@@ -1,0 +1,18 @@
+{
+  "name": "sky-first-network-website-production-v2",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "npm run db:migrate:remote && wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "check": "node scripts/check.mjs && node tests/schema-integrity.mjs && node tests/legacy-compat.mjs && node tests/runtime-smoke.mjs && node tests/production-behavior.mjs && node tests/translation-api.mjs",
+    "smoke": "node tests/runtime-smoke.mjs",
+    "qa:production": "node tests/schema-integrity.mjs && node tests/legacy-compat.mjs && node tests/runtime-smoke.mjs && node tests/production-behavior.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.34.0"
+  }
+}

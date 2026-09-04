@@ -1,0 +1,2 @@
+import { sha256 } from '../utils/crypto.js';import { clientIp } from '../utils/request.js';
+export async function audit(env,request,admin,action,type='',id='',meta={}){const ip=await sha256(clientIp(request));await env.DB.prepare('INSERT INTO site_audit_log(admin_id,action,entity_type,entity_id,metadata,ip_hash) VALUES(?,?,?,?,?,?)').bind(admin?.id||null,action,type,String(id||''),JSON.stringify(meta||{}),ip).run()}

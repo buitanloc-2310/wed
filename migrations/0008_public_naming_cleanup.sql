@@ -1,0 +1,5 @@
+-- The public website uses the full brand names, not internal abbreviations.
+UPDATE pages SET title=replace(replace(title,'SFEC','Câu lạc bộ Tiếng Anh The Sky First'),'SFN','Sky First Network'), excerpt=replace(replace(excerpt,'SFEC','Câu lạc bộ Tiếng Anh The Sky First'),'SFN','Sky First Network'), body_html=replace(replace(replace(body_html,'(SFEC)',''),'SFEC','Câu lạc bộ Tiếng Anh The Sky First'),'SFN','Sky First Network');
+UPDATE site_menus SET label=replace(replace(replace(label,'(SFEC)',''),'SFEC','Câu lạc bộ Tiếng Anh The Sky First'),'SFN','Sky First Network');
+UPDATE site_units SET name=replace(replace(name,'SFEC','Câu lạc bộ Tiếng Anh The Sky First'),'SFN','Sky First Network'), official_name=replace(replace(replace(official_name,'(SFEC)',''),'SFEC','Câu lạc bộ Tiếng Anh The Sky First'),'SFN','Sky First Network'), description=replace(replace(description,'SFEC','Câu lạc bộ Tiếng Anh The Sky First'),'SFN','Sky First Network');
+UPDATE site_portals SET name=replace(name,'SFN','Sky First Network'), subtitle=replace(subtitle,'SFN','Sky First Network'), description=replace(description,'SFN','Sky First Network');

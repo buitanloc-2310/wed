@@ -1,0 +1,4 @@
+const enc=new TextEncoder();
+export function randomToken(bytes=32){const b=crypto.getRandomValues(new Uint8Array(bytes));return btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+export async function sha256(value){const h=await crypto.subtle.digest('SHA-256',enc.encode(String(value)));return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+export async function passwordHash(password,saltB64){let raw=saltB64.replace(/-/g,'+').replace(/_/g,'/');while(raw.length%4)raw+='=';const salt=Uint8Array.from(atob(raw),c=>c.charCodeAt(0));const key=await crypto.subtle.importKey('raw',enc.encode(password),'PBKDF2',false,['deriveBits']);const out=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:310000,hash:'SHA-256'},key,256);return btoa(String.fromCharCode(...new Uint8Array(out))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}

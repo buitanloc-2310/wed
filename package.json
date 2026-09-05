@@ -1,0 +1,11 @@
+{
+  "name": "sky-first-network-official",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node tests/check.mjs",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply wed --remote"
+  },
+  "devDependencies": { "wrangler": "^4.38.0" }
+}

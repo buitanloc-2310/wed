@@ -1,0 +1,1 @@
+document.addEventListener('DOMContentLoaded',()=>document.querySelectorAll('.data-form').forEach(form=>form.addEventListener('submit',()=>{const b=form.querySelector('button[type="submit"]');if(b){b.disabled=true;b.textContent='Đang gửi…';}})));

@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wed",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-05",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "none",
+    "not_found_handling": "none"
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "wed",
+    "database_id": "e08566ab-be0d-49de-8d6a-e884912c765d",
+    "migrations_dir": "migrations"
+  }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "wed" }],
+  "vars": {
+    "APP_URL": "https://skyfirst.io.vn",
+    "DEFAULT_LANGUAGE": "vi"
+  }
+}

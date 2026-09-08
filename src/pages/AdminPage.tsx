@@ -138,8 +138,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   initialTab,
   initialSlug,
 }) => {
-  const {
+const {
     adminUsers,
+    addAdminUser,
     customPages,
     updateCustomPage,
     addCustomPage,

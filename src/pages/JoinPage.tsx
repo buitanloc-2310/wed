@@ -1,0 +1,13 @@
+import React from 'react';
+import { ArrowRight, HeartHandshake, UserRoundPlus, Users, Building2 } from 'lucide-react';
+import { PageRoute } from '../types';
+import { useDataContext } from '../context/DataContext';
+import { RichTextRenderer } from '../components/RichTextRenderer';
+interface JoinPageProps { onShowToast: (msg: string) => void; onNavigate: (page: PageRoute) => void; }
+export const JoinPage:React.FC<JoinPageProps>=({onNavigate})=>{
+ const {customPages}=useDataContext(); const p=customPages.find(x=>x.slug==='join'||x.id==='page-join');
+ const roles=[1,2,3].map(i=>({title:(p as any)?.[`joinRole${i}Title`],tag:(p as any)?.[`joinRole${i}Tag`],text:(p as any)?.[`joinRole${i}Description`],button:(p as any)?.[`joinRole${i}ButtonLabel`],url:(p as any)?.[`joinRole${i}ButtonUrl`]})).filter(x=>x.title||x.text);
+ const icons=[UserRoundPlus,HeartHandshake,Users,Building2];
+ return <main className="bg-white"><section className="bg-[#071B3A] text-white py-20"><div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-xs uppercase tracking-[.18em] text-sky-200 font-black">{p?.badge||'Tham gia'}</div><h1 className="mt-4 text-5xl lg:text-6xl font-black tracking-[-.045em]">{p?.title||'Tham gia Sky First Network'}</h1><p className="mt-5 max-w-3xl text-slate-300 leading-8">{p?.summary||''}</p></div></section>
+ <section className="py-16 lg:py-20"><div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">{(p?.contentFormatted||p?.content)&&<div className="mb-10"><RichTextRenderer content={p?.contentFormatted||p?.content||''}/></div>}<div className="grid md:grid-cols-2 gap-5">{roles.map((r,i)=>{const Icon=icons[i]||HeartHandshake;return <article key={i} className="rounded-2xl border border-slate-200 p-6"><div className="w-11 h-11 rounded-xl bg-sky-50 text-[#0B5FB4] grid place-items-center"><Icon size={21}/></div>{r.tag&&<div className="mt-4 text-xs font-bold text-sky-700">{r.tag}</div>}<h2 className="mt-2 text-2xl font-extrabold">{r.title}</h2><p className="mt-3 text-slate-600 leading-7">{r.text}</p>{r.button&&<a href={r.url||'/contact'} className="mt-5 inline-flex items-center gap-2 font-bold text-[#0B5FB4]">{r.button}<ArrowRight size={16}/></a>}</article>})}</div>{p?.joinCtaHeading&&<div className="mt-8 rounded-[26px] bg-slate-50 border border-slate-200 p-7 flex flex-col lg:flex-row gap-5 lg:items-center"><div className="flex-1"><h2 className="text-2xl font-black">{p.joinCtaHeading}</h2><p className="mt-2 text-slate-600 leading-7">{p.joinCtaDescription}</p></div><button onClick={()=>onNavigate('contact')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0B5FB4] text-white px-5 py-3 font-bold">{p.joinCtaButtonLabel||'Liên hệ'}<ArrowRight size={17}/></button></div>}</div></section></main>
+};

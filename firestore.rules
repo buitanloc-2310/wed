@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function adminDoc() { return get(/databases/$(database)/documents/admin_users/$(request.auth.uid)); }
+    function isAdmin() { return signedIn() && adminDoc().data.status == 'active' && adminDoc().data.role in ['developer','admin','editor']; }
+    function isPrivileged() { return signedIn() && adminDoc().data.status == 'active' && adminDoc().data.role in ['developer','admin']; }
+    match /admin_users/{uid} { allow read: if signedIn() && (request.auth.uid == uid || isPrivileged()); allow write: if isPrivileged(); }
+    match /site_config/{docId} { allow read: if true; allow write: if isPrivileged(); }
+    match /{col}/{id} {
+      allow read: if col in ['custom_pages','programs','network_units','news_articles','certificates','cms_modules'] || isAdmin();
+      allow write: if isAdmin();
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

@@ -122,12 +122,15 @@ export const CertificatePage: React.FC<CertificatePageProps> = ({ onShowToast })
         url: import.meta.env.VITE_MEMBER_VERIFY_URL || 'https://member.skyfirst.io.vn/api/public/verify',
         adapt: p => p?.type === 'certificate' ? makeCert({ ...(p.record || {}), valid: p.valid }, 'Cổng Thành viên Sky First Network', 'Sky First Network') : null
       },
-      {
-        name: 'Nhà Hán Ngữ',
-        url: import.meta.env.VITE_NHN_CERTIFICATE_LOOKUP_URL || 'https://ctt.nhahanngu.io.vn/api/lookup/certificate',
-        adapt: p => makeCert(p.item || p.certificate || p.data, 'Nhà Hán Ngữ', 'Nhà Hán Ngữ')
-      }
-    ];
+{
+  name: 'Nhà Hán Ngữ',
+  url: import.meta.env.VITE_NHN_CERTIFICATE_LOOKUP_URL || 'https://ctt.nhahanngu.io.vn/api/lookup/certificate',
+  adapt: p => makeCert(
+    p?.payload?.item || p?.item || p?.certificate || p?.data,
+    'Nhà Hán Ngữ',
+    'Nhà Hán Ngữ'
+  )
+}
 
     let unavailable = 0;
     for (const source of sources) {

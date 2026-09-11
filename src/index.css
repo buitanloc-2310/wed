@@ -72,7 +72,7 @@ h1, h2, h3, h4, h5, h6, p, span, a, button, label { word-break: normal; overflow
 /* Responsive hardening 2026: không để chữ/ảnh/khối bị khuất hoặc tràn ngang. */
 html, body, #root { width: 100%; min-width: 0; max-width: 100%; overflow-x: clip; }
 * { box-sizing: border-box; min-width: 0; }
-img, video, iframe, svg, canvas { max-width: 100%; height: auto; }
+img, video, iframe, svg, canvas { max-width: 100%; }
 button, a, input, textarea, select { max-width: 100%; }
 .formatted-content, .prose { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .formatted-content table, .prose table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }

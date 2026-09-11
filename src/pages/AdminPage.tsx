@@ -37,6 +37,7 @@ import { generateSlug } from '../utils/slug';
 import { AdminRecordsManager } from '../components/admin/AdminRecordsManager';
 import { AdminGlobalContentManager } from '../components/admin/AdminGlobalContentManager';
 import { AdminRemoteDataManager } from '../components/admin/AdminRemoteDataManager';
+import { AdminAboutManager } from '../components/admin/AdminAboutManager';
 
 interface AdminPageProps {
   onNavigate: (route: PageRoute) => void;
@@ -140,31 +141,46 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   initialTab,
   initialSlug,
 }) => {
-  const {
-    adminUsers,
-    addAdminUser,
-    customPages,
-    updateCustomPage,
-    addCustomPage,
-    deleteCustomPage,
-    siteConfig,
-    updateSiteConfig,
-    programs,
-    updateProgram,
-    addProgram,
-    deleteProgram,
-    networkUnits,
-    updateNetworkUnit,
-    addNetworkUnit,
-    deleteNetworkUnit,
-    newsArticles,
-    updateNewsArticle,
-    addNewsArticle,
-    deleteNewsArticle,
-    isFirebaseConfigured,
-    isFirebaseSyncing,
-    firebaseSyncStatus,
-  } = useDataContext();
+const {
+  adminUsers,
+  addAdminUser,
+
+  customPages,
+  updateCustomPage,
+  addCustomPage,
+  deleteCustomPage,
+
+  siteConfig,
+  updateSiteConfig,
+
+  programs,
+  updateProgram,
+  addProgram,
+  deleteProgram,
+
+  networkUnits,
+  updateNetworkUnit,
+  addNetworkUnit,
+  deleteNetworkUnit,
+
+  newsArticles,
+  updateNewsArticle,
+  addNewsArticle,
+  deleteNewsArticle,
+
+  // DỮ LIỆU TRANG GIỚI THIỆU
+  teamMembers,
+  corePillars,
+  timeline,
+  updateTeamMember,
+  addTeamMember,
+  deleteTeamMember,
+  updateCorePillar,
+
+  isFirebaseConfigured,
+  isFirebaseSyncing,
+  firebaseSyncStatus,
+} = useDataContext();
 
   // Phiên đăng nhập của Quản trị viên
   const [currentAdminUser, setCurrentAdminUser] = useState<AdminUser | null>(() => {
@@ -318,20 +334,80 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // 3. NẾU ĐANG Ở CHẾ ĐỘ CHỈNH SỬA: MỞ HẲN 1 TRANG MỚI ĐỘC LẬP HOÀN TOÀN
   // (Không có thanh điều hướng, menu, logo hay bất kỳ thành phần nào của /admin)
   // =========================================================================
-  if (editingPage) {
-    return (
-      <StandalonePageEditor
-        page={editingPage}
-        onSave={(updates) => {
-          updateCustomPage(editingPage.id, updates);
-          setEditingPage((prev) => (prev ? { ...prev, ...updates } : null));
-        }}
-        onClose={() => setEditingPage(null)}
-        onShowToast={onShowToast}
-      />
-    );
-  }
+// =========================================================================
+// TRANG GIỚI THIỆU DÙNG TRÌNH QUẢN LÝ RIÊNG
+// =========================================================================
+if (
+  editingPage &&
+  (editingPage.slug === 'about' || editingPage.id === 'page-about')
+) {
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
+      <div className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setEditingPage(null)}
+              className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+            >
+              ← Quay lại
+            </button>
 
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-black text-slate-900 sm:text-base">
+                Quản lý Trang Giới thiệu
+              </h1>
+              <p className="hidden text-[11px] text-slate-500 sm:block">
+                Nội dung, hành trình, đội ngũ, trụ cột và giá trị cốt lõi
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('about')}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#0284C7] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#0369A1]"
+          >
+            <ExternalLink size={14} />
+            Xem trang công khai
+          </button>
+        </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-7xl p-4 sm:p-6">
+        <AdminAboutManager
+          teamMembers={teamMembers}
+          corePillars={corePillars}
+          timeline={timeline}
+          onUpdateTeamMember={updateTeamMember}
+          onAddTeamMember={addTeamMember}
+          onDeleteTeamMember={deleteTeamMember}
+          onUpdateCorePillar={updateCorePillar}
+          onNavigate={onNavigate}
+          onShowToast={onShowToast}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Các trang khác vẫn dùng editor cũ
+if (editingPage) {
+  return (
+    <StandalonePageEditor
+      page={editingPage}
+      onSave={(updates) => {
+        updateCustomPage(editingPage.id, updates);
+        setEditingPage((prev) =>
+          prev ? { ...prev, ...updates } : null
+        );
+      }}
+      onClose={() => setEditingPage(null)}
+      onShowToast={onShowToast}
+    />
+  );
+}
   // =========================================================================
   // GIAO DIỆN QUẢN TRỊ /ADMIN
   // 1. Thanh menu bên trái (Logo, Nút ẩn/hiện, Trang, Bài đăng, Bố cục, Bình luận, Cài đặt, Xem website)

@@ -5,8 +5,8 @@ import {
   syncDocumentToFirestore,
   deleteDocumentFromFirestore,
   fetchCollectionFromFirestore,
+  fetchDocumentFromFirestore,
 } from '../lib/firebase';
-import { doc, getDoc, onSnapshot, collection } from 'firebase/firestore';
 import {
   NetworkUnit,
   Program,
@@ -326,19 +326,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!(await syncDocumentToFirestore('certificates', certificate.code, certificate))) throw new Error('SYNC_FAILED');
       }
 
-      // 8. Admin Users
-      for (const user of adminUsers) {
-        if (user.id.startsWith('invite:')) {
-          const email = user.email.trim().toLowerCase();
-          if (!(await syncDocumentToFirestore('admin_invites', email, { email, name:user.name, role:user.role, status:user.status, note:user.note || '', createdAt:user.createdAt }))) throw new Error('SYNC_FAILED');
-        } else {
-          if (!(await syncDocumentToFirestore('admin_users', user.id, user))) throw new Error('SYNC_FAILED');
-        }
-      }
+      // Admin accounts are managed by the dedicated D1 admin-auth API, never by the CMS store.
 
       setIsFirebaseSyncing(false);
       setFirebaseSyncStatus('synced');
-      const msg = `Đã tải lên Firebase thành công: ${customPages.length} trang, ${programs.length} chương trình, ${networkUnits.length} đơn vị, ${newsArticles.length} bài viết!`;
+      const msg = `Đã lưu lên D1 thành công: ${customPages.length} trang, ${programs.length} chương trình, ${networkUnits.length} đơn vị, ${newsArticles.length} bài viết!`;
       setFirebaseSyncMessage(msg);
       return { success: true, message: msg };
     } catch (error: any) {
@@ -364,9 +356,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       // 1. Site Config
-      const configSnap = await getDoc(doc(db, 'site_config', 'current'));
-      if (configSnap.exists()) {
-        const configData = configSnap.data() as SiteConfig;
+      const configData = await fetchDocumentFromFirestore<SiteConfig>('site_config','current');
+      if (configData) {
         setSiteConfig((prev) => ({
           ...prev,
           ...configData,
@@ -375,9 +366,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // 2. Core pillars: read from the server; never overwrite remote data during a fetch
-      const pillarsSnap = await getDoc(doc(db, 'cms_modules', 'core_pillars'));
-      if (pillarsSnap.exists()) {
-        const items = pillarsSnap.data()?.items;
+      const pillarsSnap = await fetchDocumentFromFirestore<any>('cms_modules','core_pillars');
+      if (pillarsSnap) {
+        const items = pillarsSnap?.items;
         if (Array.isArray(items)) setCorePillars(items as CorePillar[]);
       }
 
@@ -405,13 +396,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setNewsArticles(news);
       }
 
-      // 7. Admin directory is only readable after an authenticated administrator calls this method.
-      const users = await fetchCollectionFromFirestore<AdminUser>('admin_users');
-      const invites = await fetchCollectionFromFirestore<any>('admin_invites');
-      setAdminUsers([
-        ...users,
-        ...invites.map((invite:any) => ({ ...invite, id: `invite:${String(invite.id || invite.email || '').toLowerCase()}`, email: String(invite.email || invite.id || '').toLowerCase(), pendingInvite: true } as AdminUser)),
-      ]);
+      // Admin directory is intentionally not loaded through the CMS endpoint.
 
       setIsFirebaseSyncing(false);
       setFirebaseSyncStatus('synced');
@@ -431,183 +416,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // This prevents a cached/stale first snapshot from replacing newer initial state.
   const remoteReadyRef = useRef(false);
 
-  // Tự động kết nối và nạp dữ liệu từ Firebase Firestore lúc khởi động
+  // Nạp dữ liệu website từ Cloudflare D1. Firebase chỉ còn dùng cho Authentication.
   useEffect(() => {
-    if (!isFirebaseConfigured || !db) return;
-
     let isMounted = true;
-
-    const initFirebaseData = async () => {
+    const loadD1Data = async () => {
       try {
-        setIsFirebaseSyncing(true);
-        setFirebaseSyncStatus('syncing');
-        setFirebaseSyncMessage('Đang kết nối dịch vụ dữ liệu...');
-
-        // Đọc cấu hình site
-        const configDoc = await getDoc(doc(db, 'site_config', 'current'));
-        const [pillarsDoc, timelineDoc, teamDoc, faqsDoc] = await Promise.all([
-          getDoc(doc(db, 'cms_modules', 'core_pillars')),
-          getDoc(doc(db, 'cms_modules', 'timeline')),
-          getDoc(doc(db, 'cms_modules', 'team_members')),
-          getDoc(doc(db, 'cms_modules', 'faqs')),
-        ]);
-        if (configDoc.exists() && isMounted) {
-          const remoteConfig = configDoc.data() as SiteConfig;
-          setSiteConfig((prev) => ({
-            ...prev,
-            ...remoteConfig,
-            homeSections: { ...prev.homeSections, ...(remoteConfig.homeSections || {}) },
-          }));
-        }
-
-        if (pillarsDoc.exists() && isMounted) { const items = pillarsDoc.data()?.items; if (Array.isArray(items)) setCorePillars(items as CorePillar[]); }
-        if (timelineDoc.exists() && isMounted) { const items = timelineDoc.data()?.items; if (Array.isArray(items)) setTimeline(items as TimelineMilestone[]); }
-        if (teamDoc.exists() && isMounted) { const items = teamDoc.data()?.items; if (Array.isArray(items)) setTeamMembers(items as TeamMember[]); }
-        if (faqsDoc.exists() && isMounted) { const items = faqsDoc.data()?.items; if (Array.isArray(items)) setFaqs(items as FAQItem[]); }
-
-        // Đọc các bộ sưu tập chính
-        const [remotePages, remotePrograms, remoteUnits, remoteNews, remoteCertificates] = await Promise.all([
+        setIsFirebaseSyncing(true); setFirebaseSyncStatus('syncing'); setFirebaseSyncMessage('Đang đồng bộ dữ liệu website...');
+        const [remoteConfig, pillars, timelineData, teamData, faqsData, remotePages, remotePrograms, remoteUnits, remoteNews, remoteCertificates] = await Promise.all([
+          fetchDocumentFromFirestore<SiteConfig>('site_config','current'),
+          fetchDocumentFromFirestore<any>('cms_modules','core_pillars'),
+          fetchDocumentFromFirestore<any>('cms_modules','timeline'),
+          fetchDocumentFromFirestore<any>('cms_modules','team_members'),
+          fetchDocumentFromFirestore<any>('cms_modules','faqs'),
           fetchCollectionFromFirestore<CustomPage>('custom_pages'),
           fetchCollectionFromFirestore<Program>('programs'),
           fetchCollectionFromFirestore<NetworkUnit>('network_units'),
           fetchCollectionFromFirestore<NewsArticle>('news_articles'),
           fetchCollectionFromFirestore<Certificate>('certificates'),
         ]);
-
-        if (isMounted) {
-          if (remotePages.length > 0) setCustomPages(mergeOfficialPages(remotePages));
-          if (remotePrograms.length > 0) setPrograms(remotePrograms);
-          if (remoteUnits.length > 0) setNetworkUnits(remoteUnits);
-          if (remoteNews.length > 0) setNewsArticles(remoteNews);
-          if (remoteCertificates.length > 0) setCertificates(Object.fromEntries(remoteCertificates.map((c) => [c.code, c])));
-
-          // Public clients are read-only. Initial seeding is an explicit administrator action,
-          // so an empty remote database can never overwrite or publish local defaults by accident.
-          remoteReadyRef.current = true;
-          setFirebaseSyncStatus('synced');
-          setFirebaseSyncMessage('Đã đồng bộ dữ liệu.');
-        }
-      } catch (err: any) {
-        console.warn('Lỗi kết nối / đồng bộ Firestore:', err);
-        if (isMounted) {
-          setFirebaseSyncStatus('error');
-          setFirebaseSyncMessage(
-            err?.code === 'permission-denied'
-              ? 'Không có quyền truy cập dữ liệu này.'
-              : 'Không thể kết nối dịch vụ dữ liệu. Vui lòng thử lại.'
-          );
-        }
-      } finally {
-        if (isMounted) {
-          remoteReadyRef.current = true;
-          setIsFirebaseSyncing(false);
-        }
-      }
+        if(!isMounted) return;
+        if(remoteConfig) setSiteConfig(prev=>({...prev,...remoteConfig,homeSections:{...prev.homeSections,...(remoteConfig.homeSections||{})}}));
+        if(Array.isArray(pillars?.items)) setCorePillars(pillars.items);
+        if(Array.isArray(timelineData?.items)) setTimeline(timelineData.items);
+        if(Array.isArray(teamData?.items)) setTeamMembers(teamData.items);
+        if(Array.isArray(faqsData?.items)) setFaqs(faqsData.items);
+        if(remotePages.length) setCustomPages(mergeOfficialPages(remotePages));
+        if(remotePrograms.length) setPrograms(remotePrograms);
+        if(remoteUnits.length) setNetworkUnits(remoteUnits);
+        if(remoteNews.length) setNewsArticles(remoteNews);
+        if(remoteCertificates.length) setCertificates(Object.fromEntries(remoteCertificates.map(c=>[c.code,c])));
+        remoteReadyRef.current=true; setFirebaseSyncStatus('synced'); setFirebaseSyncMessage('Đã đồng bộ dữ liệu.');
+      } catch { if(isMounted){setFirebaseSyncStatus('error');setFirebaseSyncMessage('Không thể kết nối dịch vụ dữ liệu lúc này.');} }
+      finally { if(isMounted)setIsFirebaseSyncing(false); }
     };
-
-    initFirebaseData();
-
-    // Lắng nghe thay đổi real-time từ Firestore
-    const unsubConfig = onSnapshot(
-      doc(db, 'site_config', 'current'),
-      (docSnap) => {
-        if (docSnap.exists() && isMounted && remoteReadyRef.current) {
-          setSiteConfig((prev) => ({
-            ...prev,
-            ...(docSnap.data() as SiteConfig),
-          }));
-        }
-      },
-      (err) => console.warn('Lỗi listener site_config:', err)
-    );
-
-    const unsubPages = onSnapshot(
-      collection(db, 'custom_pages'),
-      (colSnap) => {
-        if (isMounted && remoteReadyRef.current) {
-          const list: CustomPage[] = [];
-          colSnap.forEach((d) => list.push({ id: d.id, ...d.data() } as CustomPage));
-          setCustomPages(mergeOfficialPages(list));
-        }
-      },
-      (err) => console.warn('Lỗi listener custom_pages:', err)
-    );
-
-    const unsubPrograms = onSnapshot(
-      collection(db, 'programs'),
-      (colSnap) => {
-        if (isMounted && remoteReadyRef.current) {
-          const list: Program[] = [];
-          colSnap.forEach((d) => list.push({ id: d.id, ...d.data() } as Program));
-          setPrograms(list);
-        }
-      },
-      (err) => console.warn('Lỗi listener programs:', err)
-    );
-
-    const unsubUnits = onSnapshot(
-      collection(db, 'network_units'),
-      (colSnap) => {
-        if (isMounted && remoteReadyRef.current) {
-          const list: NetworkUnit[] = [];
-          colSnap.forEach((d) => list.push({ id: d.id, ...d.data() } as NetworkUnit));
-          setNetworkUnits(list);
-        }
-      },
-      (err) => console.warn('Lỗi listener network_units:', err)
-    );
-
-    const unsubNews = onSnapshot(
-      collection(db, 'news_articles'),
-      (colSnap) => {
-        if (isMounted && remoteReadyRef.current) {
-          const list: NewsArticle[] = [];
-          colSnap.forEach((d) => list.push({ id: d.id, ...d.data() } as NewsArticle));
-          setNewsArticles(list);
-        }
-      },
-      (err) => console.warn('Lỗi listener news_articles:', err)
-    );
-
-    const unsubPillars = onSnapshot(
-      doc(db, 'cms_modules', 'core_pillars'),
-      (docSnap) => {
-        if (docSnap.exists() && isMounted && remoteReadyRef.current) {
-          const items = docSnap.data()?.items;
-          if (Array.isArray(items)) setCorePillars(items as CorePillar[]);
-        }
-      },
-      (err) => console.warn('Lỗi listener core_pillars:', err)
-    );
-
-    const subscribeModule = <T,>(id: string, setter: React.Dispatch<React.SetStateAction<T[]>>) => onSnapshot(
-      doc(db, 'cms_modules', id),
-      (snap) => { if (snap.exists() && isMounted && remoteReadyRef.current && Array.isArray(snap.data()?.items)) setter(snap.data().items as T[]); },
-      (err) => console.warn(`Lỗi listener ${id}:`, err)
-    );
-    const unsubTimeline = subscribeModule<TimelineMilestone>('timeline', setTimeline);
-    const unsubTeam = subscribeModule<TeamMember>('team_members', setTeamMembers);
-    const unsubFaqs = subscribeModule<FAQItem>('faqs', setFaqs);
-    const unsubCertificates = onSnapshot(collection(db, 'certificates'), (snap) => {
-      if (!isMounted || !remoteReadyRef.current) return;
-      const entries: [string, Certificate][] = [];
-      snap.forEach((d) => { const c = { ...d.data(), code: d.data().code || d.id } as Certificate; entries.push([c.code, c]); });
-      setCertificates(Object.fromEntries(entries));
-    }, (err) => console.warn('Lỗi listener certificates:', err));
-
-    return () => {
-      isMounted = false;
-      unsubConfig();
-      unsubPages();
-      unsubPrograms();
-      unsubUnits();
-      unsubNews();
-      unsubPillars();
-      unsubTimeline();
-      unsubTeam();
-      unsubFaqs();
-      unsubCertificates();
-    };
+    void loadD1Data();
+    const timer=window.setInterval(()=>{ if(document.visibilityState==='visible') void loadD1Data(); },30000);
+    return()=>{isMounted=false;window.clearInterval(timer)};
   }, []);
 
   // Methods

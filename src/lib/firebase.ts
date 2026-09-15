@@ -217,24 +217,91 @@ export async function testFirestoreConnection(): Promise<{ ok: boolean; message:
 }
 
 export async function getBootstrapStatus(): Promise<boolean> {
-  // Fail closed: a network/rules error must never expose first-admin setup to visitors.
-  if (!db) return true;
-  try { return (await getDoc(doc(db, 'system', 'bootstrap'))).exists(); } catch { return true; }
+  // Bootstrap must not depend on the Firestore browser SDK cache/offline state.
+  // Read the single public bootstrap marker directly from the Firestore REST endpoint.
+  if (!isFirebaseConfigured) return true;
+  const projectId = firebaseConfig.projectId;
+  const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/system/bootstrap`;
+  try {
+    const response = await fetch(url, { method: 'GET', cache: 'no-store' });
+    if (response.status === 404) return false;
+    if (!response.ok) return true; // fail closed: never expose setup on an uncertain state
+    return true;
+  } catch {
+    return true;
+  }
 }
 
+function firestoreString(value: string) { return { stringValue: value }; }
+
 export async function bootstrapFirstAdmin(user: User, name: string): Promise<any> {
-  if (!db) throw new Error('Dịch vụ dữ liệu quản trị chưa sẵn sàng.');
-  const admin = { id:user.uid, name:name.trim() || user.displayName || user.email?.split('@')[0] || 'Quản trị viên', email:(user.email||'').toLowerCase(), role:'developer', status:'active', createdAt:new Date().toISOString(), lastLogin:new Date().toISOString() };
-  const batch = writeBatch(db);
-  batch.set(doc(db,'admin_users',user.uid), sanitizeForFirestore(admin));
-  batch.set(doc(db,'system','bootstrap'), { completed:true, completedAt:new Date().toISOString() });
+  if (!isFirebaseConfigured) throw new Error('Dịch vụ dữ liệu quản trị chưa sẵn sàng.');
+  const now = new Date().toISOString();
+  const admin = {
+    id: user.uid,
+    name: name.trim() || user.displayName || user.email?.split('@')[0] || 'Quản trị viên',
+    email: (user.email || '').toLowerCase(),
+    role: 'developer',
+    status: 'active',
+    createdAt: now,
+    lastLogin: now,
+  };
+
   try {
-    await batch.commit();
+    // Force a fresh token and use Firestore REST instead of the browser SDK.
+    // This avoids the "client is offline" failure during the one-time setup.
+    const idToken = await user.getIdToken(true);
+    const projectId = firebaseConfig.projectId;
+    const base = `projects/${projectId}/databases/(default)/documents`;
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents:commit`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          writes: [
+            {
+              update: {
+                name: `${base}/admin_users/${user.uid}`,
+                fields: {
+                  id: firestoreString(admin.id),
+                  name: firestoreString(admin.name),
+                  email: firestoreString(admin.email),
+                  role: firestoreString(admin.role),
+                  status: firestoreString(admin.status),
+                  createdAt: firestoreString(admin.createdAt),
+                  lastLogin: firestoreString(admin.lastLogin),
+                },
+              },
+              currentDocument: { exists: false },
+            },
+            {
+              update: {
+                name: `${base}/system/bootstrap`,
+                fields: {
+                  completed: { booleanValue: true },
+                  completedAt: firestoreString(now),
+                },
+              },
+              currentDocument: { exists: false },
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('bootstrap-commit-failed');
+    }
     return admin;
   } catch (error) {
-    // Do not leave an orphan Authentication account if the one-time bootstrap lost a race or rules rejected it.
+    // Authentication creation and authorization bootstrap are one logical operation.
+    // If authorization fails, remove the newly-created Auth user so retrying the same email works.
     try { await deleteUser(user); } catch {}
-    throw new Error('Không thể hoàn tất khởi tạo quản trị. Vui lòng tải lại trang và thử đăng nhập.');
+    throw new Error('Không thể hoàn tất khởi tạo quản trị. Tài khoản chưa được giữ lại; vui lòng thử lại.');
   }
 }
 

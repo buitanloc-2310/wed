@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image as ImageIcon,
   Users,
@@ -39,6 +39,7 @@ import {
   SiteClosedReason,
   PageRoute
 } from '../../types';
+import { listAdminAccounts, createAdminAccount, updateAdminAccount, deleteAdminAccount, resetAdminPassword } from '../../lib/firebase';
 
 interface AdminSettingsProps {
   onShowToast: (msg: string) => void;
@@ -52,10 +53,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   const {
     siteConfig,
     updateSiteConfig,
-    adminUsers,
-    addAdminUser,
-    updateAdminUser,
-    deleteAdminUser,
+    adminUsers: contextAdminUsers,
     customPages,
     programs,
     networkUnits,
@@ -91,6 +89,11 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   // ==========================================
   // KHỐI 2: TÀI KHOẢN DRAFT & MODAL STATE
   // ==========================================
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(contextAdminUsers);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const refreshAdminUsers = async () => { setAdminUsersLoading(true); try { const rows = await listAdminAccounts(); setAdminUsers(rows as AdminUser[]); } catch (e:any) { onShowToast(e?.message || 'Không tải được danh sách quản trị.'); } finally { setAdminUsersLoading(false); } };
+  useEffect(() => { refreshAdminUsers(); }, []);
+
   const [userSearch, setUserSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | AdminUserRole>('all');
   const [userModalOpen, setUserModalOpen] = useState(false);
@@ -104,6 +107,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   const [userStatus, setUserStatus] = useState<'active' | 'inactive'>('active');
   const [userNote, setUserNote] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [userPassword, setUserPassword] = useState('');
+  const [userSaving, setUserSaving] = useState(false);
 
   // ==========================================
   // KHỐI 3: TRẠNG THÁI WEBSITE DRAFT STATE
@@ -167,6 +172,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     setUserStatus('active');
     setUserNote('');
     setEmailError('');
+    setUserPassword('');
     setUserModalOpen(true);
   };
 
@@ -179,69 +185,36 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     setUserStatus(user.status);
     setUserNote(user.note || '');
     setEmailError('');
+    setUserPassword('');
     setUserModalOpen(true);
   };
 
-  // Handler: Lưu tài khoản
-  const handleSaveUser = () => {
+  // Handler: Lưu tài khoản thật trên Firebase Auth + D1
+  const handleSaveUser = async () => {
+    if (userSaving) return;
     const trimmedEmail = userEmail.trim().toLowerCase();
-    if (!trimmedEmail) {
-      setEmailError('Vui lòng nhập địa chỉ email');
-      return;
-    }
-
-    // Kiểm tra định dạng email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      setEmailError('Định dạng email không hợp lệ');
-      return;
-    }
-
-
-    // Kiểm tra trùng lặp email khi thêm mới
-    if (!editingUser) {
-      const isDuplicate = adminUsers.some(
-        (u) => u.email.toLowerCase() === trimmedEmail
-      );
-      if (isDuplicate) {
-        setEmailError('Địa chỉ email này đã tồn tại trong danh sách');
-        return;
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { setEmailError('Địa chỉ email không hợp lệ'); return; }
+    if (!editingUser && userPassword.length < 8) { setEmailError('Tài khoản mới cần mật khẩu tối thiểu 8 ký tự'); return; }
+    if (editingUser && userPassword && userPassword.length < 8) { setEmailError('Mật khẩu mới phải có ít nhất 8 ký tự'); return; }
+    setUserSaving(true); setEmailError('');
+    try {
+      if (editingUser) {
+        await updateAdminAccount(editingUser.id,{name:userName.trim()||trimmedEmail.split('@')[0],role:userRole,status:userStatus,note:userNote.trim()});
+        if (userPassword) await resetAdminPassword(editingUser.id,userPassword);
+        onShowToast(userPassword ? `Đã cập nhật tài khoản và đặt lại mật khẩu ${trimmedEmail}.` : `Đã cập nhật tài khoản ${trimmedEmail}.`);
+      } else {
+        await createAdminAccount({email:trimmedEmail,password:userPassword,name:userName.trim()||trimmedEmail.split('@')[0],role:userRole,status:userStatus,note:userNote.trim()});
+        onShowToast(`Đã tạo tài khoản quản trị ${trimmedEmail}.`);
       }
-    }
-
-    if (editingUser) {
-      updateAdminUser(editingUser.id, {
-        email: trimmedEmail,
-        name: userName.trim() || trimmedEmail.split('@')[0],
-        role: userRole,
-        status: userStatus,
-        note: userNote.trim(),
-      });
-      onShowToast(`Đã cập nhật tài khoản ${trimmedEmail} thành công!`);
-    } else {
-      const newUser: AdminUser = {
-        id: `invite:${trimmedEmail}`,
-        email: trimmedEmail,
-        name: userName.trim() || trimmedEmail.split('@')[0],
-        role: userRole,
-        status: userStatus,
-        createdAt: new Date().toLocaleDateString('vi-VN'),
-        note: userNote.trim(),
-      };
-      addAdminUser(newUser);
-      onShowToast(`Đã thêm tài khoản ${trimmedEmail} thành công!`);
-    }
-
-    setUserModalOpen(false);
+      await refreshAdminUsers(); setUserModalOpen(false); setUserPassword('');
+    } catch(e:any) { setEmailError(e?.message || 'Không thể lưu tài khoản quản trị.'); } finally { setUserSaving(false); }
   };
 
   // Handler: Xóa tài khoản
-  const handleConfirmDeleteUser = () => {
-    if (deleteConfirmUser) {
-      deleteAdminUser(deleteConfirmUser.id);
-      onShowToast(`Đã xóa tài khoản ${deleteConfirmUser.email}`);
-      setDeleteConfirmUser(null);
-    }
+  const handleConfirmDeleteUser = async () => {
+    if (!deleteConfirmUser) return;
+    try { await deleteAdminAccount(deleteConfirmUser.id); onShowToast(`Đã xóa tài khoản ${deleteConfirmUser.email}`); await refreshAdminUsers(); setDeleteConfirmUser(null); }
+    catch(e:any){ onShowToast(e?.message || 'Không thể xóa tài khoản quản trị.'); }
   };
 
   // Handler: Lưu cấu hình Trạng thái Website
@@ -1232,6 +1205,13 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 />
               </div>
 
+              {/* Mật khẩu */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">{editingUser ? 'Đặt Lại Mật Khẩu' : 'Mật Khẩu Ban Đầu'} {!editingUser && <span className="text-rose-500">*</span>}</label>
+                <input type="password" value={userPassword} onChange={(e)=>{setUserPassword(e.target.value);setEmailError('')}} autoComplete="new-password" placeholder={editingUser ? 'Để trống nếu không đổi mật khẩu' : 'Tối thiểu 8 ký tự'} className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-sky-500"/>
+                <span className="text-[11px] text-slate-400 mt-1 block">Quản trị hệ thống có thể đặt mật khẩu mới mà không cần biết mật khẩu cũ. Mật khẩu không được lưu trong D1 hoặc nhật ký.</span>
+              </div>
+
               {/* Vai trò */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -1296,6 +1276,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 type="button"
                 id="btn-confirm-save-user"
                 onClick={handleSaveUser}
+                disabled={userSaving}
                 className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
               >
                 {editingUser ? 'Cập Nhật Tài Khoản' : 'Thêm Tài Khoản'}

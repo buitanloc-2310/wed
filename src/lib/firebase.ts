@@ -28,3 +28,10 @@ export async function bootstrapFirstAdmin(user:User,name:string){return(await d1
 export async function bootstrapNewFirstAdmin(user:User,name:string){try{return await bootstrapFirstAdmin(user,name)}catch(e){try{await deleteUser(user)}catch{}throw e}}
 export async function activateInvitedAdmin(){throw new Error('Kích hoạt tài khoản mới đã được tắt. Liên hệ quản trị hệ thống.')}
 export async function getAdminProfile(_uid:string){if(!auth?.currentUser)return null;try{return(await d1AdminRequest('/api/admin-auth/profile',auth.currentUser)).user||null}catch{return null}}
+
+async function currentAdminApi(path:string,init:RequestInit={}){if(!auth?.currentUser)throw new Error('Phiên quản trị đã hết hạn.');const h=new Headers(init.headers||{});h.set('authorization',`Bearer ${await auth.currentUser.getIdToken(true)}`);if(init.body)h.set('content-type','application/json');const r=await fetch(path,{...init,headers:h,cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d?.error||'Thao tác quản trị thất bại.');return d}
+export async function listAdminAccounts(){return(await currentAdminApi('/api/admin-users')).items||[]}
+export async function createAdminAccount(input:{email:string;password:string;name:string;role:string;status:string;note?:string}){return(await currentAdminApi('/api/admin-users',{method:'POST',body:JSON.stringify(input)})).user}
+export async function updateAdminAccount(uid:string,input:any){return currentAdminApi('/api/admin-users',{method:'PATCH',body:JSON.stringify({uid,...input})})}
+export async function deleteAdminAccount(uid:string){return currentAdminApi(`/api/admin-users?uid=${encodeURIComponent(uid)}`,{method:'DELETE'})}
+export async function resetAdminPassword(uid:string,password:string){return currentAdminApi('/api/admin-users/password',{method:'POST',body:JSON.stringify({uid,password})})}

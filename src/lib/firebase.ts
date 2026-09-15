@@ -11,7 +11,7 @@ import {
   deleteUser,
 } from 'firebase/auth';
 import {
-  getFirestore,
+  initializeFirestore,
   Firestore,
   doc,
   getDoc,
@@ -49,7 +49,9 @@ if (isFirebaseConfigured) {
   try {
     app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
     auth = getAuth(app);
-    db = getFirestore(app);
+    // Force long-polling transport for networks/proxies that block Firestore WebChannel.
+    // This prevents the browser SDK from repeatedly falling into an offline state.
+    db = initializeFirestore(app, { experimentalForceLongPolling: true });
   } catch (error) {
     console.error('Lỗi khởi tạo Firebase:', error);
   }
@@ -205,10 +207,10 @@ export async function testFirestoreConnection(): Promise<{ ok: boolean; message:
         message: 'Lỗi quyền truy cập (permission-denied): Vui lòng kiểm tra firestore.rules trên Firebase Console.',
       };
     }
-    if (error?.message?.includes('the client is offline')) {
+    if (error?.code === 'unavailable') {
       return {
         ok: false,
-        message: 'Không thể kết nối Firestore (client is offline). Vui lòng kiểm tra mạng hoặc Project ID.',
+        message: 'Dịch vụ dữ liệu tạm thời chưa kết nối được. Vui lòng thử lại.',
       };
     }
     // Một số project trả về không tìm thấy doc nhưng kết nối server vẫn thành công
@@ -249,7 +251,7 @@ export async function bootstrapFirstAdmin(user: User, name: string): Promise<any
 
   try {
     // Force a fresh token and use Firestore REST instead of the browser SDK.
-    // This avoids the "client is offline" failure during the one-time setup.
+    // This keeps first-time setup independent from browser SDK connection state.
     const idToken = await user.getIdToken(true);
     const projectId = firebaseConfig.projectId;
     const base = `projects/${projectId}/databases/(default)/documents`;

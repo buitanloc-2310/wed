@@ -1,0 +1,8 @@
+{
+  "application": "Sky First Network Website",
+  "track": "WED",
+  "phase": "2",
+  "dataPolicy": "cloud-authoritative",
+  "cachePolicy": "html-no-cache-assets-immutable",
+  "browserBaseline": ["Chrome", "Edge", "Firefox", "Safari", "Android WebView", "iOS Safari"]
+}

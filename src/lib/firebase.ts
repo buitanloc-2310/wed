@@ -236,6 +236,40 @@ export async function getBootstrapStatus(): Promise<boolean> {
 
 function firestoreString(value: string) { return { stringValue: value }; }
 
+async function firestoreRestWriteDocument(
+  path: string,
+  fields: Record<string, any>,
+  idToken: string,
+  createOnly = true
+): Promise<void> {
+  const projectId = firebaseConfig.projectId;
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  const suffix = createOnly ? '?currentDocument.exists=false' : '';
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/${encodedPath}${suffix}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ fields }),
+      cache: 'no-store',
+    }
+  );
+  if (!response.ok) throw new Error(`firestore-rest-write-${response.status}`);
+}
+
+async function firestoreRestDeleteDocument(path: string, idToken: string): Promise<void> {
+  const projectId = firebaseConfig.projectId;
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/${encodedPath}`,
+    { method: 'DELETE', headers: { authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+  );
+  if (!response.ok && response.status !== 404) throw new Error(`firestore-rest-delete-${response.status}`);
+}
+
 export async function bootstrapFirstAdmin(user: User, name: string): Promise<any> {
   if (!isFirebaseConfigured) throw new Error('Dịch vụ dữ liệu quản trị chưa sẵn sàng.');
   const now = new Date().toISOString();
@@ -249,61 +283,46 @@ export async function bootstrapFirstAdmin(user: User, name: string): Promise<any
     lastLogin: now,
   };
 
+  const idToken = await user.getIdToken(true);
+  let profileCreated = false;
   try {
-    // Force a fresh token and use Firestore REST instead of the browser SDK.
-    // This keeps first-time setup independent from browser SDK connection state.
-    const idToken = await user.getIdToken(true);
-    const projectId = firebaseConfig.projectId;
-    const base = `projects/${projectId}/databases/(default)/documents`;
-    const response = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents:commit`,
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          writes: [
-            {
-              update: {
-                name: `${base}/admin_users/${user.uid}`,
-                fields: {
-                  id: firestoreString(admin.id),
-                  name: firestoreString(admin.name),
-                  email: firestoreString(admin.email),
-                  role: firestoreString(admin.role),
-                  status: firestoreString(admin.status),
-                  createdAt: firestoreString(admin.createdAt),
-                  lastLogin: firestoreString(admin.lastLogin),
-                },
-              },
-              currentDocument: { exists: false },
-            },
-            {
-              update: {
-                name: `${base}/system/bootstrap`,
-                fields: {
-                  completed: { booleanValue: true },
-                  completedAt: firestoreString(now),
-                },
-              },
-              currentDocument: { exists: false },
-            },
-          ],
-        }),
-      }
-    );
+    // Create the first admin profile BEFORE closing bootstrap. Doing these as two
+    // REST writes avoids the browser Firestore offline cache and avoids an atomic
+    // rules dependency where both documents are created in the same commit.
+    await firestoreRestWriteDocument(`admin_users/${user.uid}`, {
+      id: firestoreString(admin.id),
+      name: firestoreString(admin.name),
+      email: firestoreString(admin.email),
+      role: firestoreString(admin.role),
+      status: firestoreString(admin.status),
+      createdAt: firestoreString(admin.createdAt),
+      lastLogin: firestoreString(admin.lastLogin),
+    }, idToken, true);
+    profileCreated = true;
 
-    if (!response.ok) {
-      throw new Error('bootstrap-commit-failed');
-    }
+    await firestoreRestWriteDocument('system/bootstrap', {
+      completed: { booleanValue: true },
+      completedAt: firestoreString(now),
+    }, idToken, true);
+
     return admin;
   } catch (error) {
-    // Authentication creation and authorization bootstrap are one logical operation.
-    // If authorization fails, remove the newly-created Auth user so retrying the same email works.
+    // Undo a partially-created profile. For a newly-created Auth account the
+    // caller also removes Auth below; for an existing orphan account we keep Auth
+    // so the owner can retry after connectivity recovers.
+    if (profileCreated) {
+      try { await firestoreRestDeleteDocument(`admin_users/${user.uid}`, idToken); } catch {}
+    }
+    throw error;
+  }
+}
+
+export async function bootstrapNewFirstAdmin(user: User, name: string): Promise<any> {
+  try {
+    return await bootstrapFirstAdmin(user, name);
+  } catch {
     try { await deleteUser(user); } catch {}
-    throw new Error('Không thể hoàn tất khởi tạo quản trị. Tài khoản chưa được giữ lại; vui lòng thử lại.');
+    throw new Error('Không thể hoàn tất khởi tạo quản trị. Vui lòng thử lại.');
   }
 }
 

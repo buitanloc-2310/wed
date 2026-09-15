@@ -15,6 +15,8 @@ import {
   Save,
   RotateCcw,
   Eye,
+  EyeOff,
+  KeyRound,
   Wrench,
   Edit3,
   RefreshCw,
@@ -108,7 +110,23 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   const [userNote, setUserNote] = useState('');
   const [emailError, setEmailError] = useState('');
   const [userPassword, setUserPassword] = useState('');
+  const [userPasswordConfirm, setUserPasswordConfirm] = useState('');
+  const [showUserPassword, setShowUserPassword] = useState(false);
+  const [showUserPasswordConfirm, setShowUserPasswordConfirm] = useState(false);
   const [userSaving, setUserSaving] = useState(false);
+
+  const generateAdminPassword = () => {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%_-';
+    const bytes = new Uint32Array(18);
+    crypto.getRandomValues(bytes);
+    const generated = Array.from(bytes, (n) => alphabet[n % alphabet.length]).join('');
+    setUserPassword(generated); setUserPasswordConfirm(generated); setShowUserPassword(true); setShowUserPasswordConfirm(true); setEmailError('');
+  };
+  const passwordChecks = {
+    length: userPassword.length >= 10,
+    upper: /[A-Z]/.test(userPassword), lower: /[a-z]/.test(userPassword), digit: /[0-9]/.test(userPassword),
+  };
+  const passwordStrong = passwordChecks.length && passwordChecks.upper && passwordChecks.lower && passwordChecks.digit;
 
   // ==========================================
   // KHỐI 3: TRẠNG THÁI WEBSITE DRAFT STATE
@@ -173,6 +191,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     setUserNote('');
     setEmailError('');
     setUserPassword('');
+    setUserPasswordConfirm(''); setShowUserPassword(false); setShowUserPasswordConfirm(false);
     setUserModalOpen(true);
   };
 
@@ -186,6 +205,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     setUserNote(user.note || '');
     setEmailError('');
     setUserPassword('');
+    setUserPasswordConfirm(''); setShowUserPassword(false); setShowUserPasswordConfirm(false);
     setUserModalOpen(true);
   };
 
@@ -194,8 +214,9 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     if (userSaving) return;
     const trimmedEmail = userEmail.trim().toLowerCase();
     if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { setEmailError('Địa chỉ email không hợp lệ'); return; }
-    if (!editingUser && userPassword.length < 8) { setEmailError('Tài khoản mới cần mật khẩu tối thiểu 8 ký tự'); return; }
-    if (editingUser && userPassword && userPassword.length < 8) { setEmailError('Mật khẩu mới phải có ít nhất 8 ký tự'); return; }
+    if (!editingUser && !passwordStrong) { setEmailError('Mật khẩu cần ít nhất 10 ký tự, có chữ hoa, chữ thường và số.'); return; }
+    if (editingUser && userPassword && !passwordStrong) { setEmailError('Mật khẩu mới cần ít nhất 10 ký tự, có chữ hoa, chữ thường và số.'); return; }
+    if (userPassword && userPassword !== userPasswordConfirm) { setEmailError('Xác nhận mật khẩu chưa trùng khớp.'); return; }
     setUserSaving(true); setEmailError('');
     try {
       if (editingUser) {
@@ -206,7 +227,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
         await createAdminAccount({email:trimmedEmail,password:userPassword,name:userName.trim()||trimmedEmail.split('@')[0],role:userRole,status:userStatus,note:userNote.trim()});
         onShowToast(`Đã tạo tài khoản quản trị ${trimmedEmail}.`);
       }
-      await refreshAdminUsers(); setUserModalOpen(false); setUserPassword('');
+      await refreshAdminUsers(); setUserModalOpen(false); setUserPassword(''); setUserPasswordConfirm('');
     } catch(e:any) { setEmailError(e?.message || 'Không thể lưu tài khoản quản trị.'); } finally { setUserSaving(false); }
   };
 
@@ -494,7 +515,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               </div>
               <h4 className="text-xs font-bold text-amber-900">Quản Trị Viên (Admin)</h4>
               <p className="text-[11px] text-amber-700 mt-0.5">
-                Toàn quyền quản lý website, tài khoản và cấu hình hệ thống.
+                Quản lý nội dung và cấu hình nghiệp vụ; quản lý tài khoản đặc quyền dành cho Quản trị hệ thống.
               </p>
             </div>
 
@@ -1174,9 +1195,10 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                   id="modal-input-user-email"
                   value={userEmail}
                   onChange={(e) => {
-                    setUserEmail(e.target.value);
+                    if (!editingUser) setUserEmail(e.target.value);
                     setEmailError('');
                   }}
+                  readOnly={!!editingUser}
                   placeholder="ten@example.com"
                   className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-sky-500 font-mono"
                 />
@@ -1206,10 +1228,24 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               </div>
 
               {/* Mật khẩu */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">{editingUser ? 'Đặt Lại Mật Khẩu' : 'Mật Khẩu Ban Đầu'} {!editingUser && <span className="text-rose-500">*</span>}</label>
-                <input type="password" value={userPassword} onChange={(e)=>{setUserPassword(e.target.value);setEmailError('')}} autoComplete="new-password" placeholder={editingUser ? 'Để trống nếu không đổi mật khẩu' : 'Tối thiểu 8 ký tự'} className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-sky-500"/>
-                <span className="text-[11px] text-slate-400 mt-1 block">Quản trị hệ thống có thể đặt mật khẩu mới mà không cần biết mật khẩu cũ. Mật khẩu không được lưu trong D1 hoặc nhật ký.</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="block text-xs font-bold text-slate-700">{editingUser ? 'Đặt Lại Mật Khẩu' : 'Mật Khẩu Ban Đầu'} {!editingUser && <span className="text-rose-500">*</span>}</label>
+                  <button type="button" onClick={generateAdminPassword} className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 hover:text-sky-900"><KeyRound size={13}/>Tạo mật khẩu mạnh</button>
+                </div>
+                <div className="relative">
+                  <input type={showUserPassword ? 'text' : 'password'} value={userPassword} onChange={(e)=>{setUserPassword(e.target.value);setEmailError('')}} autoComplete="new-password" placeholder={editingUser ? 'Để trống nếu không đổi mật khẩu' : 'Ít nhất 10 ký tự'} className="w-full text-xs sm:text-sm px-3.5 py-2.5 pr-11 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-sky-500"/>
+                  <button type="button" onClick={()=>setShowUserPassword(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" aria-label={showUserPassword?'Ẩn mật khẩu':'Hiện mật khẩu'}>{showUserPassword?<EyeOff size={16}/>:<Eye size={16}/>}</button>
+                </div>
+                <div className="relative">
+                  <input type={showUserPasswordConfirm ? 'text' : 'password'} value={userPasswordConfirm} onChange={(e)=>{setUserPasswordConfirm(e.target.value);setEmailError('')}} autoComplete="new-password" placeholder="Nhập lại mật khẩu để xác nhận" className="w-full text-xs sm:text-sm px-3.5 py-2.5 pr-11 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-sky-500"/>
+                  <button type="button" onClick={()=>setShowUserPasswordConfirm(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" aria-label={showUserPasswordConfirm?'Ẩn xác nhận mật khẩu':'Hiện xác nhận mật khẩu'}>{showUserPasswordConfirm?<EyeOff size={16}/>:<Eye size={16}/>}</button>
+                </div>
+                {userPassword && <div className="grid grid-cols-2 gap-1 text-[10px]">
+                  <span className={passwordChecks.length?'text-emerald-700':'text-slate-400'}>• Tối thiểu 10 ký tự</span><span className={passwordChecks.upper?'text-emerald-700':'text-slate-400'}>• Có chữ hoa</span>
+                  <span className={passwordChecks.lower?'text-emerald-700':'text-slate-400'}>• Có chữ thường</span><span className={passwordChecks.digit?'text-emerald-700':'text-slate-400'}>• Có chữ số</span>
+                </div>}
+                <div className="flex items-start gap-2 rounded-xl bg-slate-50 border border-slate-200 p-2.5 text-[11px] text-slate-600"><ShieldCheck size={15} className="mt-0.5 shrink-0 text-emerald-600"/><span>Quản trị hệ thống có thể đặt mật khẩu mới mà không cần mật khẩu cũ. Mật khẩu chỉ được gửi tới Firebase Authentication qua kết nối bảo mật, không lưu trong D1 và không ghi vào nhật ký.</span></div>
               </div>
 
               {/* Vai trò */}
@@ -1279,7 +1315,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 disabled={userSaving}
                 className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
               >
-                {editingUser ? 'Cập Nhật Tài Khoản' : 'Thêm Tài Khoản'}
+                {userSaving ? 'Đang xử lý...' : editingUser ? 'Cập Nhật Tài Khoản' : 'Tạo Tài Khoản Quản Trị'}
               </button>
             </div>
           </div>

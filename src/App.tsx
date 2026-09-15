@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
@@ -173,6 +173,8 @@ function AppMainContent() {
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastGuardRef = useRef<{message:string;at:number}>({message:'',at:0});
+  const toastTimerRef = useRef<number | null>(null);
 
 
   // SEO/publication metadata is updated per route without requiring a second rendering stack.
@@ -194,10 +196,11 @@ function AppMainContent() {
   }, [currentPage, currentSlug, siteConfig.siteName, siteConfig.siteDescription, siteConfig.tagline]);
 
   const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4000);
+    const clean=String(msg||'').trim(); if(!clean)return; const now=Date.now();
+    if(toastGuardRef.current.message===clean && now-toastGuardRef.current.at<2500)return;
+    toastGuardRef.current={message:clean,at:now}; setToastMessage(clean);
+    if(toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current=window.setTimeout(()=>setToastMessage(null),4000);
   };
 
   // URL synchronization handler

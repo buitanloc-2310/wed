@@ -27,6 +27,7 @@ export interface AdminUser {
   status: 'active' | 'inactive';
   note?: string;
   lastLogin?: string;
+  is_root_owner?: number | boolean;
 }
 
 export type SiteClosedReason = 'maintenance' | 'editing' | 'upgrading' | 'custom';

@@ -648,7 +648,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                           <div className="text-[10px] text-slate-400">{user.note}</div>
                         )}
                       </td>
-                      <td className="py-3.5 px-4">{getRoleBadge(user.role)}</td>
+                      <td className="py-3.5 px-4">{user.is_root_owner ? (<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-violet-50 text-violet-800 border border-violet-200"><ShieldCheck size={13}/><span>Chủ sở hữu hệ thống</span></span>) : getRoleBadge(user.role)}</td>
                       <td className="py-3.5 px-4">
                         {user.status === 'active' ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
@@ -675,14 +675,14 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                           >
                             <Edit2 size={14} />
                           </button>
-                          <button
+                          {!user.is_root_owner && (<button
                             type="button"
                             onClick={() => setDeleteConfirmUser(user)}
                             className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                             title="Xóa tài khoản"
                           >
                             <Trash2 size={14} />
-                          </button>
+                          </button>)}
                         </div>
                       </td>
                     </tr>
@@ -1166,8 +1166,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       {/* MODAL THÊM / SỬA TÀI KHOẢN QUẢN TRỊ                                         */}
       {/* ========================================================================= */}
       {userModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 animate-fade-in overflow-y-auto overscroll-contain">
+          <div className="bg-white rounded-2xl max-w-lg w-full my-2 sm:my-4 max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain p-5 sm:p-7 shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
@@ -1256,6 +1256,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 <select
                   id="modal-select-user-role"
                   value={userRole}
+                  disabled={Boolean(editingUser?.is_root_owner)}
                   onChange={(e) => setUserRole(e.target.value as AdminUserRole)}
                   className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-sky-500 bg-white"
                 >
@@ -1265,7 +1266,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 </select>
                 <span className="text-[11px] text-slate-500 mt-1 block">
                   {userRole === 'admin' && '• Có toàn quyền xem, sửa, xóa tất cả các mục trên hệ thống CMS.'}
-                  {userRole === 'developer' && '• Chuyên trách cấu hình kỹ thuật, giao diện và chức năng bảo trì.'}
+                  {editingUser?.is_root_owner ? '• Tài khoản Chủ sở hữu hệ thống được bảo vệ ở máy chủ: không thể hạ quyền hoặc khóa.' : userRole === 'developer' && '• Quyền kỹ thuật cấp cao; chỉ Chủ sở hữu hệ thống được cấp mới vai trò này.'}
                   {userRole === 'editor' && '• Chuyên trách duyệt và xuất bản tin tức, bài đăng, chương trình.'}
                 </span>
               </div>
@@ -1277,6 +1278,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 </label>
                 <select
                   value={userStatus}
+                  disabled={Boolean(editingUser?.is_root_owner)}
                   onChange={(e) => setUserStatus(e.target.value as 'active' | 'inactive')}
                   className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-sky-500 bg-white"
                 >

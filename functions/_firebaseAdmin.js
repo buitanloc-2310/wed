@@ -16,3 +16,25 @@ export async function firebaseAdminAccessToken(env){
 }
 export async function firebaseSetPassword(env,uid,password){const token=await firebaseAdminAccessToken(env);const project=firebaseProjectId(env);const r=await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(project)}/accounts:update`,{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify({localId:uid,password})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d?.error?.message||'Không đặt lại được mật khẩu Firebase.');return d}
 export async function firebaseDeleteUid(env,uid){const token=await firebaseAdminAccessToken(env);const project=firebaseProjectId(env);const r=await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(project)}/accounts:delete`,{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify({localId:uid})});if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d?.error?.message||'Không xóa được tài khoản Firebase.')}}
+
+export async function firebaseCreateUser(env,{email,password,displayName='',disabled=false}){
+ const token=await firebaseAdminAccessToken(env);const project=firebaseProjectId(env);
+ const r=await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(project)}/accounts`,{
+  method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},
+  body:JSON.stringify({email,password,displayName,disabled:Boolean(disabled),emailVerified:false})
+ });
+ const d=await r.json().catch(()=>({}));
+ if(!r.ok||!d.localId){const m=d?.error?.message||'Không tạo được tài khoản Firebase.';throw new Error(m)}
+ return d;
+}
+
+export async function firebaseGetUserByEmail(env,email){
+ const token=await firebaseAdminAccessToken(env);const project=firebaseProjectId(env);
+ const r=await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(project)}/accounts:lookup`,{
+  method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify({email:[String(email).trim().toLowerCase()]})
+ });
+ const d=await r.json().catch(()=>({}));
+ if(r.status===404)return null;
+ if(!r.ok){const m=d?.error?.message||'Không kiểm tra được tài khoản Firebase.';if(String(m).includes('USER_NOT_FOUND'))return null;throw new Error(m)}
+ return d?.users?.[0]||null;
+}

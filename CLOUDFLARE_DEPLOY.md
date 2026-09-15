@@ -24,3 +24,6 @@ Tài khoản quản trị đầu tiên được khởi tạo trực tiếp tại
 `wrangler.jsonc` đã khai báo D1 và R2 binding để dùng cho Cloudflare Functions/Workers sau này.
 Frontend React trong `src/` không thể truy cập trực tiếp binding D1/R2; phải đi qua Cloudflare Pages Functions/Worker.
 Source hiện tại chưa chuyển dữ liệu CMS từ Firestore sang D1 và chưa chuyển media sang R2 để tránh phá kiến trúc đang có. D1/R2 đã được cấu hình sẵn làm nền tảng cho bước tích hợp backend tiếp theo.
+
+## Firebase privileged admin actions
+To allow the Developer role to set another administrator's password or delete a Firebase Authentication user without the old password, add a Cloudflare Pages secret named `FIREBASE_SERVICE_ACCOUNT_JSON`. Its value must be the complete JSON of a Firebase/Google service account for project `skyfirstnetwork` with permission to manage Firebase Authentication users. Never expose this JSON as a `VITE_` variable or commit it to GitHub. Creating a normal admin account uses Firebase's server REST sign-up flow; password reset/delete require this server-only secret.

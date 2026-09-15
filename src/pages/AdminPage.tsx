@@ -772,7 +772,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       size={13}
                       className="text-emerald-600"
                     />
-                    <span>Đã đồng bộ</span>
+                    <span>Kết nối dữ liệu</span>
                   </button>
                 ) : firebaseSyncStatus ===
                   'syncing' ? (

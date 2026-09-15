@@ -487,7 +487,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 <span>Thiết Lập Tài Khoản Phân Quyền</span>
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Chỉ định và quản lý các tài khoản quản trị cho 3 vai trò: <strong>Lập trình viên</strong>, <strong>Quản trị viên</strong> và <strong>Biên tập viên</strong>.
+                Quản lý tài khoản theo phân cấp <strong>Chủ sở hữu hệ thống → Lập trình viên → Quản trị viên → Biên tập viên</strong>. Chủ sở hữu hệ thống được bảo vệ ở máy chủ.
               </p>
             </div>
 
@@ -515,7 +515,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
               </div>
               <h4 className="text-xs font-bold text-amber-900">Quản Trị Viên (Admin)</h4>
               <p className="text-[11px] text-amber-700 mt-0.5">
-                Quản lý nội dung và cấu hình nghiệp vụ; quản lý tài khoản đặc quyền dành cho Quản trị hệ thống.
+                Quản lý nội dung và cấu hình nghiệp vụ theo phạm vi được cấp; không thể tác động Chủ sở hữu hệ thống.
               </p>
             </div>
 

@@ -1,0 +1,114 @@
+{
+  "entities": {
+    "CustomPage": {
+      "title": "CustomPage",
+      "description": "Nội dung và cấu trúc các trang tĩnh / động trong hệ sinh thái SFN",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "slug": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "slug", "title"]
+    },
+    "Program": {
+      "title": "Program",
+      "description": "Các chương trình và dự án hoạt động của SFN",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    },
+    "NetworkUnit": {
+      "title": "NetworkUnit",
+      "description": "Các đơn vị thành viên trực thuộc mạng lưới SFN",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "shortName": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "NewsArticle": {
+      "title": "NewsArticle",
+      "description": "Tin tức, thông cáo báo chí và bài viết SFN",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    },
+    "SiteConfig": {
+      "title": "SiteConfig",
+      "description": "Cấu hình nhận diện thương hiệu, thông tin liên hệ và trạng thái website",
+      "type": "object",
+      "properties": {
+        "siteName": { "type": "string" },
+        "siteStatus": { "type": "string" }
+      }
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Tài khoản người dùng và phân quyền quản trị",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "PageComment": {
+      "title": "PageComment",
+      "description": "Bình luận và góp ý của người dùng trên các trang",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pageId": { "type": "string" },
+        "userName": { "type": "string" },
+        "comment": { "type": "string" }
+      },
+      "required": ["id", "pageId", "comment"]
+    }
+  },
+  "firestore": {
+    "/custom_pages/{pageId}": {
+      "schema": "CustomPage",
+      "description": "Bộ sưu tập các trang tùy biến và nội dung CMS"
+    },
+    "/programs/{programId}": {
+      "schema": "Program",
+      "description": "Bộ sưu tập các chương trình SFN"
+    },
+    "/network_units/{unitId}": {
+      "schema": "NetworkUnit",
+      "description": "Bộ sưu tập các đơn vị trực thuộc"
+    },
+    "/news_articles/{articleId}": {
+      "schema": "NewsArticle",
+      "description": "Bộ sưu tập tin tức và bài viết"
+    },
+    "/site_config/{configId}": {
+      "schema": "SiteConfig",
+      "description": "Bộ sưu tập thiết lập website"
+    },
+    "/admin_users/{userId}": {
+      "schema": "AdminUser",
+      "description": "Bộ sưu tập quản trị viên hệ thống"
+    },
+    "/page_comments/{commentId}": {
+      "schema": "PageComment",
+      "description": "Bộ sưu tập bình luận và ý kiến đóng góp"
+    }
+  }
+}

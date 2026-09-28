@@ -255,7 +255,7 @@ export const ProgramDetailPage: React.FC<ProgramDetailPageProps> = ({
               <div className="pt-2">
                 <ImagePlaceholder
                   imageUrl={program.imageUrl}
-                  sizeText="16:9 (1200x675px)"
+                  sizeText="Tỷ lệ ảnh gốc"
                   description={`Hình ảnh dự án: ${program.title}`}
                   aspectRatio="video"
                   theme={program.theme || 'sky'}

@@ -79,7 +79,7 @@ export const AdminProgramsManager: React.FC<AdminProgramsManagerProps> = ({
       statusLabel: 'Bản nháp',
       summary: '',
       description: '',
-      imageSizeText: '16:9 (1200x675px)',
+      imageSizeText: 'Giữ nguyên tỷ lệ ảnh gốc',
       imageDescription: 'Hình ảnh đại diện dự án',
       imageUrl: '',
       galleryImages: [],
@@ -794,7 +794,7 @@ export const AdminProgramsManager: React.FC<AdminProgramsManagerProps> = ({
               <ImageIcon size={15} className="text-[#0284C7]" />
               Khối 3: Ảnh đại diện & thư viện ảnh
             </h2>
-            <span className="text-[11px] text-slate-400">Giữ ảnh gốc · không khóa 16:9</span>
+            <span className="text-[11px] text-slate-400">Giữ ảnh gốc · mọi tỷ lệ ảnh</span>
           </div>
 
           <div className="space-y-3">
@@ -809,8 +809,8 @@ export const AdminProgramsManager: React.FC<AdminProgramsManagerProps> = ({
 
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-3 flex items-center justify-between"><div><div className="text-xs font-bold text-slate-800">Thư viện ảnh chương trình</div><div className="text-[11px] text-slate-500">Một chương trình có thể dùng nhiều ảnh. Mỗi dòng là một ảnh từ Media hoặc URL hợp lệ.</div></div><button type="button" onClick={()=>onUpdateProgram(activeProg.id,{galleryImages:[...(activeProg.galleryImages||[]),'']})} className="rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs font-bold text-sky-700">+ Thêm ảnh</button></div>
-              <div className="space-y-2">{(activeProg.galleryImages||[]).map((url,idx)=><div key={idx} className="flex gap-2"><input value={url} onChange={e=>{const a=[...(activeProg.galleryImages||[])];a[idx]=e.target.value;onUpdateProgram(activeProg.id,{galleryImages:a})}} placeholder="Chọn/tải ảnh trong Media hoặc dán URL" className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"/><button type="button" onClick={()=>onUpdateProgram(activeProg.id,{galleryImages:(activeProg.galleryImages||[]).filter((_,i)=>i!==idx)})} className="rounded-lg border border-rose-200 px-3 text-xs font-bold text-rose-600">Xóa</button></div>)}</div>
+              <div className="mb-3 flex items-center justify-between"><div><div className="text-xs font-bold text-slate-800">Thư viện ảnh chương trình</div><div className="text-[11px] text-slate-500">Một chương trình có thể dùng nhiều ảnh với mọi tỷ lệ. Tải ảnh trực tiếp vào Media.</div></div><button type="button" onClick={()=>onUpdateProgram(activeProg.id,{galleryImages:[...(activeProg.galleryImages||[]),'']})} className="rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs font-bold text-sky-700">+ Thêm ảnh</button></div>
+              <div className="space-y-3">{(activeProg.galleryImages||[]).map((url,idx)=><div key={idx} className="rounded-xl border border-slate-100 bg-white p-3"><ImageUrlInput label={`Ảnh thư viện ${idx+1}`} value={url} onChange={v=>{const a=[...(activeProg.galleryImages||[])];a[idx]=v;onUpdateProgram(activeProg.id,{galleryImages:a})}} helperText="Tải ảnh trực tiếp; hệ thống giữ tỷ lệ gốc."/><button type="button" onClick={()=>onUpdateProgram(activeProg.id,{galleryImages:(activeProg.galleryImages||[]).filter((_,i)=>i!==idx)})} className="mt-2 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-bold text-rose-600">Xóa khỏi thư viện</button></div>)}</div>
             </div>
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">

@@ -15,6 +15,7 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { CorePillar, TimelineMilestone, TeamMember, CoreValueItem } from '../../../types';
+import { ImageUrlInput } from '../../ImageUrlInput';
 import { CORE_PILLARS, CORE_VALUES, TIMELINE_DATA, TEAM_DATA } from '../../../data/mockData';
 
 interface AboutEditorFieldsProps {
@@ -990,20 +991,7 @@ export const AboutEditorFields: React.FC<AboutEditorFieldsProps> = ({
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                    Đường dẫn URL ảnh chân dung (imageUrl)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={member.imageUrl || ''}
-                      onChange={(e) => handleUpdateMember(mIdx, { imageUrl: e.target.value })}
-                      placeholder="/media/... hoặc https://..."
-                      className="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-mono"
-                    />
-                  </div>
-                </div>
+                <ImageUrlInput label="Ảnh chân dung" value={member.imageUrl || ''} onChange={(v)=>handleUpdateMember(mIdx,{imageUrl:v})} helperText="Tải ảnh chân dung trực tiếp từ thiết bị."/>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 mb-1">

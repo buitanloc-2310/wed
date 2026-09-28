@@ -1,11 +1,11 @@
 import { Program, NewsArticle, Certificate, TimelineMilestone, CorePillar, TeamMember, FAQItem, NetworkUnit } from '../types';
 
 export const NETWORK_UNITS: NetworkUnit[] = [
-  {id:'unit-sfec',code:'SFEC',name:'Câu lạc bộ Tiếng Anh The Sky First',tagline:'Đơn vị trực thuộc tập trung vào tiếng Anh và giáo dục cộng đồng.',slug:'the-sky-first-english-club',isPublished:true,category:'education',categoryLabel:'Giáo dục & Đào tạo',leader:{name:'',title:'Người phụ trách'},description:'Câu lạc bộ Tiếng Anh The Sky First (SFEC) là đơn vị trực thuộc Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First (SFN), tập trung vào lĩnh vực tiếng Anh và giáo dục cộng đồng.',mission:'Triển khai các hoạt động tiếng Anh, lớp học, học liệu, quản lý học viên và kết nối tình nguyện viên dạy học theo phạm vi của SFEC.',functions:['Lớp học và hoạt động tiếng Anh','Nội dung và học liệu giáo dục','Hỗ trợ người học và kết nối tình nguyện viên dạy học'],keyProjects:[],contact:{address:'',email:'',phone:'',portal:'https://sfec.skyfirst.io.vn/'},theme:'sky',imageDescription:'Logo Câu lạc bộ Tiếng Anh The Sky First',imageSizeText:'Logo chính thức',imageUrl:'/brand/the-sky-first-english-club-web.png',isFlagship:true}
+  {id:'unit-sfec',code:'SFEC',name:'Câu lạc bộ Tiếng Anh The Sky First',tagline:'Đơn vị trực thuộc tập trung vào tiếng Anh và giáo dục cộng đồng.',slug:'the-sky-first-english-club',isPublished:true,category:'education',categoryLabel:'Giáo dục & Đào tạo',leader:{name:'',title:'Người phụ trách'},description:'Câu lạc bộ Tiếng Anh The Sky First (SFEC) là đơn vị trực thuộc Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First, tập trung vào lĩnh vực tiếng Anh và giáo dục cộng đồng.',mission:'Triển khai các hoạt động tiếng Anh, lớp học, học liệu, quản lý học viên và kết nối tình nguyện viên dạy học theo phạm vi của SFEC.',functions:['Lớp học và hoạt động tiếng Anh','Nội dung và học liệu giáo dục','Hỗ trợ người học và kết nối tình nguyện viên dạy học'],keyProjects:[],contact:{address:'',email:'',phone:'',portal:'https://sfec.skyfirst.io.vn/'},theme:'sky',imageDescription:'Logo Câu lạc bộ Tiếng Anh The Sky First',imageSizeText:'Logo chính thức',imageUrl:'/brand/the-sky-first-english-club-web.png',isFlagship:true}
 ];
 
 // Chưa có số liệu được xác minh để công khai. Khối thống kê mặc định không dùng trên trang chủ.
-export const SFN_STATS = [];
+export const Sky First Network_STATS = [];
 
 export const CORE_PILLARS: CorePillar[] = [
  {number:'01',title:'Giáo dục & Đào tạo',shortDesc:'Phát triển các hoạt động học tập, ngoại ngữ, kỹ năng và trải nghiệm giáo dục phù hợp với người trẻ.',fullDesc:'Phát triển các hoạt động học tập, ngoại ngữ, kỹ năng và trải nghiệm giáo dục phù hợp với người trẻ.',iconName:'GraduationCap',activities:[]},

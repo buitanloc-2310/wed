@@ -33,6 +33,7 @@ import {
   AlertCircle,
   Info
 } from 'lucide-react';
+import { ImageUrlInput } from '../ImageUrlInput';
 import { useDataContext } from '../../context/DataContext';
 import {
   SiteConfig,
@@ -167,7 +168,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 500 * 1024) {
-        onShowToast('Ảnh logo tải trực tiếp nên nhỏ hơn 500 KB để tránh vượt giới hạn tài liệu máy chủ. Có thể dùng URL ảnh thay thế.');
+        onShowToast('Ảnh logo nên nhỏ hơn 500 KB để tải nhanh và hiển thị ổn định.');
         return;
       }
       const reader = new FileReader();
@@ -319,14 +320,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                   Logo Thương Hiệu
                 </label>
                 <div className="space-y-3">
-                  <input
-                    type="text"
-                    id="input-logo-url"
-                    value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
-                    placeholder="Nhập đường dẫn URL ảnh logo (ví dụ: https://...)"
-                    className="w-full text-xs sm:text-sm px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
-                  />
+                  <ImageUrlInput label="Logo đang sử dụng" value={logoUrl} onChange={setLogoUrl} helperText="Tải logo trực tiếp. Không cần dán đường dẫn ảnh."/>
 
                   {/* Nút upload file hoặc chọn mẫu */}
                   <div className="flex flex-wrap items-center gap-2">
@@ -348,7 +342,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition"
                       >
                         <RotateCcw size={13} />
-                        <span>Xóa URL logo</span>
+                        <span>Gỡ logo</span>
                       </button>
                     )}
                   </div>

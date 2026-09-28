@@ -166,7 +166,7 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
           <div className="pt-2">
             <ImagePlaceholder
               imageUrl={article.imageUrl}
-              sizeText="16:9 (1200x675px)"
+              sizeText="Tỷ lệ ảnh gốc"
               description={`Hình ảnh bản tin: ${article.title}`}
               aspectRatio="video"
               theme={article.theme || 'sky'}

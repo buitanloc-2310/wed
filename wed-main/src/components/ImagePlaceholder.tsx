@@ -11,7 +11,7 @@ interface ImagePlaceholderProps {
 }
 
 export const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({
-  sizeText = '16:9 (800x450px)',
+  sizeText = 'Tỷ lệ ảnh gốc',
   description = 'Hình ảnh hoạt động Sky First Network',
   aspectRatio = 'video',
   className = '',
@@ -124,7 +124,7 @@ export const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({
             <span>{imageError ? 'Lỗi tải ảnh' : `Hình ảnh Sky First Network [${sizeText}]`}</span>
           </div>
           <p className={`text-xs font-semibold ${themeStyles.text} line-clamp-2 leading-snug`}>
-            {imageError ? 'Không thể nạp ảnh từ đường dẫn URL. Hiển thị khung mặc định.' : description}
+            {imageError ? 'Không thể nạp ảnh. Hiển thị khung mặc định.' : description}
           </p>
         </div>
       </div>

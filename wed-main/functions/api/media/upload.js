@@ -1,7 +1,7 @@
 import { requireAdminToken, json } from '../../_auth.js';
 
 const MAX_BYTES = 20 * 1024 * 1024;
-const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']);
+const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml', 'application/pdf']);
 
 function safeName(name = 'image') {
   const dot = name.lastIndexOf('.');
@@ -21,7 +21,7 @@ export async function onRequestPost(context) {
   const form = await context.request.formData();
   const file = form.get('file');
   if (!(file instanceof File)) return json({ ok: false, error: 'Chưa chọn tệp.' }, { status: 400 });
-  if (!ALLOWED.has(file.type)) return json({ ok: false, error: 'Chỉ hỗ trợ JPG, PNG, WebP, GIF hoặc PDF.' }, { status: 400 });
+  if (!ALLOWED.has(file.type)) return json({ ok: false, error: 'Hỗ trợ JPG, PNG, WebP, GIF, AVIF, SVG hoặc PDF.' }, { status: 400 });
   if (file.size > MAX_BYTES) return json({ ok: false, error: 'Tệp vượt quá 20 MB.' }, { status: 400 });
 
   const now = new Date();

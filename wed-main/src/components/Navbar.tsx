@@ -8,7 +8,7 @@ interface NavbarProps {
   onNavigate: (page: PageRoute, slug?: string) => void;
 }
 
-type MenuItem = { label: string; page: PageRoute; slug?: string };
+type MenuItem = { label: string; page: PageRoute; slug?: string; description?: string };
 type MenuGroup = { label: string; items: MenuItem[] };
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
             )}
           </button>
 
-          <nav className="hidden lg:flex items-center gap-1" onMouseLeave={() => setOpenDesktopGroup(null)}>
+          <nav className="hidden lg:flex flex-1 items-center justify-around gap-2 px-6" onMouseLeave={() => setOpenDesktopGroup(null)}>
             <button onClick={() => go('home')} className={`px-3 py-2 rounded-xl text-sm font-bold transition ${currentPage==='home'?'text-[#0B5FB4] bg-sky-50':'text-slate-700 hover:text-[#0B5FB4] hover:bg-slate-50'}`}>Trang chủ</button>
             {groups.map(group => {
               const open = openDesktopGroup === group.label;
@@ -48,10 +48,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
                   </button>
                   {open && (
                     <div className="absolute top-full left-0 pt-2 z-[70]">
-                      <div className="w-[310px] rounded-2xl border border-slate-200 bg-white shadow-2xl p-2">
+                      <div className="w-[380px] rounded-2xl border border-slate-200 bg-white shadow-2xl p-2">
                         {group.items.map(item => (
                           <button key={`${item.label}-${item.slug || item.page}`} onClick={() => go(item.page, item.slug)} className="w-full px-4 py-3 rounded-xl text-left text-sm font-semibold text-slate-800 hover:text-[#0B5FB4] hover:bg-sky-50 transition">
-                            {item.label}
+                            <span className="block font-extrabold">{item.label}</span>{item.description&&<span className="mt-1 block text-[11px] leading-4 font-medium text-slate-500">{item.description}</span>}
                           </button>
                         ))}
                       </div>

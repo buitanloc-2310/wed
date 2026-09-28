@@ -82,7 +82,7 @@ export const AdminUnitsManager: React.FC<AdminUnitsManagerProps> = ({
       mission: 'Kiến tạo môi trường phát triển toàn diện và trao quyền cho thanh niên Việt Nam.',
       imageUrl: '',
       imageDescription: 'Không gian làm việc và hoạt động của đơn vị',
-      imageSizeText: '16:9 (1200x675px)',
+      imageSizeText: 'Giữ nguyên tỷ lệ ảnh gốc',
       functions: [
         'Nghiên cứu và phát triển các mô hình giáo dục thực nghiệm',
         'Tổ chức các hội thảo chuyên môn và chương trình tập huấn kỹ năng',

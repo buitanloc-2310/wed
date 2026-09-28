@@ -16,6 +16,8 @@ import {
   Sparkles, Undo2, Redo2, AlignLeft, AlignCenter, AlignRight, Image as ImageIcon, Table2,
 } from 'lucide-react';
 
+import { adminApi } from '../../lib/adminApi';
+
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -224,10 +226,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   };
 
   const handleInsertImage = () => {
-    const url = prompt('Nhập URL ảnh (https:// hoặc /media/...):', '');
-    if (!url || !/^(https?:\/\/|\/)/i.test(url.trim())) return;
-    const alt = prompt('Mô tả ảnh (alt text):', '') || '';
-    applyFormat('insertHTML', `<img src="${url.trim().replace(/"/g, '&quot;')}" alt="${alt.replace(/"/g, '&quot;')}" />`);
+    const input=document.createElement('input'); input.type='file'; input.accept='image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml'; input.multiple=true;
+    input.onchange=async()=>{const files=Array.from(input.files||[]); if(!files.length)return; for(const file of files){const form=new FormData();form.append('file',file);try{const data=await adminApi('/api/media/upload',{method:'POST',body:form});if(data?.url)applyFormat('insertHTML',`<figure style="text-align:center"><img src="${String(data.url).replace(/"/g,'&quot;')}" alt="${file.name.replace(/"/g,'&quot;')}" style="max-width:100%;height:auto"/><figcaption>${file.name}</figcaption></figure><p><br></p>`)}catch{alert(`Không thể tải ảnh ${file.name}`)}}}; input.click();
   };
 
   const handleInsertTable = () => {

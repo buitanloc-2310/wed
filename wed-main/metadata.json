@@ -1,6 +1,0 @@
-{
-  "name": "Sky First Network (SFN)",
-  "description": "Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First - Nơi kết nối, kiến tạo tri thức và phát triển kỹ năng cho thế hệ trẻ.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

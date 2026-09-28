@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function adminDoc() { return get(/databases/$(database)/documents/admin_users/$(request.auth.uid)); }
+    function isAdmin() { return signedIn() && adminDoc().data.status == 'active' && adminDoc().data.role in ['developer','admin','editor']; }
+    function isPrivileged() { return signedIn() && adminDoc().data.status == 'active' && adminDoc().data.role in ['developer','admin']; }
+    function inviteForEmail() { return get(/databases/$(database)/documents/admin_invites/$(request.auth.token.email)); }
+    function hasInvite() { return signedIn() && request.auth.token.email != null && exists(/databases/$(database)/documents/admin_invites/$(request.auth.token.email)); }
+    function bootstrapMissing() { return !exists(/databases/$(database)/documents/system/bootstrap); }
+    match /system/bootstrap { allow read: if true; allow create: if signedIn() && bootstrapMissing() && request.resource.data.completed == true; allow update, delete: if isPrivileged(); }
+    match /admin_invites/{email} {
+      allow read: if signedIn() && (request.auth.token.email == email || isPrivileged());
+      allow create, update, delete: if isPrivileged() || (signedIn() && request.auth.token.email == email && hasInvite());
+    }
+    match /admin_users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isPrivileged());
+      allow create: if isPrivileged() || (signedIn() && uid == request.auth.uid && bootstrapMissing() && request.resource.data.role == 'developer' && request.resource.data.status == 'active') || (signedIn() && uid == request.auth.uid && hasInvite() && request.resource.data.email == request.auth.token.email && request.resource.data.role == inviteForEmail().data.role && request.resource.data.status == inviteForEmail().data.status);
+      allow update, delete: if isPrivileged();
+    }
+    match /site_config/{docId} { allow read: if true; allow write: if isPrivileged(); }
+    match /{col}/{id} {
+      allow read: if col in ['custom_pages','programs','network_units','news_articles','certificates','cms_modules'] || isAdmin();
+      allow write: if isAdmin();
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

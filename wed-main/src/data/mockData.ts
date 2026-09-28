@@ -5,7 +5,7 @@ export const NETWORK_UNITS: NetworkUnit[] = [
 ];
 
 // Chưa có số liệu được xác minh để công khai. Khối thống kê mặc định không dùng trên trang chủ.
-export const Sky First Network_STATS = [];
+export const SFN_STATS = [];
 
 export const CORE_PILLARS: CorePillar[] = [
  {number:'01',title:'Giáo dục & Đào tạo',shortDesc:'Phát triển các hoạt động học tập, ngoại ngữ, kỹ năng và trải nghiệm giáo dục phù hợp với người trẻ.',fullDesc:'Phát triển các hoạt động học tập, ngoại ngữ, kỹ năng và trải nghiệm giáo dục phù hợp với người trẻ.',iconName:'GraduationCap',activities:[]},

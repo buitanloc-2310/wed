@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { TeamMember, CorePillar, TimelineMilestone, PageRoute, CoreValueItem } from '../../types';
 import { ImageUrlInput } from '../ImageUrlInput';
+import { EntityBadge } from '../EntityColorSystem';
+import { EntityColorPicker } from '../EntityColorSystem';
 import { useDataContext } from '../../context/DataContext';
 
 interface AdminAboutManagerProps {
@@ -459,7 +461,7 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
                         <div className="min-w-0">
                           <div className="text-[10px] font-bold uppercase tracking-wider text-[#0284C7]">Thành viên #{index + 1}</div>
                           <h4 className="truncate text-sm font-black text-slate-900">{member.name}</h4>
-                          <div className="truncate text-xs font-medium text-slate-500">{member.role}</div>
+                          <div className="mt-1 max-w-full"><EntityBadge label={member.role || 'Chưa có chức danh'} color={member.roleColor} className="rounded-md px-2 py-0.5 text-[10px]" /></div>
                         </div>
                       </div>
 
@@ -476,6 +478,13 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
                         <input className={inputClass} value={member.role} onChange={(e) => updateTeam(index, { role: e.target.value })} />
                       </Field>
                     </div>
+
+                    <EntityColorPicker
+                      label="Màu chức danh"
+                      entityLabel={member.role || member.name || 'Chức danh'}
+                      value={member.roleColor}
+                      onChange={(roleColor) => updateTeam(index, { roleColor })}
+                    />
 
                     <Field label="Giới thiệu ngắn">
                       <textarea rows={4} className={textareaClass} value={member.bio} onChange={(e) => updateTeam(index, { bio: e.target.value })} />

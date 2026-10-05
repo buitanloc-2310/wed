@@ -14,6 +14,7 @@ import { useDataContext } from '../context/DataContext';
 import { PageRoute, NewsArticle } from '../types';
 import { getArticleSlug } from '../utils/slug';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { EntityBadge } from '../components/EntityColorSystem';
 import { RichTextRenderer } from '../components/RichTextRenderer';
 import { NewsComments } from '../components/NewsComments';
 
@@ -130,9 +131,11 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
           {/* Category & Meta */}
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-100 pb-4">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-sky-50 text-[#0284C7] border border-sky-200 rounded-full font-extrabold uppercase tracking-wider text-[11px]">
-                {article.categoryLabel}
-              </span>
+              <EntityBadge
+                label={article.categoryLabel}
+                color={article.categoryColor}
+                className="uppercase tracking-wider"
+              />
               <span className="text-slate-400 font-mono bg-slate-50 px-2 py-0.5 rounded-md text-[11px]">
                 /tin-tuc/{currentSlug}
               </span>
@@ -228,7 +231,7 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
                     }}
                     className="p-4 bg-white rounded-2xl border border-slate-200 hover:border-sky-300 hover:shadow-xs transition cursor-pointer group space-y-2"
                   >
-                    <span className="text-[11px] font-bold text-[#0284C7]">{other.categoryLabel}</span>
+                    <EntityBadge label={other.categoryLabel} color={other.categoryColor} className="px-2 py-0.5 text-[10px]" />
                     <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-[#0284C7] transition line-clamp-2 leading-snug">
                       {other.title}
                     </h4>

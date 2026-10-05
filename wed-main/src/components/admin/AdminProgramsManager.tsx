@@ -25,7 +25,10 @@ import {
 } from 'lucide-react';
 import { Program, PageRoute, AdminManagerActionRef } from '../../types';
 import { ImageUrlInput } from '../ImageUrlInput';
+import { EntityBadge } from '../EntityColorSystem';
+import { EntityColorPicker } from '../EntityColorSystem';
 import { createUniqueSlug, generateSlug, getProgramSlug } from '../../utils/slug';
+import { getSemanticStatusColor } from '../EntityColorSystem';
 
 interface AdminProgramsManagerProps {
   programs: Program[];
@@ -240,20 +243,12 @@ export const AdminProgramsManager: React.FC<AdminProgramsManagerProps> = ({
 
                     {/* Cột 2: Nhãn (Tách riêng biệt thành một cột) */}
                     <div className="hidden sm:flex sm:col-span-2 items-center flex-wrap gap-1">
-                      <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200 shrink-0">
-                        {prog.categoryLabel || 'Dự án'}
-                      </span>
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${
-                          prog.status === 'open'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : prog.status === 'upcoming'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-slate-100 text-slate-600 border-slate-200'
-                        }`}
-                      >
-                        {prog.statusLabel || (prog.status === 'open' ? 'Đang mở đơn' : 'Đã đóng')}
-                      </span>
+                      <EntityBadge label={prog.categoryLabel || 'Dự án'} color={prog.categoryColor} className="rounded-md px-2 py-0.5 text-[10px]" />
+                      <EntityBadge
+                        label={prog.statusLabel || (prog.status === 'open' ? 'Đang mở đơn' : 'Đã đóng')}
+                        color={prog.statusColor || getSemanticStatusColor(prog.status)}
+                        className="rounded-md px-2 py-0.5 text-[10px]"
+                      />
                     </div>
 
                     {/* Cột 3: Thời gian & Địa điểm */}
@@ -697,20 +692,22 @@ export const AdminProgramsManager: React.FC<AdminProgramsManagerProps> = ({
                 </select>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                  Màu Sắc Chủ Đề (Theme)
-                </label>
-                <select
-                  value={activeProg.theme}
-                  onChange={(e) => onUpdateProgram(activeProg.id, { theme: e.target.value as any })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
-                >
-                  <option value="sky">Xanh Da Trời (Sky)</option>
-                  <option value="emerald">Xanh Lá (Emerald)</option>
-                  <option value="amber">Cam Vàng (Amber)</option>
-                  <option value="rose">Hồng Đỏ (Rose)</option>
-                </select>
+              <div className="space-y-3">
+                <EntityColorPicker
+                  label="Màu chuyên mục"
+                  entityLabel={activeProg.categoryLabel || activeProg.category}
+                  value={activeProg.categoryColor}
+                  onChange={(categoryColor) => onUpdateProgram(activeProg.id, { categoryColor })}
+                  helperText="Màu nhận diện chuyên mục. Không giới hạn 4 màu; có fallback ổn định nếu để Tự động."
+                />
+                <EntityColorPicker
+                  label="Màu trạng thái"
+                  entityLabel={activeProg.statusLabel || activeProg.status}
+                  value={activeProg.statusColor}
+                  fallbackColor={getSemanticStatusColor(activeProg.status)}
+                  onChange={(statusColor) => onUpdateProgram(activeProg.id, { statusColor })}
+                  helperText="Trạng thái dùng màu semantic mặc định; có thể override khi thật sự cần. Màu không quyết định quyền hay logic."
+                />
               </div>
             </div>
           </div>

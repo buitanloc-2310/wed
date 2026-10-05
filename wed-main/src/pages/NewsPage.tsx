@@ -9,6 +9,7 @@ import {
 import { motion } from 'motion/react';
 import { useDataContext } from '../context/DataContext';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { EntityBadge } from '../components/EntityColorSystem';
 import { NewsArticle, PageRoute } from '../types';
 
 interface NewsPageProps {
@@ -76,9 +77,10 @@ export const NewsPage: React.FC<NewsPageProps> = ({
 
                 <div className="lg:col-span-6 space-y-4">
                   <div className="flex items-center gap-3 text-xs text-slate-400">
-                    <span className="bg-sky-50 text-[#0284C7] font-extrabold px-3 py-1 rounded-full border border-sky-200">
-                      {featuredArticle.categoryLabel}
-                    </span>
+                    <EntityBadge
+                      label={featuredArticle.categoryLabel}
+                      color={featuredArticle.categoryColor}
+                    />
                     <span className="flex items-center gap-1.5 font-medium text-slate-600">
                       <Calendar size={14} className="text-[#0284C7]" />
                       {featuredArticle.date}
@@ -154,9 +156,11 @@ export const NewsPage: React.FC<NewsPageProps> = ({
 
                 <div className="p-6 space-y-3">
                   <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span className="font-extrabold text-[#0284C7] bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
-                      {article.categoryLabel}
-                    </span>
+                    <EntityBadge
+                      label={article.categoryLabel}
+                      color={article.categoryColor}
+                      className="px-2.5 py-0.5"
+                    />
                     <span className="font-medium text-slate-500">{article.date}</span>
                   </div>
 

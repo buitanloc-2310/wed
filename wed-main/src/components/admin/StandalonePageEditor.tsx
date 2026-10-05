@@ -120,7 +120,7 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
     page.teamSectionSubtitle || 'Ban Chấp hành Sky First Network'
   );
   const [customTeam, setCustomTeam] = useState<TeamMember[]>(
-    page.customTeam && page.customTeam.length > 0 ? page.customTeam : [...TEAM_DATA]
+    Array.isArray(page.customTeam) ? page.customTeam : [...TEAM_DATA]
   );
 
   // About Page: Units

@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { NewsArticle, PageRoute, AdminManagerActionRef } from '../../types';
 import { ImageUrlInput } from '../ImageUrlInput';
+import { EntityBadge } from '../EntityColorSystem';
+import { EntityColorPicker } from '../EntityColorSystem';
 import { createUniqueSlug, generateSlug, getArticleSlug } from '../../utils/slug';
 import { RichTextEditor } from './RichTextEditor';
 
@@ -242,9 +244,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
 
                     {/* Cột 2: Nhãn (Tách riêng biệt thành một cột) */}
                     <div className="hidden sm:flex sm:col-span-2 items-center flex-wrap gap-1">
-                      <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200 shrink-0">
-                        {article.category || 'Tin tức'}
-                      </span>
+                      <EntityBadge label={article.categoryLabel || article.category || 'Tin tức'} color={article.categoryColor} className="rounded-md px-2 py-0.5 text-[10px]" />
                     </div>
 
                     {/* Cột 3: Tác giả & Thời gian đọc */}
@@ -592,17 +592,35 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                 </label>
                 <select
                   value={activeArticle.category}
-                  onChange={(e) => onUpdateArticle(activeArticle.id, { category: e.target.value })}
+                  onChange={(e) => {
+                    const category = e.target.value;
+                    const labels: Record<string, string> = {
+                      announcement: 'Thông Báo',
+                      event: 'Hoạt Động & Sự Kiện',
+                      community: 'Gương Sáng & Nhân Vật',
+                      training: 'Đào Tạo & Kỹ Năng',
+                      media: 'Báo Chí & Truyền Thông',
+                    };
+                    onUpdateArticle(activeArticle.id, { category, categoryLabel: labels[category] || category });
+                  }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
                 >
-                  <option value="Thông Báo">Thông Báo Chính Thức</option>
-                  <option value="Hoạt Động">Hoạt Động & Sự Kiện</option>
-                  <option value="Gương Sáng">Gương Sáng & Nhân Vật</option>
-                  <option value="Đào Tạo">Đào Tạo & Kỹ Năng</option>
-                  <option value="Báo Chí">Báo Chí & Truyền Thông</option>
+                  <option value="announcement">Thông Báo Chính Thức</option>
+                  <option value="event">Hoạt Động & Sự Kiện</option>
+                  <option value="community">Gương Sáng & Nhân Vật</option>
+                  <option value="training">Đào Tạo & Kỹ Năng</option>
+                  <option value="media">Báo Chí & Truyền Thông</option>
                 </select>
               </div>
             </div>
+
+            <EntityColorPicker
+              label="Màu chuyên mục bài viết"
+              entityLabel={activeArticle.categoryLabel || activeArticle.category || 'Tin tức'}
+              value={activeArticle.categoryColor}
+              onChange={(categoryColor) => onUpdateArticle(activeArticle.id, { categoryColor })}
+              helperText="Có thể chọn bất kỳ màu nhận diện phù hợp hoặc để Tự động theo tên chuyên mục."
+            />
 
             <div>
               <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-1.5">

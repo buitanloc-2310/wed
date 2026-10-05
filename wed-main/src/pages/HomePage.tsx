@@ -18,6 +18,7 @@ import {
 
 import { PageRoute, Program, NewsArticle } from '../types';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { EntityBadge } from '../components/EntityColorSystem';
 import { useDataContext } from '../context/DataContext';
 
 interface HomePageProps {
@@ -258,9 +259,11 @@ export const HomePage: React.FC<HomePageProps> = ({
                   </div>
 
                   <div className="p-6">
-                    <div className="text-[11px] font-black uppercase tracking-[.14em] text-[#0B5FB4]">
-                      {p.categoryLabel || 'Hoạt động'}
-                    </div>
+                    <EntityBadge
+                      label={p.categoryLabel || 'Hoạt động'}
+                      color={p.categoryColor}
+                      className="uppercase tracking-[.08em]"
+                    />
 
                     <h3 className="mt-3 text-xl font-black text-slate-950">
                       {p.title}

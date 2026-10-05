@@ -165,6 +165,7 @@ export interface NetworkUnit {
   leader: {
     name: string;
     title: string;
+    color?: string;
   };
   description: string;
   mission: string;
@@ -176,7 +177,8 @@ export interface NetworkUnit {
     phone: string;
     portal?: string;
   };
-  theme: 'sky' | 'emerald' | 'amber' | 'rose' | 'indigo';
+  theme: string;
+  badgeColor?: string;
   imageDescription: string;
   imageSizeText: string;
   imageUrl?: string;
@@ -206,7 +208,9 @@ export interface Program {
   registrationReceiptBody?: string;
   registrationAcceptedSubject?: string;
   registrationAcceptedBody?: string;
-  theme: 'sky' | 'emerald' | 'amber' | 'rose';
+  theme: string;
+  categoryColor?: string;
+  statusColor?: string;
   date: string;
   location: string;
   targetAudience: string;
@@ -235,7 +239,8 @@ export interface NewsArticle {
   imageUrl?: string;
   galleryImages?: string[];
   isFeatured?: boolean;
-  theme?: 'sky' | 'emerald' | 'amber' | 'rose';
+  theme?: string;
+  categoryColor?: string;
   tags: string[];
   source?: string;
   allowComments?: boolean;
@@ -301,7 +306,9 @@ export interface TeamMember {
   imageSizeText: string;
   imageDescription: string;
   imageUrl?: string;
-  theme: 'sky' | 'emerald' | 'amber' | 'rose';
+  /** Optional HEX override. If omitted, role gets a deterministic colour by name. */
+  roleColor?: string;
+  theme: string;
 }
 
 export interface FAQItem {

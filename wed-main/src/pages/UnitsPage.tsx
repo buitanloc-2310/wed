@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, Building2, Mail, Phone } from 'lucide-react';
 import { PageRoute } from '../types';
 import { useDataContext } from '../context/DataContext';
+import { EntityBadge } from '../components/EntityColorSystem';
 
 interface UnitsPageProps { onNavigate: (page: PageRoute) => void; }
 
@@ -26,10 +27,16 @@ export const UnitsPage: React.FC<UnitsPageProps> = ({ onNavigate }) => {
             {unit.imageUrl ? <img src={unit.imageUrl} alt={`Logo ${unit.name}`} className="w-full h-full object-contain"/> : <Building2 size={34} className="text-slate-400"/>}
           </div>
           <div>
-            <div className="text-xs uppercase tracking-[.14em] font-black text-[#0B5FB4]">{unit.categoryLabel}</div>
+            <EntityBadge label={unit.categoryLabel} color={unit.badgeColor} className="uppercase tracking-[.08em]" />
             <h2 className="mt-2 text-3xl font-black">{unit.name}</h2>
             {unit.tagline && <p className="mt-2 text-slate-500">{unit.tagline}</p>}
             <p className="mt-5 leading-7 text-slate-600">{unit.description}</p>
+            {(unit.leader?.name || unit.leader?.title) && (
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+                {unit.leader?.name && <span className="font-bold text-slate-800">{unit.leader.name}</span>}
+                {unit.leader?.title && <EntityBadge label={unit.leader.title} color={unit.leader.color} />}
+              </div>
+            )}
             <div className="mt-5 flex flex-wrap gap-4 text-sm text-slate-600">
               {unit.contact.email && <a className="inline-flex items-center gap-2" href={`mailto:${unit.contact.email}`}><Mail size={16}/> {unit.contact.email}</a>}
               {unit.contact.phone && <a className="inline-flex items-center gap-2" href={`tel:${unit.contact.phone.replace(/\s/g,'')}`}><Phone size={16}/> {unit.contact.phone}</a>}

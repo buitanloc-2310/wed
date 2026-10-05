@@ -18,6 +18,7 @@ import { motion } from 'motion/react';
 import { CORE_VALUES } from '../data/mockData';
 import { useDataContext } from '../context/DataContext';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { EntityBadge } from '../components/EntityColorSystem';
 import { PageRoute } from '../types';
 
 interface AboutPageProps {
@@ -208,11 +209,9 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
     pageData?.teamSectionSubtitle ||
     'Sky First Network';
 
-  const activeTeam =
-    pageData?.customTeam &&
-    pageData.customTeam.length > 0
-      ? pageData.customTeam
-      : DEFAULT_TEAM;
+  const activeTeam = Array.isArray(pageData?.customTeam)
+    ? pageData.customTeam
+    : DEFAULT_TEAM;
 
   /*
    * 7. ĐƠN VỊ
@@ -761,9 +760,15 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
                       {member.name}
                     </h3>
 
-                    <div className="mt-2 inline-flex rounded-lg bg-sky-50 px-2.5 py-1 text-[11px] font-black text-[#0284C7]">
-                      {member.role}
-                    </div>
+                    {member.role && (
+                      <div className="mt-2 max-w-full">
+                        <EntityBadge
+                          label={member.role}
+                          color={member.roleColor}
+                          className="rounded-lg px-2.5 py-1 text-left"
+                        />
+                      </div>
+                    )}
 
                     {member.bio && (
                       <p className="mt-4 text-sm leading-7 text-slate-600">

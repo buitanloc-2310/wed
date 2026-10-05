@@ -11,6 +11,8 @@ import {
 import { motion } from 'motion/react';
 import { useDataContext } from '../context/DataContext';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { EntityBadge } from '../components/EntityColorSystem';
+import { getSemanticStatusColor } from '../components/EntityColorSystem';
 import { Program, ProgramCategory, PageRoute } from '../types';
 
 interface ProgramsPageProps {
@@ -126,10 +128,6 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
         {filteredPrograms.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 sm:gap-7">
             {filteredPrograms.map((prog, prIdx) => {
-              const isVolunteer = prog.category === 'volunteer';
-              const isRecruit = prog.category === 'recruitment';
-              const themeColor = isVolunteer ? 'emerald' : isRecruit ? 'amber' : prog.category === 'workshop' ? 'rose' : 'sky';
-
               return (
                 <motion.div
                   key={prog.id}
@@ -147,7 +145,7 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
                         sizeText={prog.imageSizeText}
                         description={prog.imageDescription}
                         aspectRatio="video"
-                        theme={themeColor}
+                        theme={prog.theme || 'sky'}
                         imageUrl={prog.imageUrl}
                       />
                     </div>
@@ -155,25 +153,18 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
                     {/* Content */}
                     <div className="p-6 space-y-3.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
-                          prog.category === 'volunteer'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : prog.category === 'recruitment'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : prog.category === 'workshop'
-                            ? 'bg-rose-50 text-rose-700 border-rose-200'
-                            : 'bg-sky-50 text-[#0284C7] border-sky-200'
-                        }`}>
-                          {prog.categoryLabel}
-                        </span>
+                        <EntityBadge
+                          label={prog.categoryLabel}
+                          color={prog.categoryColor}
+                          className="text-xs"
+                        />
 
-                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                          prog.status === 'open'
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-amber-500 text-white'
-                        }`}>
-                          {prog.statusLabel}
-                        </span>
+                        <EntityBadge
+                          label={prog.statusLabel}
+                          color={prog.statusColor || getSemanticStatusColor(prog.status)}
+                          solid
+                          className="text-xs"
+                        />
                       </div>
 
                       <h3 className="text-xl font-extrabold text-slate-900 group-hover:text-[#0284C7] transition leading-snug">

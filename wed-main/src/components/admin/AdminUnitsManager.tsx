@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { NetworkUnit, PageRoute, AdminManagerActionRef } from '../../types';
 import { ImageUrlInput } from '../ImageUrlInput';
+import { EntityBadge } from '../EntityColorSystem';
+import { EntityColorPicker } from '../EntityColorSystem';
 
 interface AdminUnitsManagerProps {
   units: NetworkUnit[];
@@ -250,9 +252,7 @@ export const AdminUnitsManager: React.FC<AdminUnitsManagerProps> = ({
                         </span>
                       )}
                       {unit.categoryLabel && (
-                        <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200 shrink-0">
-                          {unit.categoryLabel}
-                        </span>
+                        <EntityBadge label={unit.categoryLabel} color={unit.badgeColor} className="rounded-md px-2 py-0.5 text-[10px]" />
                       )}
                       {!unit.isFlagship && !unit.categoryLabel && (
                         <span className="text-xs text-slate-400">—</span>
@@ -265,9 +265,9 @@ export const AdminUnitsManager: React.FC<AdminUnitsManagerProps> = ({
                         <Users size={12} className="text-[#0284C7] shrink-0" />
                         <span className="truncate">{unit.leader?.name || 'Ban Lãnh Đạo'}</span>
                       </div>
-                      <span className="text-[11px] text-slate-400 block truncate mt-0.5">
-                        {unit.leader?.title || 'Phụ trách đơn vị'}
-                      </span>
+                      <div className="mt-1">
+                        <EntityBadge label={unit.leader?.title || 'Phụ trách đơn vị'} color={unit.leader?.color} className="rounded-md px-2 py-0.5 text-[10px]" />
+                      </div>
                     </div>
 
                     {/* Cột 3: Lĩnh vực & Cụm Action Icons khi hover */}
@@ -665,22 +665,13 @@ export const AdminUnitsManager: React.FC<AdminUnitsManagerProps> = ({
                 </select>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                  Màu Sắc Nhận Diện (Theme Card)
-                </label>
-                <select
-                  value={activeUnit.theme}
-                  onChange={(e) => onUpdateUnit(activeUnit.id, { theme: e.target.value as any })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
-                >
-                  <option value="sky">Xanh da trời</option>
-                  <option value="emerald">Xanh Lá (Emerald - hoạt động tình nguyện)</option>
-                  <option value="indigo">Xanh Chàm (Indigo - hoạt động nghiên cứu)</option>
-                  <option value="rose">Hồng Đỏ (Rose - hoạt động truyền thông)</option>
-                  <option value="amber">Cam Vàng (Amber - hệ thống Giấy chứng nhận)</option>
-                </select>
-              </div>
+              <EntityColorPicker
+                label="Màu nhận diện đơn vị"
+                entityLabel={activeUnit.categoryLabel || activeUnit.name}
+                value={activeUnit.badgeColor}
+                onChange={(badgeColor) => onUpdateUnit(activeUnit.id, { badgeColor })}
+                helperText="Không giới hạn 4-5 màu. Để Tự động để màu ổn định theo tên lĩnh vực/đơn vị."
+              />
             </div>
           </div>
         </div>
@@ -764,6 +755,17 @@ export const AdminUnitsManager: React.FC<AdminUnitsManagerProps> = ({
               />
             </div>
           </div>
+
+          <EntityColorPicker
+            label="Màu chức danh người phụ trách"
+            entityLabel={activeUnit.leader?.title || activeUnit.leader?.name || 'Người phụ trách'}
+            value={activeUnit.leader?.color}
+            onChange={(color) =>
+              onUpdateUnit(activeUnit.id, {
+                leader: { ...activeUnit.leader, color }
+              })
+            }
+          />
         </div>
 
         {/* KHỐI 4: GIỚI THIỆU TỔNG QUAN & SỨ MỆNH CỐT LÕI */}

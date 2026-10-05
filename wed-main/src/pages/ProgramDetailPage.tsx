@@ -19,7 +19,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useDataContext } from '../context/DataContext';
 import { PageRoute, Program } from '../types';
 import { getProgramSlug } from '../utils/slug';
+import { getSemanticStatusColor } from '../components/EntityColorSystem';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { EntityBadge } from '../components/EntityColorSystem';
 
 interface ProgramDetailPageProps {
   programSlugOrId: string;
@@ -235,12 +237,8 @@ export const ProgramDetailPage: React.FC<ProgramDetailPageProps> = ({
             {/* Title & Badges */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-4">
               <div className="flex flex-wrap items-center gap-2.5">
-                <span className="px-3 py-1 bg-sky-50 text-[#0284C7] border border-sky-200 rounded-full text-xs font-black tracking-wide uppercase">
-                  {program.categoryLabel}
-                </span>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[program.status] || statusColors.open}`}>
-                  {program.statusLabel}
-                </span>
+                <EntityBadge label={program.categoryLabel} color={program.categoryColor} className="uppercase tracking-wide text-xs" />
+                <EntityBadge label={program.statusLabel} color={program.statusColor || getSemanticStatusColor(program.status)} solid className="text-xs" />
               </div>
 
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
@@ -649,7 +647,7 @@ export const ProgramDetailPage: React.FC<ProgramDetailPageProps> = ({
                         className="p-3 bg-slate-50 hover:bg-sky-50/60 rounded-2xl border border-slate-100 hover:border-sky-200 transition cursor-pointer group space-y-1.5"
                       >
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-[#0284C7] font-bold">{otherProg.categoryLabel}</span>
+                          <EntityBadge label={otherProg.categoryLabel} color={otherProg.categoryColor} className="px-2 py-0.5 text-[10px]" />
                           <span className="text-slate-400">{otherProg.date}</span>
                         </div>
                         <h4 className="text-xs font-bold text-slate-900 group-hover:text-[#0284C7] transition line-clamp-2 leading-snug">

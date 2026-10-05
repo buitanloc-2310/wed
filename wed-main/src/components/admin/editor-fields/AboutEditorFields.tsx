@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { CorePillar, TimelineMilestone, TeamMember, CoreValueItem } from '../../../types';
 import { ImageUrlInput } from '../../ImageUrlInput';
+import { EntityColorPicker } from '../../EntityColorSystem';
 import { CORE_PILLARS, CORE_VALUES, TIMELINE_DATA, TEAM_DATA } from '../../../data/mockData';
 
 interface AboutEditorFieldsProps {
@@ -979,17 +980,22 @@ export const AboutEditorFields: React.FC<AboutEditorFieldsProps> = ({
                     </div>
                   </div>
 
-                  {customTeam.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteMember(mIdx)}
-                      className="text-slate-400 hover:text-rose-500 p-1 transition cursor-pointer"
-                      title="Xóa thành viên này"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteMember(mIdx)}
+                    className="text-slate-400 hover:text-rose-500 p-1 transition cursor-pointer"
+                    title="Xóa thành viên này"
+                  >
+                    <Trash2 size={15} />
+                  </button>
                 </div>
+
+                <EntityColorPicker
+                  label="Màu chức danh"
+                  entityLabel={member.role || member.name || 'Chức danh'}
+                  value={member.roleColor}
+                  onChange={(roleColor) => handleUpdateMember(mIdx, { roleColor })}
+                />
 
                 <ImageUrlInput label="Ảnh chân dung" value={member.imageUrl || ''} onChange={(v)=>handleUpdateMember(mIdx,{imageUrl:v})} helperText="Tải ảnh chân dung trực tiếp từ thiết bị."/>
 

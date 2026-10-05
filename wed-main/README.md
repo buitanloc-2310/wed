@@ -13,6 +13,11 @@ Website hiện có được cập nhật trên Cloudflare Pages. Có trang quả
 
 Tệp đang được nội dung đã lưu sử dụng sẽ được giữ lại khi yêu cầu xóa. Tìm kiếm thư viện áp dụng cho các trang tệp đã tải; dùng Tải thêm để mở rộng kết quả.
 
+
+## Màu chức danh và nhãn nhận diện
+
+Hệ thống badge dùng `src/components/EntityColorSystem.tsx`. Chức danh, đơn vị, chuyên mục, tag và trạng thái có màu fallback ổn định theo tên; cùng một nhãn không đổi màu sau refresh. Admin có thể chọn màu bất kỳ bằng color picker hoặc chọn preset. Màu tùy chỉnh được lưu ngay cùng document/entity hiện có, không tạo bảng hay truy vấn D1 riêng. Trạng thái nghiệp vụ vẫn dùng semantic status độc lập với role/permission.
+
 ## Chạy và triển khai
 
 Node.js 24 trở lên. Tại thư mục chứa `package.json`:
@@ -23,6 +28,6 @@ npm run check
 npm run build
 ```
 
-`npm run dev` chỉ xem giao diện; API cần môi trường Cloudflare Pages Functions. Bản ZIP có đúng 100 tệp, gồm mã nguồn, ảnh, cấu hình, API và kiểm thử. `dist/` được tạo bởi `npm run build`; không đóng gói bản build sinh tự động để giữ giới hạn tệp. Xem [CLOUDFLARE_DEPLOY.md](CLOUDFLARE_DEPLOY.md) để cập nhật project `wed` hiện có. Không upload riêng `dist/` lên hosting tĩnh nếu cần CMS.
+`npm run dev` chỉ xem giao diện; API cần môi trường Cloudflare Pages Functions. Bản ZIP có đúng 100 tệp, gồm mã nguồn, ảnh, cấu hình, API và kiểm thử. `dist/` được tạo bởi `npm run build`; không đóng gói bản build sinh tự động để giữ giới hạn tệp. Khi triển khai project `wed` hiện có, giữ nguyên bindings/secrets đang dùng và chạy migration theo thứ tự trong thư mục `migrations/`. Không upload riêng `dist/` lên hosting tĩnh nếu cần CMS.
 
 Bản bàn giao đã kiểm tra trong môi trường thử nghiệm; chưa được triển khai lên tên miền đang chạy.

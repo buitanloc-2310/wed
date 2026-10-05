@@ -3,6 +3,8 @@ import json, re, sqlite3, sys
 
 ROOT = Path(__file__).resolve().parents[1]
 errors = []
+source_files = [p for p in ROOT.rglob('*') if p.is_file() and not any(part in {'node_modules','dist','.git','.wrangler','__pycache__'} for part in p.relative_to(ROOT).parts)]
+if len(source_files) > 100: errors.append(f'File limit exceeded: {len(source_files)} > 100')
 
 def require(path):
     if not (ROOT / path).exists():
@@ -37,7 +39,7 @@ except Exception as exc:
     errors.append(f'wrangler.jsonc invalid: {exc}')
 
 try:
-    sql = (ROOT / 'migrations/0010_website_media_comments_contacts.sql').read_text(encoding='utf-8')
+    sql = '\n'.join(p.read_text(encoding='utf-8') for p in sorted((ROOT / 'migrations').glob('*.sql')))
     executable = '\n'.join(line for line in sql.splitlines() if not line.lstrip().startswith('--'))
     if re.search(r'\b(DROP|TRUNCATE|DELETE\s+FROM)\b', executable, re.I):
         errors.append('Migration contains destructive SQL')
@@ -70,6 +72,7 @@ if errors:
     sys.exit(1)
 
 print('RELEASE CHECK PASSED')
+print(f'Delivery files: {len(source_files)}/100')
 print(f'Configured page slugs checked: {len(nav | footer)}')
 print('Additive D1 migration checked: OK')
 print('Critical media/comments/contact/registration files: OK')

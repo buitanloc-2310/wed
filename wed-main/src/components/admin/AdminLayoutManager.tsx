@@ -1,3 +1,4 @@
+import {ImageUrlInput} from '../ImageUrlInput';
 import React, { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Check, Eye, EyeOff, Save, X } from 'lucide-react';
 import { useDataContext } from '../../context/DataContext';
@@ -15,7 +16,7 @@ const LABELS: Record<SectionKey,string> = {
   hero:'Đầu trang', direction:'Định hướng 2026', pillars:'05 Trụ cột hoạt động', programs:'Chương trình & hoạt động',
   units:'Đơn vị trực thuộc', certificate:'Tra cứu Giấy chứng nhận', values:'06 Giá trị cốt lõi', news:'Tin tức & hoạt động', transparency:'Thông tin minh bạch'
 };
-const DEFAULT_ORDER: SectionKey[] = ['hero','direction','pillars','programs','units','certificate','values','news','transparency'];
+const DEFAULT_ORDER: SectionKey[] = ['hero','pillars','programs','units','certificate','values','news','transparency'];
 
 export const AdminLayoutManager: React.FC<Props> = ({ onShowToast, onSwitchTab }) => {
   const { siteConfig, updateSiteConfig } = useDataContext();
@@ -24,7 +25,7 @@ export const AdminLayoutManager: React.FC<Props> = ({ onShowToast, onSwitchTab }
   const sections = siteConfig.homeSections || {};
   const order = useMemo(() => {
     const saved=(siteConfig.homeSectionOrder||[]).filter((x): x is SectionKey => DEFAULT_ORDER.includes(x as SectionKey));
-    return [...saved, ...DEFAULT_ORDER.filter(x=>!saved.includes(x))];
+    return [...new Set(saved), ...DEFAULT_ORDER.filter(x=>!saved.includes(x))];
   }, [siteConfig.homeSectionOrder]);
 
   const toggle = async (key:SectionKey) => {
@@ -40,7 +41,7 @@ export const AdminLayoutManager: React.FC<Props> = ({ onShowToast, onSwitchTab }
   };
   const open = (key:SectionKey) => {
     const data:Record<SectionKey,Record<string,string>>={
-      hero:{heroBadge:siteConfig.heroBadge||'',heroHeading:siteConfig.heroHeading||'',heroSubtext:siteConfig.heroSubtext||'',heroButton1Text:siteConfig.heroButton1Text||'',heroButton1Url:siteConfig.heroButton1Url||'',heroButton2Text:siteConfig.heroButton2Text||'',heroButton2Url:siteConfig.heroButton2Url||''},
+      hero:{heroBadge:siteConfig.heroBadge||'',heroHeading:siteConfig.heroHeading||'',heroSubtext:siteConfig.heroSubtext||'',heroImageUrl:siteConfig.heroImageUrl||'',heroImageFit:siteConfig.heroImageFit||'cover',heroButton1Text:siteConfig.heroButton1Text||'',heroButton1Url:siteConfig.heroButton1Url||'',heroButton2Text:siteConfig.heroButton2Text||'',heroButton2Url:siteConfig.heroButton2Url||''},
       direction:{directionLabel:siteConfig.directionLabel||'',directionPillarsCount:siteConfig.directionPillarsCount||'05',directionPillarsLabel:siteConfig.directionPillarsLabel||'Trụ cột hoạt động',directionValuesCount:siteConfig.directionValuesCount||'06',directionValuesLabel:siteConfig.directionValuesLabel||'Giá trị cốt lõi',directionText:siteConfig.directionText||''},
       pillars:{pillarsHeading:siteConfig.pillarsHeading||'',pillarsSubtext:siteConfig.pillarsSubtext||''},
       programs:{programsLabel:siteConfig.programsLabel||'',programsHeading:siteConfig.programsHeading||''},
@@ -52,7 +53,7 @@ export const AdminLayoutManager: React.FC<Props> = ({ onShowToast, onSwitchTab }
     };
     setDraft(data[key]); setEditing(key);
   };
-  const save=async()=>{ if(!editing)return; const ok=await updateSiteConfig(draft as Partial<SiteConfig>); onShowToast?.(ok?`Đã lưu nội dung “${LABELS[editing]}” và đồng bộ lên website.`:`Đã cập nhật “${LABELS[editing]}” trên trình duyệt nhưng chưa ghi được lên máy chủ.`); if(ok)setEditing(null); };
+  const save=async()=>{ if(!editing)return; const ok=await updateSiteConfig(draft as Partial<SiteConfig>); onShowToast?.(ok?`Đã lưu nội dung “${LABELS[editing]}” và đồng bộ lên website.`:`Chưa lưu được “${LABELS[editing]}” lên máy chủ. Vui lòng thử lại.`); if(ok)setEditing(null); };
 
   return <div className="space-y-6">
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -84,7 +85,7 @@ export const AdminLayoutManager: React.FC<Props> = ({ onShowToast, onSwitchTab }
       <div className="w-full max-w-2xl max-h-[88vh] overflow-auto rounded-3xl bg-white shadow-2xl">
         <div className="sticky top-0 bg-white border-b border-slate-200 p-5 flex justify-between items-center"><div><div className="text-xs uppercase tracking-wider text-[#0B5FB4] font-black">Trang chủ</div><h3 className="text-xl font-extrabold">{LABELS[editing]}</h3></div><button onClick={()=>setEditing(null)} className="p-2"><X size={20}/></button></div>
         <div className="p-5 space-y-4">
-          {Object.entries(draft).map(([k,v])=><label key={k} className="block"><span className="block text-sm font-bold text-slate-700 mb-1">{fieldLabel(k)}</span>{isLong(k)?<textarea rows={4} value={v} onChange={e=>setDraft({...draft,[k]:e.target.value})} className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-sky-500"/>:<input value={v} onChange={e=>setDraft({...draft,[k]:e.target.value})} className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-sky-500"/>}</label>)}
+          {Object.entries(draft).map(([k,v])=>k==='heroImageFit'?<label key={k} className="block text-sm font-semibold">Cách hiển thị ảnh<select value={v} onChange={e=>setDraft({...draft,[k]:e.target.value})} className="block w-full border rounded-xl p-3 mt-2"><option value="cover">Phủ khung (ảnh hoạt động)</option><option value="contain">Giữ toàn bộ (logo, poster)</option></select></label>:k==='heroImageUrl'?<ImageUrlInput key={k} label="Ảnh banner trang chủ" value={v} onChange={url=>setDraft({...draft,[k]:url})}/>:<label key={k} className="block"><span className="block text-sm font-bold text-slate-700 mb-1">{fieldLabel(k)}</span>{isLong(k)?<textarea aria-label={fieldLabel(k)} rows={4} value={v} onChange={e=>setDraft({...draft,[k]:e.target.value})} className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-sky-500"/>:<input aria-label={fieldLabel(k)} value={v} onChange={e=>setDraft({...draft,[k]:e.target.value})} className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-sky-500"/>}</label>)}
         </div>
         <div className="sticky bottom-0 bg-white border-t border-slate-200 p-5 flex justify-end gap-2"><button onClick={()=>setEditing(null)} className="px-4 py-2 rounded-xl border border-slate-200 font-bold">Hủy</button><button onClick={save} className="px-4 py-2 rounded-xl bg-[#0B5FB4] text-white font-bold flex items-center gap-2"><Save size={16}/>Lưu thay đổi</button></div>
       </div>
@@ -92,7 +93,7 @@ export const AdminLayoutManager: React.FC<Props> = ({ onShowToast, onSwitchTab }
   </div>;
 };
 
-function isLong(k:string){return ['heroSubtext','directionText','pillarsSubtext','unitsIntro','certificateText','transparencyText'].includes(k)}
-function fieldLabel(k:string){
+function isLong(k:string){return ['heroHeading','heroSubtext','directionText','pillarsSubtext','unitsIntro','certificateText','transparencyText'].includes(k)}
+export function fieldLabel(k:string){
   const m:Record<string,string>={heroBadge:'Nhãn đầu trang',heroHeading:'Tiêu đề chính',heroSubtext:'Mô tả',heroButton1Text:'Nút 1',heroButton1Url:'Liên kết nút 1',heroButton2Text:'Nút 2',heroButton2Url:'Liên kết nút 2',directionLabel:'Nhãn định hướng',directionText:'Nội dung định hướng',directionPillarsCount:'Số trụ cột',directionPillarsLabel:'Nhãn số trụ cột',directionValuesCount:'Số giá trị',directionValuesLabel:'Nhãn số giá trị',pillarsHeading:'Nhãn trụ cột',pillarsSubtext:'Tiêu đề khối',programsLabel:'Nhãn chương trình',programsHeading:'Tiêu đề chương trình',unitsLabel:'Nhãn đơn vị',unitsHeading:'Tiêu đề đơn vị',unitsIntro:'Mô tả đơn vị',certificateLabel:'Nhãn tra cứu',certificateHeading:'Tiêu đề tra cứu',certificateText:'Mô tả tra cứu',certificateButtonText:'Chữ trên nút',certificateButtonUrl:'Liên kết nút',valuesLabel:'Nhãn giá trị cốt lõi',valuesHeading:'Tiêu đề giá trị cốt lõi',newsLabel:'Nhãn tin tức',newsHeading:'Tiêu đề tin tức',transparencyHeading:'Tiêu đề minh bạch',transparencyText:'Nội dung minh bạch',transparencyButtonText:'Chữ trên nút',transparencyButtonUrl:'Liên kết nút'}; return m[k]||k;
 }

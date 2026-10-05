@@ -4,6 +4,9 @@ const PUBLIC_COLLECTIONS = new Set(['site_config','cms_modules','custom_pages','
 const ALWAYS_PUBLIC = new Set(['site_config','cms_modules','certificates']);
 
 async function ensureSchema(context){
+  if(!context.env.DB)throw new Error('Missing DB');
+  await context.env.DB.prepare('CREATE TABLE IF NOT EXISTS website_cms_deleted(collection_name TEXT NOT NULL,doc_id TEXT NOT NULL,deleted_at TEXT NOT NULL,PRIMARY KEY(collection_name,doc_id))').run();
+  await context.env.DB.prepare('CREATE TABLE IF NOT EXISTS website_cms_collections(collection_name TEXT PRIMARY KEY, initialized_at TEXT NOT NULL)').run();
   await context.env.DB.prepare(`CREATE TABLE IF NOT EXISTS website_cms_documents (
     collection_name TEXT NOT NULL,
     doc_id TEXT NOT NULL,
@@ -21,6 +24,7 @@ function publishedFlag(collection,data){
   return data?.isPublished === true ? 1 : 0;
 }
 async function optionalAdmin(context){
+  if(!context.request.headers.get('authorization'))return null;
   try { const response=await requireAdminToken(context); return response ? null : context.data.adminUser; } catch { return null; }
 }
 export async function onRequestGet(context){
@@ -39,18 +43,23 @@ export async function onRequestGet(context){
       ? context.env.DB.prepare('SELECT data_json FROM website_cms_documents WHERE collection_name=? AND is_published=1 ORDER BY updated_at DESC').bind(collection)
       : context.env.DB.prepare('SELECT data_json FROM website_cms_documents WHERE collection_name=? ORDER BY updated_at DESC').bind(collection);
     const rows=await q.all();
-    return json({ok:true,items:(rows.results||[]).map(r=>JSON.parse(r.data_json))});
+    const initialized=Boolean(await context.env.DB.prepare('SELECT collection_name FROM website_cms_collections WHERE collection_name=?').bind(collection).first())||Boolean(await context.env.DB.prepare('SELECT doc_id FROM website_cms_documents WHERE collection_name=? LIMIT 1').bind(collection).first());
+    const removed=await context.env.DB.prepare('SELECT doc_id FROM website_cms_deleted WHERE collection_name=?').bind(collection).all();
+    const hidden=!admin&&!ALWAYS_PUBLIC.has(collection)?await context.env.DB.prepare('SELECT doc_id FROM website_cms_documents WHERE collection_name=? AND is_published=0').bind(collection).all():{results:[]};
+    return json({ok:true,initialized,excludedIds:[...removed.results,...hidden.results].map(row=>row.doc_id),items:(rows.results||[]).map(r=>JSON.parse(r.data_json))});
   }catch(e){ return json({ok:false,error:'Không thể tải dữ liệu website.'},{status:500}); }
 }
 export async function onRequestPut(context){
   const denied=await requireAdminToken(context); if(denied)return denied; const access={admin:{uid:context.data.adminUser.uid}};
   try{
     await ensureSchema(context); const body=await context.request.json(); const collection=safeName(body?.collection); const id=safeName(body?.id); const data=body?.data;
-    if(!collection||!id||!PUBLIC_COLLECTIONS.has(collection)||!data||typeof data!=='object') return json({ok:false,error:'Dữ liệu lưu không hợp lệ.'},{status:400});
-    const now=new Date().toISOString(); const merged={...data,id:data.id||id,_syncedAt:now}; const pub=publishedFlag(collection,merged);
-    await context.env.DB.prepare(`INSERT INTO website_cms_documents(collection_name,doc_id,data_json,is_published,updated_at,updated_by)
+    if(!collection||!id||!PUBLIC_COLLECTIONS.has(collection)||!data||typeof data!=='object'||Array.isArray(data)) return json({ok:false,error:'Dữ liệu lưu không hợp lệ.'},{status:400});
+    const now=new Date().toISOString(); const merged={...data,id,_syncedAt:now}; const pub=publishedFlag(collection,merged);
+    await context.env.DB.batch([context.env.DB.prepare(`INSERT INTO website_cms_documents(collection_name,doc_id,data_json,is_published,updated_at,updated_by)
       VALUES(?,?,?,?,?,?) ON CONFLICT(collection_name,doc_id) DO UPDATE SET data_json=excluded.data_json,is_published=excluded.is_published,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
-      .bind(collection,id,JSON.stringify(merged),pub,now,access.admin.uid).run();
+      .bind(collection,id,JSON.stringify(merged),pub,now,access.admin.uid),
+    context.env.DB.prepare('INSERT OR IGNORE INTO website_cms_collections(collection_name,initialized_at) VALUES(?,?)').bind(collection,now),
+    context.env.DB.prepare('DELETE FROM website_cms_deleted WHERE collection_name=? AND doc_id=?').bind(collection,id)]);
     return json({ok:true,item:merged,published:Boolean(pub)});
   }catch(e){ return json({ok:false,error:'Không thể lưu dữ liệu website.'},{status:500}); }
 }
@@ -58,6 +67,6 @@ export async function onRequestDelete(context){
   const denied=await requireAdminToken(context); if(denied)return denied; const access={admin:{uid:context.data.adminUser.uid}};
   try{ await ensureSchema(context); const u=new URL(context.request.url); const collection=safeName(u.searchParams.get('collection')); const id=safeName(u.searchParams.get('id'));
     if(!collection||!id||!PUBLIC_COLLECTIONS.has(collection)) return json({ok:false,error:'Yêu cầu xóa không hợp lệ.'},{status:400});
-    await context.env.DB.prepare('DELETE FROM website_cms_documents WHERE collection_name=? AND doc_id=?').bind(collection,id).run(); return json({ok:true});
+    await context.env.DB.batch([context.env.DB.prepare('INSERT OR REPLACE INTO website_cms_deleted(collection_name,doc_id,deleted_at) VALUES(?,?,?)').bind(collection,id,new Date().toISOString()),context.env.DB.prepare('INSERT OR IGNORE INTO website_cms_collections(collection_name,initialized_at) VALUES(?,?)').bind(collection,new Date().toISOString()),context.env.DB.prepare('DELETE FROM website_cms_documents WHERE collection_name=? AND doc_id=?').bind(collection,id)]); return json({ok:true});
   }catch{return json({ok:false,error:'Không thể xóa dữ liệu.'},{status:500});}
 }

@@ -1,8 +1,18 @@
 {
   "application": "Sky First Network Website",
   "track": "WED",
-  "phase": "2",
+  "phase": "cms-media-layout",
   "dataPolicy": "cloud-authoritative",
   "cachePolicy": "html-no-cache-assets-immutable",
-  "browserBaseline": ["Chrome", "Edge", "Firefox", "Safari", "Android WebView", "iOS Safari"]
+  "browserBaseline": [
+    "Chrome",
+    "Edge",
+    "Firefox",
+    "Safari",
+    "Android WebView",
+    "iOS Safari"
+  ],
+  "version": "1.1.0",
+  "verifiedOn": "2026-10-05",
+  "verification": "isolated-local-build-api-browser"
 }

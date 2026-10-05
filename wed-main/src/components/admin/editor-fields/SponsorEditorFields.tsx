@@ -1,3 +1,4 @@
+import {uploadMedia} from '../../../lib/mediaApi';
 import React, { useState, useRef } from 'react';
 import { 
   CreditCard, 
@@ -378,22 +379,8 @@ export const SponsorEditorFields: React.FC<SponsorEditorFieldsProps> = ({
   const [copiedStatus, setCopiedStatus] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Vui lòng chọn file ảnh có dung lượng dưới 5MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setSponsorQrCodeUrl(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const uploadQr=async(file:File)=>{try{const item=await uploadMedia(file,true);setSponsorQrCodeUrl(item.url);}catch(error){alert(error instanceof Error?error.message:'Không tải được ảnh QR.');}};
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {const file=e.target.files?.[0];if(file)void uploadQr(file);};
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -404,24 +391,7 @@ export const SponsorEditorFields: React.FC<SponsorEditorFieldsProps> = ({
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Vui lòng chọn file ảnh có dung lượng dưới 5MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setSponsorQrCodeUrl(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const handleDrop = (e: React.DragEvent) => {e.preventDefault();setIsDragging(false);const file=e.dataTransfer.files?.[0];if(file)void uploadQr(file);};
 
   const handleGenerateVietQR = () => {
     const bankId = sponsorBankId.trim();

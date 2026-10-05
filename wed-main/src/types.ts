@@ -40,6 +40,7 @@ export interface SiteConfig {
   heroHeading: string;
   heroSubtext: string;
   heroImageUrl?: string;
+  heroImageFit?: 'cover' | 'contain';
   logoUrl?: string;
   email?: string;
   hotline?: string;
@@ -145,7 +146,7 @@ export interface SiteConfig {
   /** @deprecated dữ liệu cũ - chỉ giữ để tương thích */
   footerSocialYoutube?: string;
   footerSocialZalo?: string;
-  navigationGroups?: { label: string; items: { label: string; page: PageRoute; slug?: string }[] }[];
+  navigationGroups?: { label: string; items: { label: string; page: PageRoute; slug?: string; description?: string }[] }[];
   footerQuickLinks?: { label: string; url: string }[];
   footerContacts?: { label: string; value: string; url: string; icon?: string }[];
   footerPortals?: { label: string; domain: string; url: string; icon?: string }[];

@@ -9,5 +9,10 @@ export async function onRequestGet(context) {
   headers.set('etag', object.httpEtag);
   headers.set('cache-control', 'public, max-age=31536000, immutable');
   headers.set('x-content-type-options', 'nosniff');
+  if(object.httpMetadata?.contentType==='image/svg+xml') headers.set('content-security-policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+  if(object.httpMetadata?.contentType==='application/pdf') headers.set('content-disposition', 'inline');
+  if(context.request.headers.get('if-none-match')===object.httpEtag)return new Response(null,{status:304,headers});
   return new Response(object.body, { headers });
 }
+
+export async function onRequestHead(context){const response=await onRequestGet(context);return new Response(null,{status:response.status,headers:response.headers});}

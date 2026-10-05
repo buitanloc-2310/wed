@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
   db,
+  auth,
+  isCMSCollectionInitialized,
+  isCMSDocumentExcluded,
+  mergeCMSCollection,
   isFirebaseConfigured,
   syncDocumentToFirestore,
   deleteDocumentFromFirestore,
@@ -134,7 +138,7 @@ const mergeOfficialPages = (incoming: CustomPage[]): CustomPage[] => {
   const bySlug = new Map<string, CustomPage>();
   for (const page of incoming) bySlug.set(page.slug, page);
 
-  for (const baseline of DEFAULT_CUSTOM_PAGES) {
+  for (const baseline of DEFAULT_CUSTOM_PAGES.filter(page=>!isCMSDocumentExcluded('custom_pages',page.id))) {
     const existing = bySlug.get(baseline.slug);
     if (!existing) {
       bySlug.set(baseline.slug, baseline);
@@ -258,7 +262,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (previous) clearTimeout(previous);
     const timer = setTimeout(() => {
       pendingCloudWrites.current.delete(key);
-      void syncDocumentToFirestore(collectionName, docId, data);
+      void syncDocumentToFirestore(collectionName, docId, data).then(ok=>{setFirebaseSyncStatus(ok?'synced':'error');setFirebaseSyncMessage(ok?'Đã lưu nội dung lên máy chủ.':'Chưa lưu được nội dung. Giữ trang này và thử Lưu lại.');});
     }, 700);
     pendingCloudWrites.current.set(key, timer);
   };
@@ -374,25 +378,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // 3. Custom Pages
       const pages = await fetchCollectionFromFirestore<CustomPage>('custom_pages');
-      if (pages.length > 0) {
+      if (pages.length > 0 || isCMSCollectionInitialized('custom_pages')) {
         setCustomPages(mergeOfficialPages(pages));
       }
 
       // 4. Programs
       const progs = await fetchCollectionFromFirestore<Program>('programs');
-      if (progs.length > 0) {
+      if (progs.length > 0 || isCMSCollectionInitialized('programs')) {
         setPrograms(progs);
       }
 
       // 5. Network Units
       const units = await fetchCollectionFromFirestore<NetworkUnit>('network_units');
-      if (units.length > 0) {
-        setNetworkUnits(units);
+      if (units.length > 0 || isCMSCollectionInitialized('network_units')) {
+        setNetworkUnits(mergeCMSCollection('network_units',DEFAULT_NETWORK_UNITS,units));
       }
 
       // 6. News Articles
       const news = await fetchCollectionFromFirestore<NewsArticle>('news_articles');
-      if (news.length > 0) {
+      if (news.length > 0 || isCMSCollectionInitialized('news_articles')) {
         setNewsArticles(news);
       }
 
@@ -440,17 +444,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if(Array.isArray(timelineData?.items)) setTimeline(timelineData.items);
         if(Array.isArray(teamData?.items)) setTeamMembers(teamData.items);
         if(Array.isArray(faqsData?.items)) setFaqs(faqsData.items);
-        if(remotePages.length) setCustomPages(mergeOfficialPages(remotePages));
-        if(remotePrograms.length) setPrograms(remotePrograms);
-        if(remoteUnits.length) setNetworkUnits(remoteUnits);
-        if(remoteNews.length) setNewsArticles(remoteNews);
-        if(remoteCertificates.length) setCertificates(Object.fromEntries(remoteCertificates.map(c=>[c.code,c])));
+        if(remotePages.length || isCMSCollectionInitialized('custom_pages')) setCustomPages(mergeOfficialPages(remotePages));
+        if(remotePrograms.length || isCMSCollectionInitialized('programs')) setPrograms(remotePrograms);
+        if(remoteUnits.length || isCMSCollectionInitialized('network_units')) setNetworkUnits(mergeCMSCollection('network_units',DEFAULT_NETWORK_UNITS,remoteUnits));
+        if(remoteNews.length || isCMSCollectionInitialized('news_articles')) setNewsArticles(remoteNews);
+        if(remoteCertificates.length || isCMSCollectionInitialized('certificates')) setCertificates(Object.fromEntries(remoteCertificates.map(c=>[c.code,c])));
         remoteReadyRef.current=true; setFirebaseSyncStatus('synced'); setFirebaseSyncMessage('Đã đồng bộ dữ liệu.');
       } catch { if(isMounted){setFirebaseSyncStatus('error');setFirebaseSyncMessage('Không thể kết nối dịch vụ dữ liệu lúc này.');} }
       finally { if(isMounted)setIsFirebaseSyncing(false); }
     };
     void loadD1Data();
-    const timer=window.setInterval(()=>{ if(document.visibilityState==='visible') void loadD1Data(); },30000);
+    const timer=window.setInterval(()=>{ if(document.visibilityState==='visible'&&!auth?.currentUser&&pendingCloudWrites.current.size===0) void loadD1Data(); },30000);
     return()=>{isMounted=false;window.clearInterval(timer)};
   }, []);
 
@@ -478,7 +482,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setNetworkUnits(prev => prev.map(u => u.id === id ? target : u));
     if (Object.prototype.hasOwnProperty.call(updates, 'isPublished') && isFirebaseConfigured && db) {
       cancelPendingCloudSync('network_units', id);
-      return await syncDocumentToFirestore('network_units', id, target);
+      const ok=await syncDocumentToFirestore('network_units', id, target);if(!ok){setNetworkUnits(prev=>prev.map(item=>item.id===id?{...item,isPublished:current.isPublished}:item));}return ok;
     }
     scheduleCloudSync('network_units', id, target);
     return true;
@@ -499,7 +503,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPrograms(prev=>prev.map(p=>p.id===id?target:p));
     if (Object.prototype.hasOwnProperty.call(updates, 'isPublished') && isFirebaseConfigured && db) {
       cancelPendingCloudSync('programs', id);
-      return await syncDocumentToFirestore('programs', id, target);
+      const ok=await syncDocumentToFirestore('programs', id, target);if(!ok){setPrograms(prev=>prev.map(item=>item.id===id?{...item,isPublished:current.isPublished}:item));}return ok;
     }
     scheduleCloudSync('programs', id, target);
     return true;
@@ -521,7 +525,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setNewsArticles((prev) => prev.map((item) => (item.id === id ? target : item)));
     if (Object.prototype.hasOwnProperty.call(updates, 'isPublished') && isFirebaseConfigured && db) {
       cancelPendingCloudSync('news_articles', id);
-      return await syncDocumentToFirestore('news_articles', id, target);
+      const ok=await syncDocumentToFirestore('news_articles', id, target);if(!ok){setNewsArticles(prev=>prev.map(item=>item.id===id?{...item,isPublished:current.isPublished}:item));}return ok;
     }
     scheduleCloudSync('news_articles', id, target);
     return true;
@@ -589,7 +593,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCustomPages((prev) => prev.map((item) => (item.id === id ? target : item)));
     if (Object.prototype.hasOwnProperty.call(updates, 'isPublished') && isFirebaseConfigured && db) {
       cancelPendingCloudSync('custom_pages', id);
-      return await syncDocumentToFirestore('custom_pages', id, target);
+      const ok=await syncDocumentToFirestore('custom_pages', id, target);if(!ok){setCustomPages(prev=>prev.map(item=>item.id===id?{...item,isPublished:current.isPublished}:item));}return ok;
     }
     scheduleCloudSync('custom_pages', id, target);
     return true;

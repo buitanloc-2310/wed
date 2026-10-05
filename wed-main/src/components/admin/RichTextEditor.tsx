@@ -1,3 +1,6 @@
+import {sanitizeHtml} from '../../utils/sanitizeHtml';
+import {MediaPicker} from '../MediaPicker';
+import {MediaItem,uploadMediaBatch} from '../../lib/mediaApi';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   Bold,
@@ -106,7 +109,7 @@ export function cleanPastedHtml(rawHtml: string): string {
     let clean = doc.body.innerHTML.trim();
     // Replace duplicate blank paragraphs from Word
     clean = clean.replace(/(<p[^>]*>(&nbsp;|\s)*<\/p>\s*){3,}/gi, '<p><br></p>');
-    return clean;
+    return sanitizeHtml(clean);
   } catch {
     return rawHtml;
   }
@@ -153,6 +156,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   id = 'rich-text-editor',
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
+  const [mediaPickerOpen,setMediaPickerOpen]=useState(false);
+  const mediaSelection=useRef<Range|null>(null);
   const [isCodeView, setIsCodeView] = useState(false);
   const [codeValue, setCodeValue] = useState(value || '');
   const [showPasteToast, setShowPasteToast] = useState(false);
@@ -169,7 +174,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       const currentHtml = editorRef.current.innerHTML;
       const targetHtml = formatInitialContent(value);
       if (currentHtml !== targetHtml && (!currentHtml || currentHtml === '<p><br></p>')) {
-        editorRef.current.innerHTML = targetHtml;
+        editorRef.current.innerHTML = sanitizeHtml(targetHtml);
       }
     }
   }, [value]);
@@ -177,7 +182,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   // Initial load
   useEffect(() => {
     if (editorRef.current && (!editorRef.current.innerHTML || editorRef.current.innerHTML === '<p><br></p>')) {
-      editorRef.current.innerHTML = formatInitialContent(value);
+      editorRef.current.innerHTML = sanitizeHtml(formatInitialContent(value));
     }
   }, []);
 
@@ -216,18 +221,23 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     const selectedText = selection?.toString() || '';
     const url = prompt('Nhập địa chỉ liên kết (URL):', 'https://');
     if (url && url !== 'https://') {
+      if (!/^(https?:\/\/|mailto:|tel:|\/(?!\/)|#)/i.test(url.trim())) return;
       if (selectedText.length > 0) {
         applyFormat('createLink', url);
       } else {
-        const linkHtml = `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+        const safeUrl=url.trim();if(!/^(https?:\/\/|mailto:|tel:|\/(?!\/)|#)/i.test(safeUrl))return;const linkHtml = `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(safeUrl)}</a>`;
         applyFormat('insertHTML', linkHtml);
       }
     }
   };
 
+  const escapeHtml=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+  const rememberMediaSelection=()=>{const selection=window.getSelection();if(selection?.rangeCount&&editorRef.current?.contains(selection.anchorNode))mediaSelection.current=selection.getRangeAt(0).cloneRange();};
+  const insertMedia=(item:MediaItem)=>{const editor=editorRef.current;if(!editor)return;editor.focus();const selection=window.getSelection();selection?.removeAllRanges();const range=mediaSelection.current;if(range&&editor.contains(range.commonAncestorContainer))selection?.addRange(range);else{const end=document.createRange();end.selectNodeContents(editor);end.collapse(false);selection?.addRange(end);}applyFormat('insertHTML',`<figure><img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.alt||item.name)}"/>${item.caption?`<figcaption>${escapeHtml(item.caption)}</figcaption>`:''}</figure><p><br></p>`);rememberMediaSelection();};
   const handleInsertImage = () => {
+    rememberMediaSelection();
     const input=document.createElement('input'); input.type='file'; input.accept='image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml'; input.multiple=true;
-    input.onchange=async()=>{const files=Array.from(input.files||[]); if(!files.length)return; for(const file of files){const form=new FormData();form.append('file',file);try{const data=await adminApi('/api/media/upload',{method:'POST',body:form});if(data?.url)applyFormat('insertHTML',`<figure style="text-align:center"><img src="${String(data.url).replace(/"/g,'&quot;')}" alt="${file.name.replace(/"/g,'&quot;')}" style="max-width:100%;height:auto"/><figcaption>${file.name}</figcaption></figure><p><br></p>`)}catch{alert(`Không thể tải ảnh ${file.name}`)}}}; input.click();
+    input.onchange=async()=>{const files=Array.from(input.files||[]);if(!files.length)return;try{const results=await uploadMediaBatch(files);for(const result of results){if(result.item){const item=result.item;insertMedia(item)}else alert(result.file.name+': '+result.error)}}catch(error){alert(error instanceof Error?error.message:'Không thể tải ảnh.')}};input.click();
   };
 
   const handleInsertTable = () => {
@@ -312,7 +322,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       setIsCodeView(false);
       setTimeout(() => {
         if (editorRef.current) {
-          editorRef.current.innerHTML = codeValue;
+          editorRef.current.innerHTML = sanitizeHtml(codeValue);
           triggerChange();
         }
       }, 50);
@@ -456,6 +466,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <label className="p-1 text-[10px] font-bold text-slate-500" title="Màu chữ">A<input type="color" disabled={isCodeView} onChange={(e)=>applyFormat('foreColor',e.target.value)} className="w-5 h-5 align-middle ml-1" /></label>
           <label className="p-1 text-[10px] font-bold text-slate-500" title="Màu nền chữ">▰<input type="color" disabled={isCodeView} onChange={(e)=>applyFormat('hiliteColor',e.target.value)} className="w-5 h-5 align-middle ml-1" /></label>
           <button type="button" onClick={handleInsertImage} disabled={isCodeView} className="p-1.5 text-slate-600 hover:bg-white rounded-lg" title="Chèn ảnh"><ImageIcon size={15}/></button>
+          <button type="button" onMouseDown={rememberMediaSelection} onClick={()=>setMediaPickerOpen(true)} disabled={isCodeView} className="px-2 py-1.5 text-xs text-sky-700 hover:bg-white rounded-lg" title="Chọn ảnh từ thư viện">Thư viện ảnh</button>
           <button type="button" onClick={handleInsertTable} disabled={isCodeView} className="p-1.5 text-slate-600 hover:bg-white rounded-lg" title="Chèn bảng"><Table2 size={15}/></button>
 
           {/* Clear Format */}
@@ -499,6 +510,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         </div>
       </div>
 
+      {mediaPickerOpen&&<MediaPicker onClose={()=>setMediaPickerOpen(false)} onSelect={item=>{setMediaPickerOpen(false);insertMedia(item)}}/>}
       {/* 2. Format Paste Feedback Banner */}
       {showPasteToast && (
         <div className="bg-emerald-50 border-b border-emerald-200 px-4 py-1.5 flex items-center justify-between text-xs font-bold text-emerald-800 animate-in fade-in duration-200">

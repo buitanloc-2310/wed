@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {Check,Copy,ExternalLink,Eye,FileText,Loader2,RefreshCw,Search,Trash2,UploadCloud,X} from 'lucide-react';
+import { AdminMediaLibrary } from './AdminMediaLibrary';
 import { adminApi as api } from '../../lib/adminApi';
 
 type Kind='comments'|'contacts'|'media'|'registrations'|'participants';
@@ -7,7 +8,7 @@ const statusLabel:Record<string,string>={pending:'Chờ xử lý',approved:'Đã
 const fmt=(v:any)=>v?new Date(v).toLocaleString('vi-VN'):'';
 const safeExternal=(url:string)=>/^https?:\/\//i.test(url||'');
 
-export const AdminRemoteDataManager:React.FC<{kind:Kind;onShowToast:(m:string)=>void}>=({kind,onShowToast})=>{
+const RemoteRecordsManager:React.FC<{kind:Kind;onShowToast:(m:string)=>void}>=({kind,onShowToast})=>{
  const [items,setItems]=useState<any[]>([]),[loading,setLoading]=useState(false),[q,setQ]=useState(''),[detail,setDetail]=useState<any|null>(null);
  const fileRef=useRef<HTMLInputElement|null>(null);
  const endpoint=kind==='comments'?'/api/comments':kind==='contacts'?'/api/contact':kind==='registrations'?'/api/registrations':kind==='participants'?'/api/registrations?view=participants':'/api/media';
@@ -31,3 +32,5 @@ export const AdminRemoteDataManager:React.FC<{kind:Kind;onShowToast:(m:string)=>
 }
 
 const Info=({label,value}:{label:string;value:any})=><div><div className="text-[11px] uppercase tracking-wide font-bold text-slate-400 mb-1">{label}</div><div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-slate-700 break-words">{value||'—'}</div></div>;
+
+export const AdminRemoteDataManager:React.FC<{kind:Kind;onShowToast:(m:string)=>void}>=props=>props.kind==='media'?<AdminMediaLibrary onShowToast={props.onShowToast}/>:<RemoteRecordsManager {...props}/>;

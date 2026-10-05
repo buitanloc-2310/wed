@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {ArrowLeft,Mail,Lock,X,Eye,EyeOff,ShieldCheck} from 'lucide-react';
 import {AdminUser} from '../../types';
-import {getAdminProfile,logoutFirebase,signInWithEmailPasswordReal} from '../../lib/firebaseAuth';
+import {getAdminProfile,logoutFirebase,signInWithEmailPasswordReal} from '../../lib/firebase';
 interface Props{adminUsers:AdminUser[];addAdminUser:(u:AdminUser)=>void;onLoginSuccess:(u:AdminUser)=>void;onNavigateHome:()=>void;onShowToast:(m:string)=>void;}
 const ROOT='skyfirst.ec@gmail.com';
 export const AdminLogin:React.FC<Props>=({onLoginSuccess,onNavigateHome,onShowToast})=>{

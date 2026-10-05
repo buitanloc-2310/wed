@@ -2,22 +2,20 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
-import { AboutPage } from './pages/AboutPage';
-import { ProgramsPage } from './pages/ProgramsPage';
-import { UnitsPage } from './pages/UnitsPage';
-import { NewsPage } from './pages/NewsPage';
-import { CertificatePage } from './pages/CertificatePage';
-import { JoinPage } from './pages/JoinPage';
-import { SponsorPage } from './pages/SponsorPage';
-import { ContactPage } from './pages/ContactPage';
-import { AdminPage } from './pages/AdminPage';
-import { ProgramDetailPage } from './pages/ProgramDetailPage';
-import { NewsDetailPage } from './pages/NewsDetailPage';
-import { CustomPageDetail } from './pages/CustomPageDetail';
-import { ProgramModal } from './components/ProgramModal';
-import { NewsModal } from './components/NewsModal';
+const AboutPage=React.lazy(()=>import('./pages/AboutPage').then(module=>({default:module.AboutPage})));
+const ProgramsPage=React.lazy(()=>import('./pages/ProgramsPage').then(module=>({default:module.ProgramsPage})));
+const UnitsPage=React.lazy(()=>import('./pages/UnitsPage').then(module=>({default:module.UnitsPage})));
+const NewsPage=React.lazy(()=>import('./pages/NewsPage').then(module=>({default:module.NewsPage})));
+const CertificatePage=React.lazy(()=>import('./pages/CertificatePage').then(module=>({default:module.CertificatePage})));
+const JoinPage=React.lazy(()=>import('./pages/JoinPage').then(module=>({default:module.JoinPage})));
+const SponsorPage=React.lazy(()=>import('./pages/SponsorPage').then(module=>({default:module.SponsorPage})));
+const ContactPage=React.lazy(()=>import('./pages/ContactPage').then(module=>({default:module.ContactPage})));
+const AdminPage=React.lazy(()=>import('./pages/AdminPage').then(module=>({default:module.AdminPage})));
+const ProgramDetailPage=React.lazy(()=>import('./pages/ProgramDetailPage').then(module=>({default:module.ProgramDetailPage})));
+const NewsDetailPage=React.lazy(()=>import('./pages/NewsDetailPage').then(module=>({default:module.NewsDetailPage})));
+const CustomPageDetail=React.lazy(()=>import('./pages/CustomPageDetail').then(module=>({default:module.CustomPageDetail})));
 import { Toast } from './components/Toast';
-import { PageRoute, Program, NewsArticle } from './types';
+import { PageRoute } from './types';
 import { useDataContext, DataProvider } from './context/DataContext';
 import { SiteClosedTopBanner } from './components/SiteClosedTopBanner';
 import { SiteClosedNotice } from './components/SiteClosedNotice';
@@ -176,8 +174,6 @@ function AppMainContent() {
   const [currentSlug, setCurrentSlug] = useState<string | undefined>(initialRoute.slug);
   const [adminTab, setAdminTab] = useState<string | undefined>(initialRoute.adminTab);
   const [adminSlug, setAdminSlug] = useState<string | undefined>(initialRoute.adminSlug);
-  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
-  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastGuardRef = useRef<{message:string;at:number}>({message:'',at:0});
   const toastTimerRef = useRef<number | null>(null);
@@ -321,7 +317,7 @@ function AppMainContent() {
           )}
 
         {/* Main Multi-Page Body Content with Explicit URL Routes */}
-        <main className="flex-grow">
+        <main className="flex-grow"><React.Suspense fallback={<div className="min-h-[60vh] grid place-items-center text-slate-500">Đang tải trang…</div>}>
           {currentPage === 'home' && (
             <HomePage
               onNavigate={(p, slug) => handleNavigate(p, slug)}
@@ -427,32 +423,19 @@ function AppMainContent() {
           )}
 
           {currentPage === 'admin' && (
-            <AdminPage
+            <React.Suspense fallback={<div className="min-h-[60vh] grid place-items-center text-slate-500">Đang mở trang quản trị…</div>}><AdminPage
               onNavigate={(p) => handleNavigate(p)}
               onShowToast={showToast}
               initialTab={adminTab as any}
               initialSlug={adminSlug}
-            />
+            /></React.Suspense>
           )}
-        </main>
+        </React.Suspense></main>
 
         {/* Footer (hidden on admin page for focused CMS experience) */}
         {currentPage !== 'admin' && <Footer onNavigate={(p, slug) => handleNavigate(p, slug)} />}
         </>
       )}
-
-      {/* Interactive Detail Modals */}
-      <ProgramModal
-        program={selectedProgram}
-        onClose={() => setSelectedProgram(null)}
-        onShowToast={showToast}
-      />
-
-      <NewsModal
-        article={selectedArticle}
-        onClose={() => setSelectedArticle(null)}
-        onShowToast={showToast}
-      />
 
       {/* Toast Feedback Notification */}
       <Toast

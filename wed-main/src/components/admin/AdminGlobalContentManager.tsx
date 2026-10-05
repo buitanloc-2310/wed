@@ -11,7 +11,7 @@ export const AdminGlobalContentManager:React.FC<{onShowToast:(m:string)=>void}>=
   const contacts=draft.footerContacts||[];
   const portals=draft.footerPortals||[];
   const legal=draft.footerLegalLinks||[];
-  const save=async()=>{const ok=await updateSiteConfig(draft);onShowToast(ok?'Đã lưu nội dung toàn cục và đồng bộ lên website.':'Đã cập nhật trên trình duyệt nhưng chưa ghi được lên máy chủ. Hãy kiểm tra quyền hoặc kết nối.');};
+  const save=async()=>{const ok=await updateSiteConfig(draft);onShowToast(ok?'Đã lưu nội dung toàn cục và đồng bộ lên website.':'Chưa lưu được nội dung. Kiểm tra quyền hoặc kết nối rồi thử lại.');};
   const set=(k:string,v:any)=>setDraft((d:any)=>({...d,[k]:v}));
   const move=(arr:any[],i:number,dir:number)=>{const n=[...arr],j=i+dir;if(j<0||j>=n.length)return arr;[n[i],n[j]]=[n[j],n[i]];return n};
   return <div className="space-y-6 max-w-6xl">

@@ -53,7 +53,7 @@ import { AdminAboutManager } from '../components/admin/AdminAboutManager';
 import { AdminVisualWebsiteEditor } from '../components/admin/AdminVisualWebsiteEditor';
 import { AdminSystemHealth } from '../components/admin/AdminSystemHealth';
 
-import { getAdminProfile, logoutFirebase, subscribeToAuthChanges } from '../lib/firebaseAuth';
+import { getAdminProfile, logoutFirebase, subscribeToAuthChanges } from '../lib/firebase';
 import { canOpenAdminTab } from '../lib/adminPermissions';
 
 interface AdminPageProps {
@@ -238,15 +238,21 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
   useEffect(() => subscribeToAuthChanges(async (firebaseUser) => {
     if (!firebaseUser) { setCurrentAdminUser(null); setCheckingSession(false); return; }
-    const profile = await getAdminProfile(firebaseUser.uid) as AdminUser | null;
-    if (!profile || profile.status !== 'active') {
-      try { await logoutFirebase(); } catch {}
+    try {
+      const profile = await getAdminProfile(firebaseUser.uid) as AdminUser | null;
+      if (!profile || profile.status !== 'active') {
+        await logoutFirebase();
+        setCurrentAdminUser(null);
+      } else {
+        setCurrentAdminUser(profile);
+        void fetchDataFromFirestore();
+      }
+    } catch (error) {
       setCurrentAdminUser(null);
-    } else {
-      setCurrentAdminUser(profile);
-      void fetchDataFromFirestore();
+      onShowToast(error instanceof Error ? error.message : 'Không thể xác minh phiên quản trị. Vui lòng đăng nhập lại.');
+    } finally {
+      setCheckingSession(false);
     }
-    setCheckingSession(false);
   }), []);
 
   const handleLogout = async () => {

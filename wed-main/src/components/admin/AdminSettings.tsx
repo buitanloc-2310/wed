@@ -1,3 +1,4 @@
+import {uploadMedia} from '../../lib/mediaApi';
 import React, { useEffect, useState } from 'react';
 import {
   Image as ImageIcon,
@@ -160,26 +161,13 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
       siteDescription: siteDescription.trim(),
       tagline: tagline.trim() || siteDescription.trim(),
     });
-    onShowToast(ok ? 'Đã lưu nhận diện thương hiệu và đồng bộ lên website.' : 'Đã cập nhật trên trình duyệt nhưng chưa ghi được lên máy chủ. Hãy kiểm tra quyền hoặc kết nối.');
+    onShowToast(ok ? 'Đã lưu nhận diện thương hiệu và đồng bộ lên website.' : 'Chưa lưu được nhận diện. Hãy kiểm tra quyền hoặc kết nối rồi thử lại.');
   };
 
   // Handler: Tải ảnh logo từ máy
-  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 500 * 1024) {
-        onShowToast('Ảnh logo nên nhỏ hơn 500 KB để tải nhanh và hiển thị ổn định.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setLogoUrl(event.target.result as string);
-          onShowToast('Đã tải ảnh logo lên thành công!');
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file=e.target.files?.[0];if(!file)return;
+    try{const item=await uploadMedia(file,true);setLogoUrl(item.url);onShowToast('Đã tải logo vào thư viện. Bấm Lưu nhận diện để sử dụng trên website.');}catch(error){onShowToast(error instanceof Error?error.message:'Không tải được logo.');}finally{e.target.value='';}
   };
 
   // Handler: Mở modal thêm tài khoản

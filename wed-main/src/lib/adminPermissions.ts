@@ -9,7 +9,7 @@ export const can=(role:AdminUserRole,cap:AdminCapability)=>matrix[role].has(cap)
 export const canOpenAdminTab=(role:AdminUserRole,tab:string)=>{
  if(['visual-editor','system-health','logs'].includes(tab)) return can(role,'system.manage');
  if(tab==='settings') return can(role,'settings.manage');
- if(['certificates','partners','contributions','comments','contacts','registrations','participants'].includes(tab)) return can(role,'records.manage');
+ if(['certificates','partners','contributions','comments','contacts','forms','registrations','participants'].includes(tab)) return can(role,'records.manage');
  if(tab==='media') return can(role,'media.manage');
  return can(role,'content.edit');
 };

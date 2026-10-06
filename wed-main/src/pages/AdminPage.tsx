@@ -52,6 +52,7 @@ import { AdminRemoteDataManager } from '../components/admin/AdminRemoteDataManag
 import { AdminAboutManager } from '../components/admin/AdminAboutManager';
 import { AdminVisualWebsiteEditor } from '../components/admin/AdminVisualWebsiteEditor';
 import { AdminSystemHealth } from '../components/admin/AdminSystemHealth';
+import { AdminFormsManager } from '../components/admin/AdminFormsManager';
 
 import { getAdminProfile, logoutFirebase, subscribeToAuthChanges } from '../lib/firebase';
 import { canOpenAdminTab } from '../lib/adminPermissions';
@@ -72,6 +73,7 @@ export type AdminTab =
   | 'posts'
   | 'pages'
   | 'comments'
+  | 'forms'
   | 'registrations'
   | 'participants'
   | 'contacts'
@@ -129,6 +131,7 @@ const MENU_ITEMS: MenuItemConfig[] = [
     icon: <MessageSquare size={18} />,
     largeIcon: <MessageSquare size={24} />,
   },
+  { id: 'forms', label: 'Form Builder', icon: <FileText size={18} />, largeIcon: <FileText size={24} /> },
   {
     id: 'registrations',
     label: 'Đăng ký',
@@ -1215,6 +1218,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             />
           )}
 
+          {activeTab === 'forms' && <AdminFormsManager onShowToast={onShowToast} />}
+
           {(
             [
               'comments',
@@ -1230,7 +1235,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   | 'comments'
                   | 'contacts'
                   | 'media'
-                  | 'registrations'
+                  | 'forms'
+  | 'registrations'
                   | 'participants'
               }
               onShowToast={onShowToast}

@@ -31,3 +31,14 @@ npm run build
 `npm run dev` chỉ xem giao diện; API cần môi trường Cloudflare Pages Functions. Bản ZIP có đúng 100 tệp, gồm mã nguồn, ảnh, cấu hình, API và kiểm thử. `dist/` được tạo bởi `npm run build`; không đóng gói bản build sinh tự động để giữ giới hạn tệp. Khi triển khai project `wed` hiện có, giữ nguyên bindings/secrets đang dùng và chạy migration theo thứ tự trong thư mục `migrations/`. Không upload riêng `dist/` lên hosting tĩnh nếu cần CMS.
 
 Bản bàn giao đã kiểm tra trong môi trường thử nghiệm; chưa được triển khai lên tên miền đang chạy.
+
+## SFN CMS V2 upgrade (2026-10-06)
+- Added data-driven Form Builder under Admin > Form Builder.
+- Forms support create/edit/duplicate/delete, draft/open/closed state, reorderable fields, required/optional fields and option lists.
+- Public Join page now discovers open forms from D1, accepts submissions, issues an SFN application code and provides application lookup without querying when the code is blank.
+- Added D1 migration `0014_forms_people_cms.sql` for forms/submissions and the future People source-of-truth table.
+- Form deletion explicitly deletes its submissions first; individual submission deletion and status update are available at the API layer.
+- Existing certificate center, media library, programs, units, posts, pages, comments, contacts, partners, contributions and audit architecture are retained rather than rebuilt.
+
+### Verification note
+`node --test tests/backend.test.mjs` passes 8/8 on this handoff. Full TypeScript/build verification was not claimed because dependency installation did not complete within the execution window; run `npm ci && npm run check && npm run build` in CI before production deployment.

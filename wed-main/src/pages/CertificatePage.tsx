@@ -1,5 +1,5 @@
 import { sanitizeHtml } from '../utils/sanitizeHtml';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Search,
   CheckCircle2,
@@ -12,7 +12,11 @@ import {
   FileCheck,
   Sparkles,
   Copy,
-  RotateCcw
+  RotateCcw,
+  Camera,
+  X,
+  QrCode,
+  Users
 } from 'lucide-react';
 
 import { useDataContext } from '../context/DataContext';
@@ -95,6 +99,11 @@ export const CertificatePage: React.FC<CertificatePageProps> = ({ onShowToast })
   const [searchedCert, setSearchedCert] = useState<Certificate | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [stats,setStats]=useState({issued:0,valid:0,programs:0,updatedAt:''});
+  const [scanOpen,setScanOpen]=useState(false);
+  const [scanError,setScanError]=useState('');
+  const videoRef=useRef<HTMLVideoElement|null>(null);
+  useEffect(()=>{fetch('/api/cms?collection=certificates&stats=1').then(r=>r.json()).then(d=>{if(d?.ok&&d.stats)setStats(d.stats)}).catch(()=>{})},[]);
 
   const handleLookup = async (codeToSearch?: string) => {
     const target = (codeToSearch ?? certCode)
@@ -497,124 +506,40 @@ export const CertificatePage: React.FC<CertificatePageProps> = ({ onShowToast })
     setErrorMsg('');
   };
 
+
+  useEffect(()=>{if(!scanOpen)return;let stream:MediaStream|undefined;let timer:number|undefined;let stopped=false;const run=async()=>{try{setScanError('');const Detector=(window as any).BarcodeDetector;if(!Detector)throw new Error('Trình duyệt này chưa hỗ trợ quét QR trực tiếp. Bạn vẫn có thể nhập mã thủ công.');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});if(videoRef.current){videoRef.current.srcObject=stream;await videoRef.current.play()}const detector=new Detector({formats:['qr_code']});timer=window.setInterval(async()=>{if(stopped||!videoRef.current)return;try{const result=await detector.detect(videoRef.current);const raw=String(result?.[0]?.rawValue||'').trim();if(!raw)return;let code=raw;try{const u=new URL(raw);code=u.searchParams.get('code')||u.pathname.split('/').filter(Boolean).pop()||raw}catch{}stopped=true;if(timer)window.clearInterval(timer);stream?.getTracks().forEach(t=>t.stop());setScanOpen(false);setCertCode(code.toUpperCase());void handleLookup(code)}catch{}},650)}catch(e:any){setScanError(e?.message||'Không thể mở camera.');}};void run();return()=>{stopped=true;if(timer)window.clearInterval(timer);stream?.getTracks().forEach(t=>t.stop())}},[scanOpen]);
+
   return (
-    <div className="space-y-10 py-6 sm:py-10">
-
-      {/* ================================================= */}
-      {/* HEADER */}
-      {/* ================================================= */}
-
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-50 border border-sky-200 text-xs font-black text-[#0284C7] shadow-2xs">
-            <ShieldCheck
-              size={14}
-              className="text-[#0284C7]"
-            />
-
-            <span>{badgeText}</span>
+    <div className="bg-[#F5F9FD] pb-16">
+      <section className="relative overflow-hidden border-b border-sky-100 bg-gradient-to-br from-white via-sky-50 to-[#DDEEFF]">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-[#0B66C3]/15 blur-3xl"/>
+        <div className="pointer-events-none absolute bottom-[-140px] left-[42%] h-80 w-80 rounded-full bg-cyan-300/20 blur-3xl"/>
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-16">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-3.5 py-1.5 text-xs font-black text-[#0B66C3] shadow-sm"><ShieldCheck size={14}/>{badgeText}</div>
+            <h1 className="mt-5 text-4xl font-black tracking-[-.045em] text-slate-950 sm:text-5xl lg:text-6xl">{titleText}<span className="block text-[#0B66C3]">Sky First Network</span></h1>
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">{summaryText}</p>
+            <div className="mt-7 rounded-[26px] border border-white bg-white/90 p-4 shadow-[0_18px_50px_rgba(15,94,160,.12)] sm:p-5">
+              <label className="text-xs font-black uppercase tracking-wide text-slate-800">{searchLabel}</label>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row"><div className="relative flex-1"><Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/><input value={certCode} onChange={e=>{setCertCode(e.target.value.toUpperCase());if(errorMsg)setErrorMsg('')}} onKeyDown={e=>{if(e.key==='Enter')void handleLookup()}} placeholder={searchPlaceholder} className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 font-mono text-sm font-bold uppercase tracking-wider outline-none focus:border-sky-400 focus:ring-4 focus:ring-sky-100"/></div><button onClick={()=>void handleLookup()} className="min-h-12 rounded-2xl bg-[#0B66C3] px-6 text-sm font-black text-white shadow-lg shadow-sky-900/10">{searchButtonLabel} →</button><button onClick={()=>setScanOpen(true)} className="min-h-12 rounded-2xl border border-sky-200 bg-sky-50 px-4 text-sm font-black text-[#0B66C3] sm:hidden"><Camera size={17} className="inline mr-2"/>Quét QR</button></div>
+              {guidanceNote&&<p className="mt-2 text-[11px] leading-5 text-slate-500">{guidanceNote}</p>}
+              {errorMsg&&<div className="mt-3 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700"><AlertCircle size={15}/>{errorMsg}</div>}
+            </div>
           </div>
-
-          <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-            {titleText}
-          </h1>
-
-          <p className="text-slate-600 text-sm sm:text-base leading-relaxed font-normal">
-            {summaryText}
-          </p>
-
+          <div className="relative min-h-[330px]">
+            <div className="absolute inset-4 rotate-[-5deg] rounded-[28px] border border-sky-200 bg-white/55 shadow-xl"/>
+            <div className="absolute inset-x-8 inset-y-3 rotate-[4deg] rounded-[28px] border border-sky-200 bg-white/70 shadow-xl"/>
+            <div className="relative mx-auto mt-6 max-w-lg rounded-[30px] border border-sky-200 bg-white p-7 shadow-[0_28px_70px_rgba(15,94,160,.18)]">
+              <div className="flex items-start justify-between"><div><img src="/brand/sky-first-network-web.png" alt="Sky First" className="h-12 w-auto object-contain"/><div className="mt-5 text-xs font-black uppercase tracking-[.16em] text-[#0B66C3]">Giấy chứng nhận điện tử</div><div className="mt-2 text-3xl font-black text-slate-950">Xác thực nhanh.<br/>Đối chiếu minh bạch.</div></div><div className="grid h-16 w-16 place-items-center rounded-2xl bg-sky-50 text-[#0B66C3]"><QrCode size={34}/></div></div>
+              <div className="mt-8 h-2 rounded-full bg-gradient-to-r from-[#0B66C3] via-cyan-400 to-sky-100"/>
+              <div className="mt-5 flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 text-emerald-800"><CheckCircle2 size={22}/><div><b className="block text-sm">Xác thực chính thức</b><span className="text-xs">Chỉ hiển thị dữ liệu đã được ghi nhận.</span></div></div>
+            </div>
+          </div>
         </div>
+        <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[[stats.issued,'GCN đã phát hành',Award],[stats.valid,'Đang hợp lệ',ShieldCheck],[stats.programs,'Chương trình có GCN',Building],[stats.updatedAt?new Date(stats.updatedAt).toLocaleDateString('vi-VN'):'—','Cập nhật gần nhất',Calendar]].map(([value,label,Icon]:any)=><div key={label} className="rounded-2xl border border-sky-100 bg-white/85 p-4 shadow-sm"><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-sky-50 text-[#0B66C3]"><Icon size={20}/></span><div><div className="text-2xl font-black tabular-nums text-slate-950">{value}</div><div className="text-xs font-bold text-slate-500">{label}</div></div></div></div>)}</div></div>
       </section>
 
-      {/* ================================================= */}
-      {/* SEARCH BOX */}
-      {/* ================================================= */}
-
-      <section className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        <div className="p-6 sm:p-7 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-3.5">
-
-          <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
-            {searchLabel}
-          </label>
-
-          <div className="flex flex-col sm:flex-row gap-2.5">
-
-            <div className="relative flex-1">
-
-              <input
-                type="text"
-                value={certCode}
-                onChange={e => {
-                  setCertCode(
-                    e.target.value.toUpperCase()
-                  );
-
-                  if (errorMsg) {
-                    setErrorMsg('');
-                  }
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    handleLookup();
-                  }
-                }}
-                placeholder={searchPlaceholder}
-                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 focus:border-[#0284C7] focus:ring-2 focus:ring-sky-100 outline-none font-mono font-bold text-sm tracking-wider uppercase transition shadow-2xs"
-              />
-
-              <Search
-                size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-
-            </div>
-
-            <button
-              type="button"
-              onClick={() => handleLookup()}
-              className="px-6 py-3 bg-[#0284C7] hover:bg-[#0369A1] text-white font-extrabold text-sm rounded-2xl transition flex items-center justify-center gap-2 shadow-sm shadow-sky-500/20 cursor-pointer"
-            >
-              <Search size={16} />
-              <span>{searchButtonLabel}</span>
-            </button>
-
-            {(certCode || hasSearched) && (
-              <button
-                type="button"
-                onClick={handleReset}
-                className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition flex items-center justify-center gap-1.5 cursor-pointer"
-                title="Làm mới kết quả"
-              >
-                <RotateCcw size={14} />
-                <span>{resetButtonLabel}</span>
-              </button>
-            )}
-
-          </div>
-
-          {guidanceNote && (
-            <p className="text-[11px] text-slate-500 leading-relaxed pt-1">
-              *{guidanceNote}
-            </p>
-          )}
-
-          {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
-
-              <AlertCircle
-                size={15}
-                className="flex-shrink-0"
-              />
-
-              <span>{errorMsg}</span>
-
-            </div>
-          )}
-
-        </div>
-      </section>
+      {scanOpen&&<div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-950/75 p-4"><div className="w-full max-w-md overflow-hidden rounded-[28px] bg-white shadow-2xl"><div className="flex items-center justify-between border-b p-4"><div><h3 className="font-black">Quét QR Giấy chứng nhận</h3><p className="text-xs text-slate-500">Đưa QR vào giữa khung camera.</p></div><button onClick={()=>setScanOpen(false)} className="rounded-xl p-2 hover:bg-slate-100"><X size={20}/></button></div><div className="relative aspect-square bg-black"><video ref={videoRef} playsInline muted className="h-full w-full object-cover"/><div className="pointer-events-none absolute inset-[14%] rounded-3xl border-2 border-cyan-300 shadow-[0_0_0_999px_rgba(0,0,0,.25)]"/></div>{scanError&&<div className="p-4 text-sm text-rose-600">{scanError}</div>}</div></div>}
 
       {/* ================================================= */}
       {/* KẾT QUẢ TRA CỨU */}

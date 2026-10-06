@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -20,6 +20,9 @@ import { PageRoute, Program, NewsArticle } from '../types';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
 import { EntityBadge } from '../components/EntityColorSystem';
 import { useDataContext } from '../context/DataContext';
+
+
+const AnimatedStat:React.FC<{value:string}>=({value})=>{const ref=useRef<HTMLSpanElement|null>(null);const[shown,setShown]=useState('0');const ran=useRef(false);useEffect(()=>{const el=ref.current;if(!el)return;const ob=new IntersectionObserver((entries)=>{if(!entries[0]?.isIntersecting||ran.current)return;ran.current=true;const raw=String(value||'0');const m=raw.match(/[\d.,]+/);if(!m){setShown(raw);ob.disconnect();return}const number=Number(m[0].replace(/\./g,'').replace(',','.'));if(!Number.isFinite(number)){setShown(raw);ob.disconnect();return}const suffix=raw.replace(m[0],'');const start=performance.now(),duration=1050;const step=(now:number)=>{const t=Math.min(1,(now-start)/duration),eased=1-Math.pow(1-t,3),v=Math.round(number*eased);setShown(v.toLocaleString('vi-VN')+suffix);if(t<1)requestAnimationFrame(step)};requestAnimationFrame(step);ob.disconnect()},{threshold:.45});ob.observe(el);return()=>ob.disconnect()},[value]);return <span ref={ref}>{shown}</span>};
 
 interface HomePageProps {
   onNavigate: (page: PageRoute, slug?: string) => void;
@@ -69,11 +72,11 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   const publishedPrograms = programs
     .filter((p) => p.isPublished !== false)
-    .slice(0, 3);
+    .slice(0, 5);
 
   const publishedUnits = networkUnits
     .filter((u) => u.isPublished !== false)
-    .slice(0, 2);
+    .slice(0, 8);
 
   const publishedNews = newsArticles
     .filter((n) => n.isPublished !== false)
@@ -170,7 +173,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             ].map(([value,label,Icon]: any, index) => (
               <div key={String(label)} className={`flex items-center gap-4 px-6 py-5 ${index ? 'border-t border-white/10 sm:border-t-0 sm:border-l' : ''}`}>
                 <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/8 text-cyan-300"><Icon size={20}/></span>
-                <div><p className="text-2xl font-black">{value || '—'}</p><p className="mt-0.5 text-xs text-slate-300">{label}</p></div>
+                <div><p className="text-2xl font-black tabular-nums"><AnimatedStat value={String(value || '0')} /></p><p className="mt-0.5 text-xs text-slate-300">{label}</p></div>
               </div>
             ))}
           </div>
@@ -245,158 +248,25 @@ export const HomePage: React.FC<HomePageProps> = ({
     ),
 
     programs: (
-      <section className="relative overflow-hidden bg-[#F5F9FD] py-20 lg:py-24">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-200 to-transparent" />
-
+      <section className="relative overflow-hidden bg-[#F5F9FD] py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[.18em] text-[#0B5FB4]">
-                {siteConfig.programsLabel || 'Chương trình & hoạt động'}
-              </div>
-
-              <h2 className="mt-3 text-4xl font-black tracking-[-.04em] text-slate-950 sm:text-5xl">
-                {siteConfig.programsHeading ||
-                  'Những hoạt động đang được cập nhật'}
-              </h2>
-            </div>
-
-            <button
-              onClick={() => onNavigate('programs')}
-              className="group inline-flex items-center gap-2 font-black text-[#0B5FB4]"
-            >
-              Xem tất cả
-              <ArrowRight
-                size={17}
-                className="transition-transform group-hover:translate-x-1"
-              />
-            </button>
+          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div><div className="text-xs font-black uppercase tracking-[.18em] text-[#0B5FB4]">{siteConfig.programsLabel || 'Chương trình & hoạt động'}</div><h2 className="mt-2 text-3xl font-black tracking-[-.04em] text-slate-950 sm:text-4xl">{siteConfig.programsHeading || 'Bảng tin hoạt động'}</h2></div>
+            <button onClick={() => onNavigate('programs')} className="group inline-flex items-center gap-2 font-black text-[#0B5FB4]">Xem tất cả <ArrowRight size={17} className="transition-transform group-hover:translate-x-1"/></button>
           </div>
-
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {publishedPrograms.length === 0 ? (
-              <div className="lg:col-span-3 rounded-[26px] border border-dashed border-slate-300 bg-white/80 p-10 text-slate-500">
-                Chưa có chương trình được công bố.
-              </div>
-            ) : (
-              publishedPrograms.map((p: any) => (
-                <article
-                  key={p.id}
-                  onClick={() => onSelectProgram?.(p)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ')
-                      onSelectProgram?.(p);
-                  }}
-                  className="group cursor-pointer overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl"
-                >
-                  <div className="relative h-52 overflow-hidden bg-gradient-to-br from-sky-50 to-slate-100">
-                    {p.imageUrl ? (
-                      <img
-                        src={p.imageUrl}
-                        alt=""
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="grid h-full place-items-center text-sky-300">
-                        <GraduationCap size={48} strokeWidth={1.3} />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-6">
-                    <EntityBadge
-                      label={p.categoryLabel || 'Hoạt động'}
-                      color={p.categoryColor}
-                      className="uppercase tracking-[.08em]"
-                    />
-
-                    <h3 className="mt-3 text-xl font-black text-slate-950">
-                      {p.title}
-                    </h3>
-
-                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-500">
-                      {p.summary}
-                    </p>
-
-                    <div className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#0B5FB4]">
-                      Xem chi tiết
-                      <ArrowRight
-                        size={15}
-                        className="transition-transform group-hover:translate-x-1"
-                      />
-                    </div>
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
+          {publishedPrograms.length===0?<div className="rounded-[26px] border border-dashed border-slate-300 bg-white p-10 text-slate-500">Chưa có chương trình được công bố.</div>:<div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
+            {(()=>{const lead=publishedPrograms[0] as any;return <article onClick={()=>onSelectProgram?.(lead)} className="group cursor-pointer overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm"><div className="aspect-[16/9] overflow-hidden bg-slate-100">{lead.imageUrl?<img src={lead.imageUrl} alt={lead.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]"/>:<div className="grid h-full place-items-center text-sky-300"><BookOpen size={52}/></div>}</div><div className="p-6"><EntityBadge label={lead.categoryLabel||'Hoạt động'} color={lead.categoryColor}/><h3 className="mt-3 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">{lead.title}</h3><p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{lead.summary}</p><div className="mt-4 flex items-center justify-between text-xs text-slate-400"><span>{lead.date||'Đang cập nhật'}</span><span className="font-black text-[#0B5FB4]">Xem chi tiết →</span></div></div></article>})()}
+            <div className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm">{publishedPrograms.slice(1,5).map((p:any,i)=><button key={p.id} onClick={()=>onSelectProgram?.(p)} className={`group flex w-full items-center gap-4 p-4 text-left hover:bg-sky-50/70 transition ${i?'border-t border-slate-100':''}`}><div className="h-24 w-36 shrink-0 overflow-hidden rounded-2xl bg-slate-100">{p.imageUrl?<img src={p.imageUrl} alt={p.title} className="h-full w-full object-cover"/>:<div className="grid h-full place-items-center text-sky-300"><GraduationCap size={28}/></div>}</div><div className="min-w-0 flex-1"><div className="text-[10px] font-black uppercase tracking-[.12em] text-[#0B66C3]">{p.categoryLabel||'Hoạt động'}</div><h3 className="mt-1 line-clamp-2 text-base font-black leading-5 text-slate-950 group-hover:text-[#0B66C3]">{p.title}</h3><p className="mt-1 line-clamp-1 text-xs text-slate-500">{p.summary}</p></div><ArrowRight size={17} className="shrink-0 text-slate-300 group-hover:text-[#0B66C3]"/></button>)}</div>
+          </div>}
         </div>
       </section>
     ),
 
     units: (
-      <section className="bg-white py-20 lg:py-24">
+      <section className="bg-white py-12 lg:py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid items-start gap-12 lg:grid-cols-[.9fr_1.1fr]">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[.18em] text-[#0B5FB4]">
-                {siteConfig.unitsLabel || 'Đơn vị'}
-              </div>
-
-              <h2 className="mt-3 text-4xl font-black tracking-[-.04em] text-slate-950 sm:text-5xl">
-                {siteConfig.unitsHeading ||
-                  'Những đơn vị đang cùng phát triển trong hệ sinh thái.'}
-              </h2>
-
-              <p className="mt-5 max-w-xl text-base leading-8 text-slate-500">
-                {siteConfig.unitsIntro}
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {publishedUnits.map((u: any) => (
-                <article
-                  key={u.id}
-                  className="group flex items-center gap-5 rounded-[26px] border border-slate-200 bg-white p-5 transition-all duration-300 hover:border-sky-200 hover:shadow-[0_14px_36px_rgba(15,94,160,.08)]"
-                >
-                  <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-[22px] border border-slate-200 bg-white p-2">
-                    {u.code === 'SFEC' ? (
-                      <img
-                        src="/brand/the-sky-first-english-club-web.png"
-                        alt="SFEC"
-                        className="h-full w-full object-contain"
-                      />
-                    ) : u.code === 'NHN' ? (
-                      <img
-                        src="/brand/nha-han-ngu-web.jpg"
-                        alt=""
-                        className="h-full w-full object-contain"
-                      />
-                    ) : (
-                      <Building2 className="text-[#0B5FB4]" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-lg font-black text-slate-950">
-                      {u.name}
-                    </h3>
-
-                    <p className="mt-1 text-sm leading-6 text-slate-500">
-                      {u.tagline}
-                    </p>
-                  </div>
-
-                  <ArrowUpRight
-                    size={20}
-                    className="hidden text-slate-300 transition group-hover:text-[#0B5FB4] sm:block"
-                  />
-                </article>
-              ))}
-            </div>
-          </div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><div className="text-xs font-black uppercase tracking-[.18em] text-[#0B5FB4]">{siteConfig.unitsLabel || 'Đơn vị trực thuộc'}</div><h2 className="mt-2 text-3xl font-black tracking-[-.04em] text-slate-950 sm:text-4xl">{siteConfig.unitsHeading || 'Hệ sinh thái hoạt động chuyên môn'}</h2><p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500">{siteConfig.unitsIntro}</p></div><button onClick={()=>onNavigate('units')} className="inline-flex items-center gap-2 text-sm font-black text-[#0B5FB4]">Xem hệ sinh thái <ArrowRight size={16}/></button></div>
+          <div className="mt-7 flex gap-4 overflow-x-auto pb-2 snap-x">{publishedUnits.map((u:any)=><article key={u.id} className="group flex min-w-[310px] max-w-[430px] flex-1 snap-start items-center gap-4 rounded-[22px] border border-slate-200 bg-white p-4 hover:border-sky-200 hover:shadow-lg transition"><div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">{u.imageUrl?<img src={u.imageUrl} alt={u.name} className="h-full w-full object-contain"/>:<Building2 className="text-[#0B5FB4]"/>}</div><div className="min-w-0 flex-1"><h3 className="truncate text-base font-black text-slate-950">{u.name}</h3><p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{u.tagline}</p><div className="mt-2 text-[10px] font-bold uppercase tracking-wide text-[#0B66C3]">{u.categoryLabel||'Đơn vị chuyên môn'}</div></div><ArrowUpRight size={18} className="shrink-0 text-slate-300 group-hover:text-[#0B5FB4]"/></article>)}</div>
         </div>
       </section>
     ),

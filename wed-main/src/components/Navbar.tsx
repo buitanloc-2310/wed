@@ -16,6 +16,12 @@ import {
   Sparkles,
   Users,
   X,
+  Home,
+  Info,
+  Newspaper,
+  ScanSearch,
+  FileText,
+  UserRoundPlus,
 } from 'lucide-react';
 import { PageRoute } from '../types';
 import { useDataContext } from '../context/DataContext';
@@ -30,6 +36,7 @@ type MenuItem = { label: string; page: PageRoute; slug?: string; description?: s
 type MenuGroup = { label: string; items: MenuItem[] };
 
 const activityIcons = [GraduationCap, Users, HeartHandshake, Leaf, FlaskConical, FolderKanban, CalendarDays, Handshake, Megaphone];
+const menuIcon=(label:string)=>{const x=label.toLocaleLowerCase('vi');if(x.includes('giấy chứng nhận')||x.includes('tra cứu'))return ScanSearch;if(x.includes('thành viên')||x.includes('core team')||x.includes('tình nguyện'))return Users;if(x.includes('hợp tác')||x.includes('đồng hành'))return Handshake;if(x.includes('tin')||x.includes('bản tin')||x.includes('thông báo'))return Newspaper;if(x.includes('tài liệu')||x.includes('báo cáo'))return FileText;if(x.includes('giáo dục'))return GraduationCap;if(x.includes('môi trường'))return Leaf;if(x.includes('nghiên cứu'))return FlaskConical;return Sparkles};
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
   const { siteConfig, programs, newsArticles, customPages } = useDataContext();
@@ -61,6 +68,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
 
   const renderStandardDropdown = (group: MenuGroup) => {
     const open = openDesktopGroup === group.label;
+    const isLarge = group.items.length > 6;
+    const headerIcon = group.label === 'Giới thiệu' ? Info : group.label === 'Tin tức' ? Newspaper : group.label === 'Tra cứu' ? ScanSearch : group.label === 'Tham gia' ? UserRoundPlus : Sparkles;
+    const HeaderIcon=headerIcon;
     return (
       <div key={group.label} className="relative" onMouseEnter={() => setOpenDesktopGroup(group.label)}>
         <button
@@ -68,21 +78,24 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
           aria-expanded={open}
           className="px-4 py-2.5 rounded-2xl text-[15px] font-semibold text-slate-700 hover:text-[#0B66C3] hover:bg-sky-50 transition flex items-center gap-1.5"
         >
-          {group.label}<ChevronDown size={15} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+          <HeaderIcon size={16}/>{group.label}<ChevronDown size={15} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
         {open && (
           <div className="absolute top-full left-1/2 -translate-x-1/2 pt-3 z-[80]">
-            <div className="w-[390px] rounded-[24px] border border-slate-200/80 bg-white shadow-[0_28px_70px_rgba(15,23,42,.18)] p-2.5">
-              {group.items.map((item) => (
-                <button
-                  key={`${item.label}-${item.slug || item.page}`}
-                  onClick={() => go(item.page, item.slug)}
-                  className="w-full px-4 py-3.5 rounded-2xl text-left hover:bg-sky-50 transition group"
-                >
-                  <span className="block font-extrabold text-slate-900 group-hover:text-[#0B66C3]">{item.label}</span>
-                  {item.description && <span className="mt-1 block text-[12px] leading-5 font-medium text-slate-500">{item.description}</span>}
-                </button>
-              ))}
+            <div className={`${isLarge?'w-[720px]':'w-[430px]'} rounded-[26px] border border-slate-200/80 bg-white shadow-[0_28px_70px_rgba(15,23,42,.18)] p-3`}>
+              <div className="mb-2 flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-white text-[#0B66C3] shadow-sm"><HeaderIcon size={17}/></span><div><div className="font-black text-slate-950">{group.label}</div><div className="text-[11px] text-slate-500">Chọn nội dung bạn muốn khám phá</div></div></div>
+              <div className={`grid gap-1 ${isLarge?'grid-cols-2':''}`}>
+                {group.items.map((item) => {const Icon=menuIcon(item.label);return (
+                  <button
+                    key={`${item.label}-${item.slug || item.page}`}
+                    onClick={() => go(item.page, item.slug)}
+                    className="w-full px-3 py-3 rounded-2xl text-left hover:bg-sky-50 transition group flex gap-3 items-start"
+                  >
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-50 text-[#0B66C3] group-hover:bg-white"><Icon size={16}/></span>
+                    <span className="min-w-0"><span className="block font-extrabold text-slate-900 group-hover:text-[#0B66C3]">{item.label}</span>{item.description && <span className="mt-1 block text-[11px] leading-4 font-medium text-slate-500 line-clamp-2">{item.description}</span>}</span>
+                  </button>
+                )})}
+              </div>
             </div>
           </div>
         )}
@@ -103,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
           </button>
 
           <nav className="hidden lg:flex flex-1 items-center justify-center gap-5 xl:gap-9 px-5" onMouseLeave={() => setOpenDesktopGroup(null)}>
-            <button onClick={() => go('home')} className={`px-4 py-2.5 rounded-2xl text-[15px] font-semibold transition ${currentPage === 'home' ? 'text-[#0B66C3] bg-sky-50' : 'text-slate-700 hover:text-[#0B66C3] hover:bg-sky-50'}`}>Trang chủ</button>
+            <button onClick={() => go('home')} className={`px-4 py-2.5 rounded-2xl text-[15px] font-semibold transition flex items-center gap-1.5 ${currentPage === 'home' ? 'text-[#0B66C3] bg-sky-50' : 'text-slate-700 hover:text-[#0B66C3] hover:bg-sky-50'}`}><Home size={16}/>Trang chủ</button>
             {groups.filter((g) => g.label !== 'Đơn vị trực thuộc').map((group) => {
               if (group.label !== 'Hoạt động') return renderStandardDropdown(group);
               const open = openDesktopGroup === group.label;

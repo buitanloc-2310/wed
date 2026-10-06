@@ -556,7 +556,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                   const title = e.target.value;
                   onUpdateArticle(activeArticle.id, {
                     title,
-                    slug: activeArticle.slug ? activeArticle.slug : generateSlug(title)
+                    slug: activeArticle.isPublished===true ? activeArticle.slug : generateSlug(title)
                   });
                 }}
                 placeholder="Ví dụ: Lễ Phát Động Chiến Dịch Tình Nguyện Mùa Hè Xanh 2026..."
@@ -595,22 +595,30 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                   onChange={(e) => {
                     const category = e.target.value;
                     const labels: Record<string, string> = {
-                      announcement: 'Thông Báo',
-                      event: 'Hoạt Động & Sự Kiện',
-                      community: 'Gương Sáng & Nhân Vật',
-                      training: 'Đào Tạo & Kỹ Năng',
-                      media: 'Báo Chí & Truyền Thông',
+                      announcement:'Thông báo',event:'Sự kiện & Hoạt động',community:'Tình nguyện & Cộng đồng',training:'Hội thảo & Kỹ năng',media:'Truyền thông & Lan tỏa',education:'Giáo dục & Đào tạo',youth:'Phát triển Người trẻ',environment:'Môi trường & Phát triển bền vững',research:'Nghiên cứu & Đổi mới sáng tạo',technology:'Công nghệ & Chuyển đổi số',recruitment:'Tuyển dụng & Nhân sự',project:'Chương trình & Dự án',opportunity:'Cơ hội',report:'Báo cáo & Công khai',culture:'Văn hóa & Xã hội',other:'Khác'
                     };
                     onUpdateArticle(activeArticle.id, { category, categoryLabel: labels[category] || category });
                   }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
                 >
-                  <option value="announcement">Thông Báo Chính Thức</option>
-                  <option value="event">Hoạt Động & Sự Kiện</option>
-                  <option value="community">Gương Sáng & Nhân Vật</option>
-                  <option value="training">Đào Tạo & Kỹ Năng</option>
-                  <option value="media">Báo Chí & Truyền Thông</option>
+                  <option value="education">Giáo dục & Đào tạo</option>
+                  <option value="youth">Phát triển Người trẻ</option>
+                  <option value="community">Tình nguyện & Cộng đồng</option>
+                  <option value="environment">Môi trường & Phát triển bền vững</option>
+                  <option value="media">Truyền thông & Lan tỏa</option>
+                  <option value="event">Sự kiện & Hoạt động</option>
+                  <option value="training">Hội thảo & Kỹ năng</option>
+                  <option value="research">Nghiên cứu & Đổi mới sáng tạo</option>
+                  <option value="technology">Công nghệ & Chuyển đổi số</option>
+                  <option value="recruitment">Tuyển dụng & Nhân sự</option>
+                  <option value="project">Chương trình & Dự án</option>
+                  <option value="opportunity">Cơ hội</option>
+                  <option value="culture">Văn hóa & Xã hội</option>
+                  <option value="announcement">Thông báo</option>
+                  <option value="report">Báo cáo & Công khai</option>
+                  <option value="other">Khác...</option>
                 </select>
+                {activeArticle.category==='other'&&<input value={activeArticle.categoryLabel==='Khác'?'':activeArticle.categoryLabel||''} onChange={e=>onUpdateArticle(activeArticle.id,{categoryLabel:e.target.value})} placeholder="Nhập chuyên mục riêng" className="mt-2 w-full px-3 py-2 bg-white border border-sky-200 rounded-xl text-xs font-bold"/>}
               </div>
             </div>
 

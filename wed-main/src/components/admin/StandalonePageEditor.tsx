@@ -17,6 +17,7 @@ import { SponsorEditorFields } from './editor-fields/SponsorEditorFields';
 import { JoinEditorFields } from './editor-fields/JoinEditorFields';
 import { ContactEditorFields } from './editor-fields/ContactEditorFields';
 import { StandardEditorFields } from './editor-fields/StandardEditorFields';
+import { ImageUrlInput } from '../ImageUrlInput';
 
 interface StandalonePageEditorProps {
   page: CustomPage;
@@ -43,7 +44,7 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
   // 1. Common Basic States
   const [title, setTitle] = useState(page.title || '');
   const [slug, setSlug] = useState(page.slug || '');
-  const [slugTouched, setSlugTouched] = useState(Boolean(page.slug));
+  const [slugTouched, setSlugTouched] = useState(Boolean(page.isPublished));
   React.useEffect(() => { if (!slugTouched) setSlug(generateSlug(title)); }, [title, slugTouched]);
   const [badge, setBadge] = useState(page.badge || '');
   const [summary, setSummary] = useState(page.summary || '');
@@ -1614,7 +1615,7 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
 
                     {['text','quote','html'].includes(block.type) && <textarea value={block.body || ''} onChange={(e)=>updatePageBlock(block.id,{body:e.target.value})} rows={block.type==='html'?7:4} placeholder={block.type==='html'?'HTML an toàn (script sẽ bị loại bỏ)':'Nội dung'} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400" />}
 
-                    {block.type === 'image' && <div className="mt-3 grid gap-3 sm:grid-cols-2"><input value={block.imageUrl || ''} onChange={(e)=>updatePageBlock(block.id,{imageUrl:e.target.value})} placeholder="URL ảnh từ Media Library/R2" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.alt || ''} onChange={(e)=>updatePageBlock(block.id,{alt:e.target.value})} placeholder="Alt text" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.caption || ''} onChange={(e)=>updatePageBlock(block.id,{caption:e.target.value})} placeholder="Chú thích ảnh" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.credit || ''} onChange={(e)=>updatePageBlock(block.id,{credit:e.target.value})} placeholder="Nguồn/Tác giả ảnh" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/></div>}
+                    {block.type === 'image' && <div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><ImageUrlInput label="Ảnh trong nội dung" value={block.imageUrl||''} onChange={url=>updatePageBlock(block.id,{imageUrl:url})} helperText="Tải trực tiếp lên R2, chọn từ Media Library hoặc dán URL." category="media" placeholder="Chọn hoặc tải ảnh"/></div><input value={block.alt || ''} onChange={(e)=>updatePageBlock(block.id,{alt:e.target.value})} placeholder="Alt text" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.caption || ''} onChange={(e)=>updatePageBlock(block.id,{caption:e.target.value})} placeholder="Chú thích ảnh" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.credit || ''} onChange={(e)=>updatePageBlock(block.id,{credit:e.target.value})} placeholder="Nguồn/Tác giả ảnh" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.sourceUrl || ''} onChange={(e)=>updatePageBlock(block.id,{sourceUrl:e.target.value})} placeholder="URL nguồn ảnh (nếu có)" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/></div>}
 
                     {block.type === 'video' && <div className="mt-3 grid gap-3 sm:grid-cols-2"><input value={block.videoUrl || ''} onChange={(e)=>updatePageBlock(block.id,{videoUrl:e.target.value})} placeholder="URL MP4/WebM hoặc YouTube" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.posterUrl || ''} onChange={(e)=>updatePageBlock(block.id,{posterUrl:e.target.value})} placeholder="Poster ảnh (không bắt buộc)" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/></div>}
 

@@ -151,6 +151,7 @@ export interface SiteConfig {
   footerContacts?: { label: string; value: string; url: string; icon?: string }[];
   footerPortals?: { label: string; domain: string; url: string; icon?: string }[];
   footerLegalLinks?: { label: string; url: string }[];
+  organizationInfo?: { label: string; value: string; url?: string; icon?: string; visible?: boolean }[];
   designSystem?: { primary?: string; navy?: string; accent?: string; radius?: string; container?: string; motion?: 'reduced'|'balanced'|'rich' };
   announcement?: { enabled?: boolean; text?: string; buttonLabel?: string; buttonUrl?: string; startAt?: string; endAt?: string; tone?: 'info'|'success'|'warning' };
 }

@@ -51,6 +51,11 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
   const [imageUrl, setImageUrl] = useState(page.imageUrl || '');
   const [secondaryImageUrl, setSecondaryImageUrl] = useState(page.secondaryImageUrl || '');
   const [pageBlocks, setPageBlocks] = useState<PageBlock[]>(Array.isArray(page.pageBlocks) ? page.pageBlocks : []);
+  const [seoTitle,setSeoTitle]=useState(page.seoTitle||'');
+  const [seoDescription,setSeoDescription]=useState(page.seoDescription||'');
+  const [ogImageUrl,setOgImageUrl]=useState(page.ogImageUrl||'');
+  const [canonicalUrl,setCanonicalUrl]=useState(page.canonicalUrl||'');
+  const [noIndex,setNoIndex]=useState(Boolean(page.noIndex));
   const addPageBlock = (type: PageBlockType) => {
     const id = `block-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
     const base: PageBlock = { id, type, background: 'white', align: 'left' };
@@ -695,6 +700,11 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
       imageUrl: imageUrl.trim(),
       secondaryImageUrl: secondaryImageUrl.trim(),
       pageBlocks,
+      seoTitle:seoTitle.trim(),
+      seoDescription:seoDescription.trim(),
+      ogImageUrl:ogImageUrl.trim(),
+      canonicalUrl:canonicalUrl.trim(),
+      noIndex,
       author: author.trim() || 'Ban Quản trị Sky First Network',
       publishedAt: publishedAt || new Date().toLocaleDateString('vi-VN'),
       isPublished: finalPublishState,
@@ -1566,6 +1576,8 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
           />
         )}
 
+        <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4"><div><h2 className="text-sm font-black text-slate-900">SEO & Chia sẻ mạng xã hội</h2><p className="mt-1 text-xs text-slate-500">Thiết lập riêng cho trang; để trống sẽ dùng thông tin chung của website.</p></div><div className="grid gap-3 sm:grid-cols-2"><input value={seoTitle} onChange={e=>setSeoTitle(e.target.value)} placeholder="SEO title" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"/><input value={canonicalUrl} onChange={e=>setCanonicalUrl(e.target.value)} placeholder="Canonical URL" className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"/><textarea value={seoDescription} onChange={e=>setSeoDescription(e.target.value)} rows={3} placeholder="Meta description" className="sm:col-span-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm"/><input value={ogImageUrl} onChange={e=>setOgImageUrl(e.target.value)} placeholder="OG image URL từ Media Library" className="sm:col-span-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm"/><label className="sm:col-span-2 flex items-center gap-2 text-xs font-bold text-slate-700"><input type="checkbox" checked={noIndex} onChange={e=>setNoIndex(e.target.checked)}/>Không cho công cụ tìm kiếm index trang này</label></div></section>
+
         {!isAboutPage && !isCertificatePage && !isSponsorPage && !isJoinPage && !isContactPage && (
           <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4">
@@ -1574,7 +1586,7 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
                 <p className="mt-1 text-xs text-slate-500">Thêm, sắp xếp và chỉnh các khối nội dung mà không cần sửa code.</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {(['text','image','video','stats','cta','quote','divider','html'] as PageBlockType[]).map((type) => (
+                {(['text','image','video','stats','cta','quote','divider','html','gallery','timeline','logos','accordion','tabs','table','documents','people','campaign','funding','transparency','map','embed','marquee'] as PageBlockType[]).map((type) => (
                   <button key={type} type="button" onClick={() => addPageBlock(type)} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-700 hover:border-sky-300 hover:bg-sky-50">+ {type}</button>
                 ))}
               </div>
@@ -1609,8 +1621,10 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
                     {block.type === 'cta' && <div className="mt-3 grid gap-3 sm:grid-cols-2"><input value={block.buttonLabel || ''} onChange={(e)=>updatePageBlock(block.id,{buttonLabel:e.target.value})} placeholder="Tên nút" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.buttonUrl || ''} onChange={(e)=>updatePageBlock(block.id,{buttonUrl:e.target.value})} placeholder="URL nút" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/></div>}
 
                     {block.type === 'stats' && <div className="mt-3 space-y-2">{(block.stats || []).map((stat,statIndex)=><div key={statIndex} className="grid gap-2 sm:grid-cols-[.55fr_1fr_1fr_auto]"><input value={stat.value} onChange={(e)=>{const stats=[...(block.stats||[])];stats[statIndex]={...stats[statIndex],value:e.target.value};updatePageBlock(block.id,{stats})}} placeholder="100+" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm"/><input value={stat.label} onChange={(e)=>{const stats=[...(block.stats||[])];stats[statIndex]={...stats[statIndex],label:e.target.value};updatePageBlock(block.id,{stats})}} placeholder="Nhãn" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm"/><input value={stat.note||''} onChange={(e)=>{const stats=[...(block.stats||[])];stats[statIndex]={...stats[statIndex],note:e.target.value};updatePageBlock(block.id,{stats})}} placeholder="Ghi chú" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm"/><button type="button" onClick={()=>updatePageBlock(block.id,{stats:(block.stats||[]).filter((_,i)=>i!==statIndex)})} className="rounded-lg border border-rose-200 bg-white px-3 text-xs font-bold text-rose-600">×</button></div>)}<button type="button" onClick={()=>updatePageBlock(block.id,{stats:[...(block.stats||[]),{value:'0',label:'Chỉ số'}]})} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold">+ Thêm chỉ số</button></div>}
+                    {['gallery','timeline','logos','accordion','tabs','table','documents','people','campaign','funding','transparency','marquee'].includes(block.type) && <div className="mt-3 space-y-2"><div className="text-[11px] font-bold text-slate-500">Danh sách item của block — có thể thêm, xóa và sắp xếp bằng nội dung bên dưới.</div>{(block.items||[]).map((item,itemIndex)=><div key={itemIndex} className="grid gap-2 sm:grid-cols-[1fr_1.4fr_1fr_auto]"><input value={item.title||''} onChange={e=>{const items=[...(block.items||[])];items[itemIndex]={...items[itemIndex],title:e.target.value};updatePageBlock(block.id,{items})}} placeholder="Tiêu đề / nhãn" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm"/><input value={item.body||''} onChange={e=>{const items=[...(block.items||[])];items[itemIndex]={...items[itemIndex],body:e.target.value};updatePageBlock(block.id,{items})}} placeholder="Mô tả / giá trị" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm"/><input value={item.imageUrl||item.url||''} onChange={e=>{const items=[...(block.items||[])];items[itemIndex]={...items[itemIndex],url:e.target.value,imageUrl:e.target.value};updatePageBlock(block.id,{items})}} placeholder="URL ảnh/file/link" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm"/><button type="button" onClick={()=>updatePageBlock(block.id,{items:(block.items||[]).filter((_,i)=>i!==itemIndex)})} className="rounded-lg border border-rose-200 bg-white px-3 text-xs font-bold text-rose-600">×</button></div>)}<button type="button" onClick={()=>updatePageBlock(block.id,{items:[...(block.items||[]),{title:'Mục mới',body:''}]})} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold">+ Thêm item</button></div>}
+                    {['map','embed'].includes(block.type) && <div className="mt-3 grid gap-3 sm:grid-cols-2"><input value={block.sourceUrl||block.videoUrl||''} onChange={e=>updatePageBlock(block.id,{sourceUrl:e.target.value,videoUrl:e.target.value})} placeholder={block.type==='map'?'URL bản đồ':'URL embed an toàn'} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.body||''} onChange={e=>updatePageBlock(block.id,{body:e.target.value})} placeholder="Mô tả" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/></div>}
+                    <div className="mt-3 grid gap-3 sm:grid-cols-4"><select value={block.width||'normal'} onChange={e=>updatePageBlock(block.id,{width:e.target.value as PageBlock['width']})} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"><option value="normal">Rộng chuẩn</option><option value="wide">Rộng</option><option value="full">Toàn chiều rộng</option></select><select value={block.animation||'none'} onChange={e=>updatePageBlock(block.id,{animation:e.target.value as PageBlock['animation']})} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"><option value="none">Không hiệu ứng</option><option value="fade">Fade</option><option value="slide">Slide</option><option value="zoom">Zoom</option><option value="reveal">Reveal</option></select><label className="flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={block.mobileHidden===true} onChange={e=>updatePageBlock(block.id,{mobileHidden:e.target.checked})}/>Ẩn mobile</label><label className="flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={block.hidden===true} onChange={e=>updatePageBlock(block.id,{hidden:e.target.checked})}/>Ẩn public</label></div>
 
-                    <label className="mt-4 flex items-center gap-2 text-xs font-bold text-slate-600"><input type="checkbox" checked={block.hidden === true} onChange={(e)=>updatePageBlock(block.id,{hidden:e.target.checked})}/>Ẩn block này trên public</label>
                   </article>
                 ))}
               </div>

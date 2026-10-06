@@ -107,3 +107,12 @@ body{background:#fff;color:#142b47}h1,h2,h3{font-kerning:normal}button:focus-vis
 .formatted-content figure.article-media img,.prose-slate figure.article-media img{display:block;width:auto;max-width:100%;max-height:760px;margin:0 auto;border-radius:16px;object-fit:contain}
 .formatted-content figure.article-media figcaption,.prose-slate figure.article-media figcaption{max-width:760px;margin:.7rem auto 0;font-size:.78rem;line-height:1.55;color:#64748b;text-align:center}
 .formatted-content .media-credit,.prose-slate .media-credit{font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;color:#94a3b8;font-weight:700}
+
+/* Sky First platform design tokens & CMS block motion */
+:root{--sfn-primary:#0B66C3;--sfn-navy:#071B3A;--sfn-accent:#22D3EE;--sfn-radius:24px;--sfn-container:1200px}
+.cms-anim{animation-duration:.55s;animation-fill-mode:both;animation-timing-function:cubic-bezier(.22,.61,.36,1)}
+.cms-anim-fade{animation-name:sfnFade}.cms-anim-slide{animation-name:sfnSlide}.cms-anim-zoom{animation-name:sfnZoom}.cms-anim-reveal{animation-name:sfnReveal}
+@keyframes sfnFade{from{opacity:0}to{opacity:1}}@keyframes sfnSlide{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}@keyframes sfnZoom{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}@keyframes sfnReveal{from{opacity:0;clip-path:inset(0 0 25% 0)}to{opacity:1;clip-path:inset(0)}}
+html[data-motion="reduced"] .cms-anim{animation:none!important}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+.article-media img{display:block;max-width:100%;height:auto;margin-inline:auto}.article-media figcaption{font-size:.78rem;line-height:1.45;color:#64748b;text-align:center;margin-top:.65rem}.article-media .media-credit{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}

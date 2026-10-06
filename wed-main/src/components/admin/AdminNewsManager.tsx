@@ -731,6 +731,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:border-sky-500"
               />
             </div>
+            <div className="grid sm:grid-cols-2 gap-3"><input value={activeArticle.imageAlt||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageAlt:e.target.value})} placeholder="Alt text cho ảnh" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><input value={activeArticle.imageCredit||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageCredit:e.target.value})} placeholder="Nguồn/Tác giả ảnh" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><input value={activeArticle.imageSourceUrl||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageSourceUrl:e.target.value})} placeholder="URL nguồn ảnh (nếu có)" className="sm:col-span-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><select value={activeArticle.heroImageMode||'16:9'} onChange={e=>onUpdateArticle(activeArticle.id,{heroImageMode:e.target.value as any})} className="sm:col-span-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"><option value="16:9">Public: crop 16:9</option><option value="original">Trang chi tiết: ảnh nguyên tỷ lệ</option><option value="hidden">Trang chi tiết: ẩn ảnh đầu bài</option></select></div>
           </div>
         </div>
 
@@ -796,6 +797,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                 placeholder="Ví dụ: Sky First Network / Ban Truyền Thông"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
               />
+              <input type="url" value={activeArticle.canonicalUrl||''} onChange={e=>onUpdateArticle(activeArticle.id,{canonicalUrl:e.target.value})} placeholder="URL nguồn gốc / canonical (nếu dẫn nguồn ngoài)" className="mt-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/>
             </div>
 
             <div className="flex items-center gap-3 pt-6">

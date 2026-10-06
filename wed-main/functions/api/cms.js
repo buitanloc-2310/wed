@@ -1,8 +1,8 @@
 import { json, requireAdminToken } from '../_auth.js';
 
-const PUBLIC_COLLECTIONS = new Set(['site_config','cms_modules','custom_pages','programs','network_units','news_articles','certificates']);
+const PUBLIC_COLLECTIONS = new Set(['site_config','cms_modules','custom_pages','programs','network_units','news_articles','certificates','people']);
 const ALWAYS_PUBLIC = new Set(['site_config','cms_modules']);
-const BUNDLE_COLLECTIONS = ['site_config','cms_modules','custom_pages','programs','network_units','news_articles'];
+const BUNDLE_COLLECTIONS = ['site_config','cms_modules','custom_pages','programs','network_units','news_articles','people'];
 
 async function ensureSchema(context){
   if(!context.env.DB)throw new Error('Missing DB');

@@ -151,7 +151,10 @@ export interface SiteConfig {
   footerContacts?: { label: string; value: string; url: string; icon?: string }[];
   footerPortals?: { label: string; domain: string; url: string; icon?: string }[];
   footerLegalLinks?: { label: string; url: string }[];
+  designSystem?: { primary?: string; navy?: string; accent?: string; radius?: string; container?: string; motion?: 'reduced'|'balanced'|'rich' };
+  announcement?: { enabled?: boolean; text?: string; buttonLabel?: string; buttonUrl?: string; startAt?: string; endAt?: string; tone?: 'info'|'success'|'warning' };
 }
+
 
 export interface NetworkUnit {
   id: string;
@@ -218,6 +221,18 @@ export interface Program {
   timeline: string[];
   benefits: string[];
   requirements: string[];
+  campaignType?: 'program' | 'campaign' | 'event' | 'opportunity';
+  startAt?: string;
+  endAt?: string;
+  goalValue?: number;
+  currentValue?: number;
+  goalLabel?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  partnerNames?: string[];
+  impactMetrics?: { value: string; label: string }[];
+  updates?: { date: string; title: string; body: string }[];
+  publicReportUrl?: string;
 }
 
 export interface NewsArticle {
@@ -244,6 +259,17 @@ export interface NewsArticle {
   tags: string[];
   source?: string;
   allowComments?: boolean;
+  pageBlocks?: PageBlock[];
+  imageAlt?: string;
+  imageCaption?: string;
+  imageCredit?: string;
+  imageSourceUrl?: string;
+  heroImageMode?: '16:9' | 'original' | 'hidden';
+  seoTitle?: string;
+  seoDescription?: string;
+  ogImageUrl?: string;
+  canonicalUrl?: string;
+  noIndex?: boolean;
 }
 
 export interface Certificate {
@@ -324,7 +350,7 @@ export interface CoreValueItem {
   theme?: string;
 }
 
-export type PageBlockType = 'text' | 'image' | 'video' | 'stats' | 'cta' | 'quote' | 'divider' | 'html';
+export type PageBlockType = 'text' | 'image' | 'video' | 'stats' | 'cta' | 'quote' | 'divider' | 'html' | 'gallery' | 'timeline' | 'logos' | 'accordion' | 'tabs' | 'table' | 'documents' | 'people' | 'campaign' | 'funding' | 'transparency' | 'map' | 'embed' | 'marquee';
 
 export interface PageBlock {
   id: string;
@@ -345,6 +371,15 @@ export interface PageBlock {
   background?: 'white' | 'soft' | 'navy' | 'sky';
   align?: 'left' | 'center';
   hidden?: boolean;
+  sourceUrl?: string;
+  items?: { title?: string; body?: string; imageUrl?: string; url?: string; label?: string; value?: string }[];
+  columns?: 1 | 2 | 3 | 4;
+  animation?: 'none' | 'fade' | 'slide' | 'zoom' | 'reveal';
+  width?: 'normal' | 'wide' | 'full';
+  mobileHidden?: boolean;
+  autoplay?: boolean;
+  loop?: boolean;
+  muted?: boolean;
 }
 
 export interface CustomPage {
@@ -363,6 +398,11 @@ export interface CustomPage {
   views?: number;
   type?: 'about' | 'contact' | 'faq' | 'custom' | 'legal' | 'programs' | 'units' | 'certificate' | 'sponsor' | 'join';
   showInFooter?: boolean;
+  seoTitle?: string;
+  seoDescription?: string;
+  ogImageUrl?: string;
+  canonicalUrl?: string;
+  noIndex?: boolean;
   badge?: string;
   subtitle?: string;
   // General Button fields (Tên nút và liên kết trỏ đến)

@@ -277,6 +277,8 @@ export const ProgramDetailPage: React.FC<ProgramDetailPageProps> = ({
                 />
               </div>
 
+              {(program.goalValue||program.startAt||program.endAt)&&<div className="rounded-2xl border border-sky-100 bg-sky-50/60 p-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><div className="text-[11px] font-black uppercase tracking-wider text-sky-700">Tiến độ chương trình</div><div className="mt-1 text-2xl font-black text-slate-900">{program.currentValue??0}{program.goalLabel?` ${program.goalLabel}`:''}</div></div>{program.goalValue&&<div className="text-right"><div className="text-[11px] text-slate-500">Mục tiêu</div><div className="font-black">{program.goalValue}{program.goalLabel?` ${program.goalLabel}`:''}</div></div>}</div>{program.goalValue&&<><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-[#0B66C3] transition-all" style={{width:`${Math.min(100,Math.max(0,((program.currentValue||0)/program.goalValue)*100))}%`}}/></div><div className="mt-2 text-[11px] font-bold text-slate-500">{Math.min(100,Math.max(0,((program.currentValue||0)/program.goalValue)*100)).toFixed(0)}% hoàn thành</div></>}{(program.startAt||program.endAt)&&<div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-600">{program.startAt&&<span>Bắt đầu: <b>{new Date(program.startAt).toLocaleString('vi-VN')}</b></span>}{program.endAt&&<span>Kết thúc: <b>{new Date(program.endAt).toLocaleString('vi-VN')}</b></span>}</div>}{program.ctaLabel&&program.ctaUrl&&<a href={program.ctaUrl} target={/^https?:/i.test(program.ctaUrl)?'_blank':undefined} rel="noreferrer" className="mt-4 inline-flex rounded-xl bg-[#0B66C3] px-4 py-2.5 text-xs font-black text-white">{program.ctaLabel} →</a>}</div>}
+
               {/* Quick Info Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-100">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -387,6 +389,8 @@ export const ProgramDetailPage: React.FC<ProgramDetailPageProps> = ({
                 </div>
               )}
             </div>
+
+            {program.publicReportUrl&&<section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"><div className="text-xs font-black uppercase tracking-[.16em] text-sky-700">Công khai & Minh bạch</div><h2 className="mt-2 text-2xl font-black text-slate-950">Hồ sơ / báo cáo của chương trình</h2><p className="mt-2 text-sm leading-6 text-slate-600">Theo dõi thông tin công khai, báo cáo nguồn lực hoặc kết quả được cập nhật cho chương trình này.</p><a href={program.publicReportUrl} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-black text-sky-700">Xem hồ sơ công khai <ExternalLink size={15}/></a></section>}
 
             {(program.galleryImages || []).filter(Boolean).length > 0 && (
               <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"><div className="mb-5"><div className="text-xs font-black uppercase tracking-[.16em] text-sky-700">Hình ảnh chương trình</div><h2 className="mt-2 text-2xl font-black text-slate-950">Thư viện hoạt động</h2></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(program.galleryImages || []).filter(Boolean).map((src,idx)=><img key={idx} src={src} alt={`${program.title} - ảnh ${idx+1}`} loading="lazy" className="h-56 w-full rounded-2xl object-cover" />)}</div></section>

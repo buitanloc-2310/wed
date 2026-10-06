@@ -85,6 +85,16 @@ const parseUrlRoute = (): ParsedRoute => {
     if (segments[1] === 'giay-chung-nhan') return { page: 'admin', adminTab: 'certificates' };
     if (segments[1] === 'doi-tac') return { page: 'admin', adminTab: 'partners' };
     if (segments[1] === 'tai-tro-dong-gop') return { page: 'admin', adminTab: 'contributions' };
+    if (segments[1] === 'su-kien') return { page: 'admin', adminTab: 'events' };
+    if (segments[1] === 'co-hoi') return { page: 'admin', adminTab: 'opportunities' };
+    if (segments[1] === 'tai-lieu') return { page: 'admin', adminTab: 'documents' };
+    if (segments[1] === 'con-nguoi') return { page: 'admin', adminTab: 'people' };
+    if (segments[1] === 'tac-dong') return { page: 'admin', adminTab: 'impact' };
+    if (segments[1] === 'cong-khai') return { page: 'admin', adminTab: 'transparency' };
+    if (segments[1] === 'thong-bao') return { page: 'admin', adminTab: 'notifications' };
+    if (segments[1] === 'redirect') return { page: 'admin', adminTab: 'redirects' };
+    if (segments[1] === 'mau-email') return { page: 'admin', adminTab: 'email-templates' };
+    if (segments[1] === 'tich-hop') return { page: 'admin', adminTab: 'integrations' };
     if (segments[1] === 'media') return { page: 'admin', adminTab: 'media' };
     if (segments[1] === 'menu') return { page: 'admin', adminTab: 'menus' };
     if (segments[1] === 'nhat-ky') return { page: 'admin', adminTab: 'logs' };
@@ -207,6 +217,20 @@ function AppMainContent() {
     canonical.href=window.location.origin+window.location.pathname;
   }, [currentPage, currentSlug, siteConfig.siteName, siteConfig.siteDescription, siteConfig.tagline]);
 
+  useEffect(()=>{
+    const root=document.documentElement; const ds=siteConfig.designSystem||{};
+    if(ds.primary)root.style.setProperty('--sfn-primary',ds.primary);
+    if(ds.navy)root.style.setProperty('--sfn-navy',ds.navy);
+    if(ds.accent)root.style.setProperty('--sfn-accent',ds.accent);
+    if(ds.radius)root.style.setProperty('--sfn-radius',ds.radius);
+    if(ds.container)root.style.setProperty('--sfn-container',ds.container);
+    root.dataset.motion=ds.motion||'balanced';
+  },[siteConfig.designSystem]);
+
+  const announcement=siteConfig.announcement;
+  const announcementNow=Date.now();
+  const announcementActive=Boolean(announcement?.enabled&&announcement?.text&&(!announcement.startAt||announcementNow>=new Date(announcement.startAt).getTime())&&(!announcement.endAt||announcementNow<=new Date(announcement.endAt).getTime()));
+
   const showToast = (msg: string) => {
     const clean=String(msg||'').trim(); if(!clean)return; const now=Date.now();
     if(toastGuardRef.current.message===clean && now-toastGuardRef.current.at<2500)return;
@@ -294,6 +318,8 @@ function AppMainContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans selection:bg-[#0284C7] selection:text-white">
+      {announcementActive&&<div className={`relative z-[95] px-4 py-2.5 text-center text-xs sm:text-sm font-bold ${announcement?.tone==='warning'?'bg-amber-400 text-slate-950':announcement?.tone==='success'?'bg-emerald-600 text-white':'bg-[#0B66C3] text-white'}`}><span>{announcement?.text}</span>{announcement?.buttonLabel&&announcement?.buttonUrl&&<a href={announcement.buttonUrl} className="ml-3 underline underline-offset-2">{announcement.buttonLabel}</a>}</div>}
+
       {/* Banner thông báo trên đầu trang khi đóng website */}
       {isSiteClosed && (
         <SiteClosedTopBanner

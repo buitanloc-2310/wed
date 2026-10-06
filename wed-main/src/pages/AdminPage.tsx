@@ -6,6 +6,11 @@ import {
   CheckCircle2,
   Clock,
   Cloud,
+  CalendarDays,
+  Sparkles,
+  BarChart3,
+  ShieldCheck,
+  BellRing,
   Edit2,
   ExternalLink,
   FileText,
@@ -80,6 +85,16 @@ export type AdminTab =
   | 'certificates'
   | 'partners'
   | 'contributions'
+  | 'events'
+  | 'opportunities'
+  | 'documents'
+  | 'people'
+  | 'impact'
+  | 'transparency'
+  | 'notifications'
+  | 'redirects'
+  | 'email-templates'
+  | 'integrations'
   | 'media'
   | 'menus'
   | 'logs'
@@ -168,6 +183,16 @@ const MENU_ITEMS: MenuItemConfig[] = [
     icon: <HeartHandshake size={18} />,
     largeIcon: <HeartHandshake size={24} />,
   },
+  { id: 'events', label: 'Sự kiện', icon: <CalendarDays size={18} />, largeIcon: <CalendarDays size={24} /> },
+  { id: 'opportunities', label: 'Cơ hội', icon: <Sparkles size={18} />, largeIcon: <Sparkles size={24} /> },
+  { id: 'documents', label: 'Tài liệu', icon: <FileText size={18} />, largeIcon: <FileText size={24} /> },
+  { id: 'people', label: 'Con người', icon: <Users size={18} />, largeIcon: <Users size={24} /> },
+  { id: 'impact', label: 'Số liệu & Tác động', icon: <BarChart3 size={18} />, largeIcon: <BarChart3 size={24} /> },
+  { id: 'transparency', label: 'Công khai & Minh bạch', icon: <ShieldCheck size={18} />, largeIcon: <ShieldCheck size={24} /> },
+  { id: 'notifications', label: 'Thông báo', icon: <BellRing size={18} />, largeIcon: <BellRing size={24} /> },
+  { id: 'redirects', label: 'Redirect & URL', icon: <ExternalLink size={18} />, largeIcon: <ExternalLink size={24} /> },
+  { id: 'email-templates', label: 'Mẫu Email', icon: <Mail size={18} />, largeIcon: <Mail size={24} /> },
+  { id: 'integrations', label: 'Tích hợp', icon: <Cloud size={18} />, largeIcon: <Cloud size={24} /> },
   {
     id: 'media',
     label: 'Media',
@@ -1248,6 +1273,16 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               'certificates',
               'partners',
               'contributions',
+              'events',
+              'opportunities',
+              'documents',
+              'people',
+              'impact',
+              'transparency',
+              'notifications',
+              'redirects',
+              'email-templates',
+              'integrations',
               'logs',
             ] as AdminTab[]
           ).includes(activeTab) && (

@@ -31,7 +31,7 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
   onShowToast,
   onSelectArticle
 }) => {
-  const { newsArticles } = useDataContext();
+  const { newsArticles, isPublicDataReady } = useDataContext();
 
   const article = newsArticles.find(
     (a) =>
@@ -39,6 +39,11 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
       a.id === newsSlugOrId ||
       (a.slug && a.slug === newsSlugOrId)
   );
+
+
+  if (!isPublicDataReady) {
+    return <div className="min-h-[70vh] bg-white"><div className="max-w-4xl mx-auto px-4 py-12 animate-pulse"><div className="h-5 w-32 rounded bg-slate-100"/><div className="mt-7 h-10 w-4/5 rounded-xl bg-slate-100"/><div className="mt-5 h-24 rounded-2xl bg-slate-100"/><div className="mt-6 aspect-video rounded-2xl bg-slate-100"/></div></div>;
+  }
 
   if (!article || article.isPublished === false) {
     return (
@@ -165,23 +170,16 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
             </div>
           )}
 
-          {/* Feature Cover Image */}
-          <div className="pt-2">
-            <ImagePlaceholder
-              imageUrl={article.imageUrl}
-              sizeText="Tỷ lệ ảnh gốc"
-              description={`Hình ảnh bản tin: ${article.title}`}
-              aspectRatio="video"
-              theme={article.theme || 'sky'}
-              className="rounded-2xl overflow-hidden shadow-xs"
-            />
-          </div>
+          {/* Feature Cover Image: card luôn 16:9, trang chi tiết cho phép 16:9 / ảnh gốc / ẩn */}
+          {article.heroImageMode!=='hidden'&&article.imageUrl&&<figure className="pt-2"><div className={`w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 ${article.heroImageMode==='original'?'':'aspect-video'}`}><img src={article.imageUrl} alt={article.imageAlt||article.title} className={`mx-auto w-full ${article.heroImageMode==='original'?'h-auto max-h-[760px] object-contain':'h-full object-cover'}`} loading="eager"/></div>{(article.imageDescription||article.imageCredit)&&<figcaption className="mt-3 text-center text-xs leading-5 text-slate-500">{article.imageDescription&&<span>{article.imageDescription}</span>}{article.imageDescription&&article.imageCredit&&<br/>}{article.imageCredit&&<span className="font-bold uppercase tracking-wide">ẢNH/NGUỒN: {article.imageSourceUrl?<a href={article.imageSourceUrl} target="_blank" rel="noreferrer" className="text-[#0284C7] hover:underline">{article.imageCredit}</a>:article.imageCredit}</span>}</figcaption>}</figure>}
 
           {/* Main Body with Rich Text Rendering (B, I, U, H1, H2, H3, H4, Quotes, Lists, Links) */}
           <div className="pt-4 text-slate-800 leading-relaxed space-y-4">
             <RichTextRenderer content={rawContent} />
             {(article.galleryImages || []).filter(Boolean).length > 0 && <section className="mt-10"><h2 className="mb-4 text-xl font-black text-slate-900">Hình ảnh liên quan</h2><div className="grid gap-3 sm:grid-cols-2">{(article.galleryImages || []).filter(Boolean).map((src,idx)=><img key={idx} src={src} alt={`${article.title} - ảnh ${idx+1}`} loading="lazy" className="max-h-[520px] w-full rounded-2xl object-cover" />)}</div></section>}
           </div>
+
+          {(article.source||article.canonicalUrl)&&<div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600"><b>Nguồn:</b> {article.canonicalUrl?<a href={article.canonicalUrl} target="_blank" rel="noreferrer" className="ml-1 font-bold text-[#0284C7] hover:underline">{article.source||'Nguồn tham khảo'}</a>:<span className="ml-1">{article.source}</span>}</div>}
 
           {/* Tags */}
           {article.tags && article.tags.length > 0 && (

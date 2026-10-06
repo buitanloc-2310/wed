@@ -101,3 +101,9 @@ body{background:#fff;color:#142b47}h1,h2,h3{font-kerning:normal}button:focus-vis
 .formatted-content video,.prose video{display:block;width:100%;border-radius:14px}.sf-hero-visual img{min-height:0}
 @media(max-width:640px){h1{line-height:1.2!important;letter-spacing:-.025em!important}.sf-home-hero h1{font-size:34px!important}.sf-home-hero .sf-hero-visual{width:100%}input,textarea,select{font-size:16px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* Article media inserted from CMS: natural ratio inside articles, editorial caption + source. */
+.formatted-content figure.article-media,.prose-slate figure.article-media{margin:2rem auto;text-align:center}
+.formatted-content figure.article-media img,.prose-slate figure.article-media img{display:block;width:auto;max-width:100%;max-height:760px;margin:0 auto;border-radius:16px;object-fit:contain}
+.formatted-content figure.article-media figcaption,.prose-slate figure.article-media figcaption{max-width:760px;margin:.7rem auto 0;font-size:.78rem;line-height:1.55;color:#64748b;text-align:center}
+.formatted-content .media-credit,.prose-slate .media-credit{font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;color:#94a3b8;font-weight:700}

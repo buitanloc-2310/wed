@@ -116,16 +116,63 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   const section: Record<Key, React.ReactNode> = {
     hero: (
-      <section className="sf-home-hero relative overflow-hidden bg-[#071B3A] text-white">
-        <div className="mx-auto max-w-7xl px-5 py-14 sm:px-6 lg:px-8 lg:py-20 grid lg:grid-cols-[1.1fr_.9fr] gap-10 lg:gap-14 items-center">
-          <div><p className="text-[10px] sm:text-xs uppercase tracking-[.16em] text-sky-200 font-bold mb-6">{siteConfig.heroBadge || siteConfig.siteName}</p>
-            <h1 className="text-[38px] sm:text-5xl lg:text-[56px] font-bold leading-[1.2] tracking-[-.035em] whitespace-pre-line">{siteConfig.heroHeading || 'Kết nối tri thức. Phát triển người trẻ. Lan tỏa giá trị cộng đồng.'}</h1>
-            <p className="mt-6 text-sm sm:text-base leading-8 text-slate-300 max-w-2xl">{siteConfig.heroSubtext}</p>
-            <div className="mt-8 flex flex-wrap gap-3"><button onClick={()=>navigateUrl(siteConfig.heroButton1Url || '/about',onNavigate)} className="inline-flex items-center gap-3 rounded-xl bg-white text-[#071B3A] px-5 py-3.5 text-sm font-bold hover:bg-sky-100 transition">{siteConfig.heroButton1Text || 'Khám phá Sky First'}<ArrowUpRight size={18}/></button><button onClick={()=>navigateUrl(siteConfig.heroButton2Url || '/join',onNavigate)} className="inline-flex items-center gap-3 rounded-xl border border-slate-500 px-5 py-3.5 text-sm font-bold hover:bg-white/10 transition">{siteConfig.heroButton2Text || 'Cùng đồng hành'}<ArrowRight size={17}/></button></div>
-            <div className="flex flex-wrap gap-x-5 gap-y-3 mt-9 pt-6 border-t border-white/15 text-[11px] text-slate-300"><span className="flex gap-2 items-center"><GraduationCap size={15}/>Giáo dục & học tập</span><span className="flex gap-2 items-center"><Users size={15}/>Phát triển người trẻ</span><span className="flex gap-2 items-center"><HeartHandshake size={15}/>Tình nguyện & cộng đồng</span></div>
+      <section className="sf-home-hero relative overflow-hidden bg-[#061A3A] text-white">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-24 -top-24 h-[420px] w-[420px] rounded-full bg-[#0B66C3]/20 blur-3xl" />
+          <div className="absolute right-[-130px] top-[80px] h-[520px] w-[520px] rounded-full bg-cyan-400/15 blur-3xl" />
+          <div className="absolute inset-x-0 bottom-0 h-44 bg-[linear-gradient(165deg,transparent_0%,transparent_48%,rgba(14,165,233,.14)_49%,rgba(14,165,233,.04)_72%,transparent_73%)]" />
+        </div>
+        <div className="relative mx-auto max-w-[1500px] px-5 pb-8 pt-14 sm:px-6 lg:px-8 lg:pb-10 lg:pt-20">
+          <div className="grid items-center gap-10 lg:grid-cols-[.95fr_1.05fr] lg:gap-14">
+            <div className="max-w-3xl">
+              <p className="mb-6 text-[11px] font-black uppercase tracking-[.24em] text-cyan-300">{siteConfig.heroBadge || siteConfig.siteName}</p>
+              <h1 className="text-[42px] font-black leading-[1.08] tracking-[-.045em] sm:text-5xl lg:text-[64px]">{siteConfig.heroHeading || 'Kết nối tri thức. Phát triển người trẻ. Lan tỏa giá trị cộng đồng.'}</h1>
+              <p className="mt-6 max-w-2xl text-sm leading-8 text-slate-300 sm:text-base">{siteConfig.heroSubtext}</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <button onClick={() => navigateUrl(siteConfig.heroButton1Url || '/about', onNavigate)} className="inline-flex items-center gap-3 rounded-2xl bg-[#078DE3] px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-sky-950/20 transition hover:-translate-y-0.5 hover:bg-[#0B9AED]">{siteConfig.heroButton1Text || 'Khám phá mạng lưới'}<ArrowRight size={17}/></button>
+                <button onClick={() => navigateUrl(siteConfig.heroButton2Url || '/join', onNavigate)} className="inline-flex items-center gap-3 rounded-2xl border border-white/35 bg-white/5 px-5 py-3.5 text-sm font-black text-white backdrop-blur transition hover:bg-white/10">{siteConfig.heroButton2Text || 'Tham gia cùng chúng tôi'}<ArrowRight size={17}/></button>
+              </div>
+            </div>
+
+            <div className="relative min-h-[360px] overflow-hidden rounded-[36px] border border-white/15 bg-gradient-to-br from-[#0B315E]/80 via-[#0B4D96]/70 to-[#071B3A] p-6 shadow-[0_30px_90px_rgba(0,0,0,.25)] sm:min-h-[420px]">
+              <div className="absolute inset-0 opacity-90">
+                <div className="absolute left-[8%] top-[14%] h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_28px_8px_rgba(103,232,249,.32)]" />
+                <div className="absolute right-[12%] top-[18%] h-3 w-3 rotate-45 border-2 border-white/80" />
+                <div className="absolute left-[45%] top-[8%] h-28 w-28 rounded-full border border-cyan-300/25" />
+                <div className="absolute bottom-[-80px] left-[14%] h-[300px] w-[300px] rounded-full border-[34px] border-sky-300/10" />
+                <div className="absolute bottom-[-110px] right-[-35px] h-[340px] w-[340px] rounded-full border-[42px] border-cyan-300/10" />
+              </div>
+              <div className="relative z-10 flex h-full min-h-[310px] flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-[.15em] text-cyan-100"><Sparkles size={13}/> Sky First Network</div>
+                  <div className="grid h-12 w-12 place-items-center rounded-2xl border border-white/15 bg-white/10 text-cyan-200"><Network size={22}/></div>
+                </div>
+                <div className="mx-auto w-full max-w-[520px]">
+                  <div className="relative mx-auto h-44 max-w-[430px]">
+                    <div className="absolute bottom-0 left-1/2 h-32 w-[82%] -translate-x-1/2 rounded-[50%] border-[10px] border-cyan-300/80 border-t-transparent rotate-[-7deg]" />
+                    <div className="absolute bottom-3 left-1/2 h-28 w-[70%] -translate-x-1/2 rounded-[50%] border-[8px] border-sky-100/90 border-t-transparent rotate-[7deg]" />
+                    <div className="absolute left-1/2 top-0 -translate-x-1/2 text-center"><Sparkles className="mx-auto text-cyan-300" size={38}/><p className="mt-3 text-2xl font-black tracking-tight">Giáo dục · Người trẻ · Cộng đồng</p></div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center text-[11px] font-bold text-slate-200">
+                  <span className="rounded-xl bg-white/7 px-3 py-2">Học tập</span><span className="rounded-xl bg-white/7 px-3 py-2">Kết nối</span><span className="rounded-xl bg-white/7 px-3 py-2">Đóng góp</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="sf-hero-visual relative"><ImagePlaceholder imageUrl={siteConfig.heroImageUrl} objectFit={siteConfig.heroImageFit||'cover'} aspectRatio="4/3" description={siteConfig.siteName+' — Giáo dục, người trẻ và cộng đồng'} theme="navy" className="rounded-[24px] border border-white/20"/>
-            <div className="relative lg:-mt-8 lg:ml-8 mt-3 flex items-center gap-4 bg-white text-slate-900 rounded-2xl p-5 border border-slate-200 shadow-xl"><div className="rounded-xl bg-sky-50 p-3 text-sky-700"><HeartHandshake size={24}/></div><div><p className="text-[10px] uppercase tracking-widest text-sky-700 font-bold">Sky First Network</p><p className="font-bold mt-1">Cùng tạo giá trị cho cộng đồng.</p></div></div>
+
+          <div className="mt-9 grid overflow-hidden rounded-[26px] border border-white/15 bg-[#071B3A]/80 shadow-2xl backdrop-blur sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              [siteConfig.stats.membersCount, siteConfig.stats.membersLabel || 'Thành viên', Users],
+              [siteConfig.stats.communityProjects, siteConfig.stats.projectsLabel || 'Chương trình & hoạt động', BookOpen],
+              [siteConfig.stats.provincesCount, siteConfig.stats.provincesLabel || 'Địa bàn hoạt động', Network],
+              [siteConfig.stats.volunteerHours, siteConfig.stats.hoursLabel || 'Giờ hoạt động', HeartHandshake],
+            ].map(([value,label,Icon]: any, index) => (
+              <div key={String(label)} className={`flex items-center gap-4 px-6 py-5 ${index ? 'border-t border-white/10 sm:border-t-0 sm:border-l' : ''}`}>
+                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/8 text-cyan-300"><Icon size={20}/></span>
+                <div><p className="text-2xl font-black">{value || '—'}</p><p className="mt-0.5 text-xs text-slate-300">{label}</p></div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

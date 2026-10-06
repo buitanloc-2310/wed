@@ -22,6 +22,19 @@ export const isCMSCollectionInitialized=(collection:string)=>initializedCollecti
 async function readCMS(url:string){const r=await fetch(url,{headers:await authHeaders(),cache:'no-store'});const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok!==true)throw new Error(d?.error||'Không thể tải dữ liệu website.');return d;}
 export async function fetchCollectionFromFirestore<T>(collection:string):Promise<T[]>{const d=await readCMS(`/api/cms?collection=${encodeURIComponent(collection)}`);if(d.initialized)initializedCollections.add(collection);excludedDocuments.set(collection,new Set(Array.isArray(d.excludedIds)?d.excludedIds:[]));return Array.isArray(d.items)?d.items:[];}
 export async function fetchDocumentFromFirestore<T>(collection:string,id:string):Promise<T|null>{const d=await readCMS(`/api/cms?collection=${encodeURIComponent(collection)}&id=${encodeURIComponent(id)}`);return d.item||null;}
+export async function fetchCMSBundle():Promise<Record<string,any>>{
+  const headers=await authHeaders();
+  const hasAuth=headers.has('authorization');
+  const r=await fetch('/api/cms?bundle=public',{headers,cache:hasAuth?'no-store':'default'});
+  const d=await r.json().catch(()=>null);
+  if(!r.ok||!d||d.ok!==true) throw new Error(d?.error||'Không thể tải dữ liệu website.');
+  const collections=d.collections||{};
+  for(const [name,value] of Object.entries(collections) as [string,any][]){
+    if(value?.initialized) initializedCollections.add(name);
+    excludedDocuments.set(name,new Set(Array.isArray(value?.excludedIds)?value.excludedIds:[]));
+  }
+  return collections;
+}
 export async function testFirestoreConnection(){try{const r=await fetch('/api/cms?collection=site_config&id=current',{cache:'no-store'});return r.ok?{ok:true,message:'Dịch vụ dữ liệu D1 hoạt động bình thường.'}:{ok:false,message:'Dịch vụ dữ liệu chưa sẵn sàng.'}}catch{return{ok:false,message:'Không thể kết nối dịch vụ dữ liệu.'}}}
 
 export async function createInitialAdminAccount(email:string,password:string,displayName?:string):Promise<User>{if(!auth)throw new Error('Dịch vụ đăng nhập chưa sẵn sàng.');const r=await createUserWithEmailAndPassword(auth,email.trim(),password);if(displayName?.trim())await updateProfile(r.user,{displayName:displayName.trim()});return r.user}

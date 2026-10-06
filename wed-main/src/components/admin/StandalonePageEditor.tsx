@@ -8,8 +8,8 @@ import {
   User,
   Calendar,
 } from 'lucide-react';
-import { CustomPage, CorePillar, TimelineMilestone, TeamMember, CoreValueItem } from '../../types';
-import { CORE_PILLARS, CORE_VALUES, TIMELINE_DATA, TEAM_DATA } from '../../data/mockData';
+import { CustomPage, CorePillar, TimelineMilestone, TeamMember, CoreValueItem, PageBlock, PageBlockType } from '../../types';
+import { CORE_PILLARS, CORE_VALUES, TIMELINE_DATA, TEAM_DATA } from '../../data/baselineData';
 import { createUniqueSlug, generateSlug } from '../../utils/slug';
 import { AboutEditorFields } from './editor-fields/AboutEditorFields';
 import { CertificateEditorFields } from './editor-fields/CertificateEditorFields';
@@ -50,6 +50,17 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
   const [content, setContent] = useState(page.contentFormatted || page.content || '');
   const [imageUrl, setImageUrl] = useState(page.imageUrl || '');
   const [secondaryImageUrl, setSecondaryImageUrl] = useState(page.secondaryImageUrl || '');
+  const [pageBlocks, setPageBlocks] = useState<PageBlock[]>(Array.isArray(page.pageBlocks) ? page.pageBlocks : []);
+  const addPageBlock = (type: PageBlockType) => {
+    const id = `block-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+    const base: PageBlock = { id, type, background: 'white', align: 'left' };
+    if (type === 'stats') base.stats = [{ value: '0', label: 'Chỉ số' }];
+    if (type === 'cta') { base.title = 'Lời kêu gọi hành động'; base.buttonLabel = 'Tìm hiểu thêm'; base.buttonUrl = '/contact'; }
+    setPageBlocks((prev) => [...prev, base]);
+  };
+  const updatePageBlock = (id: string, updates: Partial<PageBlock>) => setPageBlocks((prev) => prev.map((b) => b.id === id ? { ...b, ...updates } : b));
+  const movePageBlock = (index: number, dir: -1 | 1) => setPageBlocks((prev) => { const next=[...prev]; const target=index+dir; if(target<0||target>=next.length)return prev; [next[index],next[target]]=[next[target],next[index]]; return next; });
+  const deletePageBlock = (id: string) => setPageBlocks((prev) => prev.filter((b) => b.id !== id));
   const [author, setAuthor] = useState(page.author || 'Ban Quản trị Sky First Network');
   const [publishedAt, setPublishedAt] = useState(
     page.publishedAt || new Date().toLocaleDateString('vi-VN')
@@ -325,6 +336,10 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
   );
 
   // 4.4 Bank details & contacts
+  const [sponsorRecipientEntity, setSponsorRecipientEntity] = useState(page.sponsorRecipientEntity || '');
+  const [sponsorGoalAmount, setSponsorGoalAmount] = useState(page.sponsorGoalAmount || '');
+  const [sponsorReceivedAmount, setSponsorReceivedAmount] = useState(page.sponsorReceivedAmount || '');
+  const [sponsorPublicLedgerUrl, setSponsorPublicLedgerUrl] = useState(page.sponsorPublicLedgerUrl || '');
   const [sponsorBankName, setSponsorBankName] = useState(page.sponsorBankName || '');
   const [sponsorBankId, setSponsorBankId] = useState(page.sponsorBankId || '');
   const [sponsorBankAccount, setSponsorBankAccount] = useState(
@@ -679,6 +694,7 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
       contentFormatted: content.trim(),
       imageUrl: imageUrl.trim(),
       secondaryImageUrl: secondaryImageUrl.trim(),
+      pageBlocks,
       author: author.trim() || 'Ban Quản trị Sky First Network',
       publishedAt: publishedAt || new Date().toLocaleDateString('vi-VN'),
       isPublished: finalPublishState,
@@ -768,6 +784,10 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
       sponsorPkg4Unit: sponsorPkg4Unit.trim(),
       sponsorPkg4Desc: sponsorPkg4Desc.trim(),
       sponsorPkg4Impact: sponsorPkg4Impact.trim(),
+      sponsorRecipientEntity: sponsorRecipientEntity.trim(),
+      sponsorGoalAmount: sponsorGoalAmount.trim(),
+      sponsorReceivedAmount: sponsorReceivedAmount.trim(),
+      sponsorPublicLedgerUrl: sponsorPublicLedgerUrl.trim(),
       sponsorBankName: sponsorBankName.trim(),
       sponsorBankId: sponsorBankId.trim(),
       sponsorBankAccount: sponsorBankAccount.trim(),
@@ -1262,6 +1282,14 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
             sponsorPkg4Impact={sponsorPkg4Impact}
             setSponsorPkg4Impact={setSponsorPkg4Impact}
             // Bank details
+            sponsorRecipientEntity={sponsorRecipientEntity}
+            setSponsorRecipientEntity={setSponsorRecipientEntity}
+            sponsorGoalAmount={sponsorGoalAmount}
+            setSponsorGoalAmount={setSponsorGoalAmount}
+            sponsorReceivedAmount={sponsorReceivedAmount}
+            setSponsorReceivedAmount={setSponsorReceivedAmount}
+            sponsorPublicLedgerUrl={sponsorPublicLedgerUrl}
+            setSponsorPublicLedgerUrl={setSponsorPublicLedgerUrl}
             sponsorBankName={sponsorBankName}
             setSponsorBankName={setSponsorBankName}
             sponsorBankId={sponsorBankId}
@@ -1536,6 +1564,58 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
             secondaryButtonUrl={secondaryButtonUrl}
             setSecondaryButtonUrl={setSecondaryButtonUrl}
           />
+        )}
+
+        {!isAboutPage && !isCertificatePage && !isSponsorPage && !isJoinPage && !isContactPage && (
+          <section className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4">
+              <div>
+                <h2 className="text-sm font-black text-slate-900">Page Builder</h2>
+                <p className="mt-1 text-xs text-slate-500">Thêm, sắp xếp và chỉnh các khối nội dung mà không cần sửa code.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(['text','image','video','stats','cta','quote','divider','html'] as PageBlockType[]).map((type) => (
+                  <button key={type} type="button" onClick={() => addPageBlock(type)} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-700 hover:border-sky-300 hover:bg-sky-50">+ {type}</button>
+                ))}
+              </div>
+            </div>
+
+            {pageBlocks.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">Chưa có block. Nội dung cũ phía trên vẫn được giữ nguyên; thêm block khi cần dựng landing page.</div>
+            ) : (
+              <div className="space-y-4">
+                {pageBlocks.map((block, index) => (
+                  <article key={block.id} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2"><span className="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-white">{block.type}</span><span className="text-xs text-slate-400">#{index + 1}</span></div>
+                      <div className="flex gap-1.5">
+                        <button type="button" onClick={() => movePageBlock(index,-1)} disabled={index===0} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold disabled:opacity-30">↑</button>
+                        <button type="button" onClick={() => movePageBlock(index,1)} disabled={index===pageBlocks.length-1} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold disabled:opacity-30">↓</button>
+                        <button type="button" onClick={() => deletePageBlock(block.id)} className="rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600">Xóa</button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {!['divider'].includes(block.type) && <input value={block.title || ''} onChange={(e)=>updatePageBlock(block.id,{title:e.target.value})} placeholder="Tiêu đề block (không bắt buộc)" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400" />}
+                      <select value={block.background || 'white'} onChange={(e)=>updatePageBlock(block.id,{background:e.target.value as PageBlock['background']})} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="white">Nền trắng</option><option value="soft">Nền xám nhạt</option><option value="sky">Nền xanh nhạt</option><option value="navy">Nền navy</option></select>
+                    </div>
+
+                    {['text','quote','html'].includes(block.type) && <textarea value={block.body || ''} onChange={(e)=>updatePageBlock(block.id,{body:e.target.value})} rows={block.type==='html'?7:4} placeholder={block.type==='html'?'HTML an toàn (script sẽ bị loại bỏ)':'Nội dung'} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400" />}
+
+                    {block.type === 'image' && <div className="mt-3 grid gap-3 sm:grid-cols-2"><input value={block.imageUrl || ''} onChange={(e)=>updatePageBlock(block.id,{imageUrl:e.target.value})} placeholder="URL ảnh từ Media Library/R2" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.alt || ''} onChange={(e)=>updatePageBlock(block.id,{alt:e.target.value})} placeholder="Alt text" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.caption || ''} onChange={(e)=>updatePageBlock(block.id,{caption:e.target.value})} placeholder="Chú thích ảnh" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.credit || ''} onChange={(e)=>updatePageBlock(block.id,{credit:e.target.value})} placeholder="Nguồn/Tác giả ảnh" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/></div>}
+
+                    {block.type === 'video' && <div className="mt-3 grid gap-3 sm:grid-cols-2"><input value={block.videoUrl || ''} onChange={(e)=>updatePageBlock(block.id,{videoUrl:e.target.value})} placeholder="URL MP4/WebM hoặc YouTube" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.posterUrl || ''} onChange={(e)=>updatePageBlock(block.id,{posterUrl:e.target.value})} placeholder="Poster ảnh (không bắt buộc)" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/></div>}
+
+                    {block.type === 'cta' && <div className="mt-3 grid gap-3 sm:grid-cols-2"><input value={block.buttonLabel || ''} onChange={(e)=>updatePageBlock(block.id,{buttonLabel:e.target.value})} placeholder="Tên nút" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.buttonUrl || ''} onChange={(e)=>updatePageBlock(block.id,{buttonUrl:e.target.value})} placeholder="URL nút" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/></div>}
+
+                    {block.type === 'stats' && <div className="mt-3 space-y-2">{(block.stats || []).map((stat,statIndex)=><div key={statIndex} className="grid gap-2 sm:grid-cols-[.55fr_1fr_1fr_auto]"><input value={stat.value} onChange={(e)=>{const stats=[...(block.stats||[])];stats[statIndex]={...stats[statIndex],value:e.target.value};updatePageBlock(block.id,{stats})}} placeholder="100+" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm"/><input value={stat.label} onChange={(e)=>{const stats=[...(block.stats||[])];stats[statIndex]={...stats[statIndex],label:e.target.value};updatePageBlock(block.id,{stats})}} placeholder="Nhãn" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm"/><input value={stat.note||''} onChange={(e)=>{const stats=[...(block.stats||[])];stats[statIndex]={...stats[statIndex],note:e.target.value};updatePageBlock(block.id,{stats})}} placeholder="Ghi chú" className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm"/><button type="button" onClick={()=>updatePageBlock(block.id,{stats:(block.stats||[]).filter((_,i)=>i!==statIndex)})} className="rounded-lg border border-rose-200 bg-white px-3 text-xs font-bold text-rose-600">×</button></div>)}<button type="button" onClick={()=>updatePageBlock(block.id,{stats:[...(block.stats||[]),{value:'0',label:'Chỉ số'}]})} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold">+ Thêm chỉ số</button></div>}
+
+                    <label className="mt-4 flex items-center gap-2 text-xs font-bold text-slate-600"><input type="checkbox" checked={block.hidden === true} onChange={(e)=>updatePageBlock(block.id,{hidden:e.target.checked})}/>Ẩn block này trên public</label>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         )}
       </main>
     </div>

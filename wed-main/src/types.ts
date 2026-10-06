@@ -324,6 +324,29 @@ export interface CoreValueItem {
   theme?: string;
 }
 
+export type PageBlockType = 'text' | 'image' | 'video' | 'stats' | 'cta' | 'quote' | 'divider' | 'html';
+
+export interface PageBlock {
+  id: string;
+  type: PageBlockType;
+  title?: string;
+  body?: string;
+  imageUrl?: string;
+  alt?: string;
+  caption?: string;
+  credit?: string;
+  videoUrl?: string;
+  posterUrl?: string;
+  buttonLabel?: string;
+  buttonUrl?: string;
+  secondaryButtonLabel?: string;
+  secondaryButtonUrl?: string;
+  stats?: { value: string; label: string; note?: string }[];
+  background?: 'white' | 'soft' | 'navy' | 'sky';
+  align?: 'left' | 'center';
+  hidden?: boolean;
+}
+
 export interface CustomPage {
   id: string;
   slug: string;
@@ -333,6 +356,7 @@ export interface CustomPage {
   contentFormatted?: string;
   imageUrl?: string;
   secondaryImageUrl?: string;
+  pageBlocks?: PageBlock[];
   isPublished?: boolean;
   publishedAt?: string;
   author?: string;
@@ -427,6 +451,10 @@ export interface CustomPage {
   certCtaButtonLabel?: string;
   certCtaButtonUrl?: string;
   // Specific fields for Sponsor page
+  sponsorRecipientEntity?: string;
+  sponsorGoalAmount?: string;
+  sponsorReceivedAmount?: string;
+  sponsorPublicLedgerUrl?: string;
   sponsorBankName?: string;
   sponsorBankId?: string;
   sponsorBankAccount?: string;

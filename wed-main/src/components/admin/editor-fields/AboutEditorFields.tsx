@@ -17,7 +17,7 @@ import {
 import { CorePillar, TimelineMilestone, TeamMember, CoreValueItem } from '../../../types';
 import { ImageUrlInput } from '../../ImageUrlInput';
 import { EntityColorPicker } from '../../EntityColorSystem';
-import { CORE_PILLARS, CORE_VALUES, TIMELINE_DATA, TEAM_DATA } from '../../../data/mockData';
+import { CORE_PILLARS, CORE_VALUES, TIMELINE_DATA, TEAM_DATA } from '../../../data/baselineData';
 
 interface AboutEditorFieldsProps {
   // 1. Hero

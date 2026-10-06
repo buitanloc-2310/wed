@@ -115,6 +115,14 @@ interface SponsorEditorFieldsProps {
   setSponsorPkg4Impact: (val: string) => void;
 
   // 4. Bank Account Details
+  sponsorRecipientEntity: string;
+  setSponsorRecipientEntity: (val: string) => void;
+  sponsorGoalAmount: string;
+  setSponsorGoalAmount: (val: string) => void;
+  sponsorReceivedAmount: string;
+  setSponsorReceivedAmount: (val: string) => void;
+  sponsorPublicLedgerUrl: string;
+  setSponsorPublicLedgerUrl: (val: string) => void;
   sponsorBankName: string;
   setSponsorBankName: (val: string) => void;
   sponsorBankId: string;
@@ -289,6 +297,14 @@ export const SponsorEditorFields: React.FC<SponsorEditorFieldsProps> = ({
   sponsorPkg4Impact,
   setSponsorPkg4Impact,
   // 4. Bank Details
+  sponsorRecipientEntity,
+  setSponsorRecipientEntity,
+  sponsorGoalAmount,
+  setSponsorGoalAmount,
+  sponsorReceivedAmount,
+  setSponsorReceivedAmount,
+  sponsorPublicLedgerUrl,
+  setSponsorPublicLedgerUrl,
   sponsorBankName,
   setSponsorBankName,
   sponsorBankId,
@@ -938,6 +954,23 @@ export const SponsorEditorFields: React.FC<SponsorEditorFieldsProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">Chủ thể/đơn vị tiếp nhận nguồn lực</label>
+            <input type="text" value={sponsorRecipientEntity} onChange={(e)=>setSponsorRecipientEntity(e.target.value)} placeholder="Bắt buộc ghi rõ chủ thể thực tế đứng tên tài khoản tiếp nhận" className="w-full text-xs px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl font-bold focus:outline-hidden" />
+            <p className="mt-1 text-[10px] leading-4 text-slate-500">Thông tin này hiển thị cạnh QR để tránh hiểu nhầm đơn vị nào trực tiếp tiếp nhận tiền.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">Mục tiêu chiến dịch (VNĐ)</label>
+            <input inputMode="numeric" value={sponsorGoalAmount} onChange={(e)=>setSponsorGoalAmount(e.target.value.replace(/\D/g,''))} placeholder="100000000" className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold focus:outline-hidden" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">Đã ghi nhận/đối soát (VNĐ)</label>
+            <input inputMode="numeric" value={sponsorReceivedAmount} onChange={(e)=>setSponsorReceivedAmount(e.target.value.replace(/\D/g,''))} placeholder="0" className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold focus:outline-hidden" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">Liên kết công khai/đối soát (nếu có)</label>
+            <input type="url" value={sponsorPublicLedgerUrl} onChange={(e)=>setSponsorPublicLedgerUrl(e.target.value)} placeholder="https://..." className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden" />
+          </div>
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               Ngân hàng thụ hưởng

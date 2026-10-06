@@ -10,6 +10,7 @@ import {
   deleteDocumentFromFirestore,
   fetchCollectionFromFirestore,
   fetchDocumentFromFirestore,
+  fetchCMSBundle,
 } from '../lib/firebase';
 import {
   NetworkUnit,
@@ -38,7 +39,7 @@ import {
   FAQS_DATA as DEFAULT_FAQS,
   SFN_STATS as DEFAULT_STATS,
   CORE_VALUES as DEFAULT_CORE_VALUES
-} from '../data/mockData';
+} from '../data/baselineData';
 
 const OFFICIAL_MANAGED_SLUGS = new Set<string>([
   ...OFFICIAL_CONTENT_PAGES_2026.map((p) => p.slug).filter((slug) => slug !== 'nha-han-ngu'),
@@ -64,22 +65,44 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   coreValues: DEFAULT_CORE_VALUES.map(v => ({name:v.name, desc:v.desc})),
   navigationGroups:[
     {label:'Giới thiệu',items:[{label:'Về Sky First Network',page:'custom-page',slug:'sky-first-network-la-gi',description:'Tổng quan về định hướng, phạm vi hoạt động và cách mạng lưới vận hành.'},{label:'Lịch sử hình thành',page:'custom-page',slug:'hanh-trinh-hinh-thanh'},{label:'Tầm nhìn & Sứ mệnh',page:'custom-page',slug:'tam-nhin-su-menh',description:'Định hướng dài hạn và những giá trị Sky First Network theo đuổi.'},{label:'Giá trị cốt lõi',page:'custom-page',slug:'gia-tri-cot-loi'},{label:'Cơ cấu tổ chức',page:'custom-page',slug:'co-cau-to-chuc',description:'Cách các đơn vị và bộ phận trong mạng lưới được tổ chức.'}]},
-    {label:'Hoạt động',items:[{label:'Giáo dục & Đào tạo',page:'custom-page',slug:'giao-duc-dao-tao'},{label:'Phát triển Người trẻ',page:'custom-page',slug:'phat-trien-nguoi-tre'},{label:'Tình nguyện & Cộng đồng',page:'custom-page',slug:'tinh-nguyen-cong-dong'},{label:'Kết nối & Hợp tác',page:'custom-page',slug:'ket-noi-hop-tac'},{label:'Truyền thông & Lan tỏa',page:'custom-page',slug:'truyen-thong-lan-toa'}]},
+    {label:'Hoạt động',items:[
+      {label:'Giáo dục & Đào tạo',page:'custom-page',slug:'giao-duc-dao-tao',description:'Học tập, ngoại ngữ, kỹ năng và trải nghiệm giáo dục.'},
+      {label:'Phát triển Người trẻ',page:'custom-page',slug:'phat-trien-nguoi-tre',description:'Không gian trải nghiệm, rèn luyện và phát triển năng lực.'},
+      {label:'Tình nguyện & Cộng đồng',page:'custom-page',slug:'tinh-nguyen-cong-dong',description:'Hoạt động tình nguyện, chiến dịch cộng đồng và cơ hội đóng góp.'},
+      {label:'Môi trường & Phát triển bền vững',page:'programs',description:'Các sáng kiến và hoạt động hướng tới lối sống bền vững.'},
+      {label:'Nghiên cứu & Đổi mới sáng tạo',page:'programs',description:'Sáng kiến, nghiên cứu ứng dụng và giải pháp mới.'},
+      {label:'Chương trình & Dự án',page:'programs',description:'Các chương trình đang triển khai và hồ sơ dự án đã công bố.'},
+      {label:'Sự kiện & Hoạt động',page:'news',description:'Sự kiện, hội thảo, chiến dịch và hoạt động nổi bật.'},
+      {label:'Kết nối & Hợp tác',page:'custom-page',slug:'ket-noi-hop-tac',description:'Kết nối tổ chức, chuyên gia, đối tác và nguồn lực phù hợp.'},
+      {label:'Truyền thông & Lan tỏa',page:'custom-page',slug:'truyen-thong-lan-toa',description:'Chia sẻ câu chuyện, tri thức và những giá trị tích cực.'}
+    ]},
     {label:'Đơn vị trực thuộc',items:[{label:'Câu lạc bộ Tiếng Anh The Sky First',page:'custom-page',slug:'cau-lac-bo-tieng-anh-the-sky-first'}]},
-    {label:'Tra cứu',items:[{label:'Tra cứu Giấy chứng nhận',page:'certificate',description:'Đối chiếu thông tin giấy chứng nhận đã được ghi nhận.'},{label:'Tài liệu công khai',page:'custom-page',slug:'tai-lieu-cong-khai',description:'Tài liệu, báo cáo và thông tin được Sky First Network công bố.'}]},
-    {label:'Tham gia',items:[{label:'Core Team',page:'custom-page',slug:'core-team'},{label:'Tình nguyện viên',page:'custom-page',slug:'tinh-nguyen-vien'},{label:'Hợp tác & Đồng hành',page:'contact',description:'Kết nối đề xuất hợp tác, đồng hành và hỗ trợ chương trình.'},{label:'Liên hệ',page:'contact'}]}
+    {label:'Tra cứu',items:[
+      {label:'Tra cứu Giấy chứng nhận',page:'certificate',description:'Đối chiếu thông tin giấy chứng nhận đã được ghi nhận.'},
+      {label:'Công khai & Minh bạch',page:'custom-page',slug:'cong-khai',description:'Hồ sơ công khai, báo cáo, nguồn lực và cập nhật theo từng hoạt động.'},
+      {label:'Tài liệu công khai',page:'custom-page',slug:'tai-lieu-cong-khai',description:'Tài liệu, báo cáo và thông tin được Sky First Network công bố.'}
+    ]},
+    {label:'Tham gia',items:[
+      {label:'Cơ hội đang mở',page:'programs',description:'Xem các chương trình, dự án và đợt tuyển đang nhận đăng ký.'},
+      {label:'Thành viên Sky First',page:'join',description:'Tìm hiểu cách tham gia và đồng hành lâu dài cùng mạng lưới.'},
+      {label:'Core Team',page:'custom-page',slug:'core-team',description:'Tham gia đội ngũ vận hành và phát triển các hoạt động của mạng lưới.'},
+      {label:'Tình nguyện viên',page:'custom-page',slug:'tinh-nguyen-vien',description:'Đóng góp chuyên môn, thời gian và kỹ năng cho hoạt động phù hợp.'},
+      {label:'Tài trợ & Đồng hành',page:'sponsor',description:'Thông tin nguồn lực, VietQR và các hình thức đồng hành được công bố.'},
+      {label:'Hợp tác & Kết nối',page:'contact',description:'Kết nối đề xuất hợp tác, chuyên môn, truyền thông và nguồn lực.'},
+      {label:'Liên hệ',page:'contact',description:'Gửi câu hỏi, phản hồi hoặc nhu cầu kết nối đến Sky First Network.'}
+    ]}
   ],
   footerQuickLinks:[{label:'Giới thiệu Sky First Network',url:'/sky-first-network-la-gi'},{label:'Tầm nhìn & Sứ mệnh',url:'/tam-nhin-su-menh'},{label:'Giá trị cốt lõi',url:'/gia-tri-cot-loi'},{label:'Cơ cấu tổ chức',url:'/co-cau-to-chuc'},{label:'Lĩnh vực hoạt động',url:'/linh-vuc-hoat-dong'},{label:'Hợp tác & Đồng hành',url:'/contact'},{label:'Đơn vị trực thuộc',url:'/units'},{label:'Tin tức & Hoạt động',url:'/news'},{label:'Tra cứu Giấy chứng nhận',url:'/certificate'},{label:'Tham gia Sky First Network',url:'/join'}],
   footerContacts:[{label:'Email liên hệ chính',value:'support@skyfirst.io.vn',url:'mailto:support@skyfirst.io.vn',icon:'mail'},{label:'Email Nhân sự',value:'nhansu@skyfirst.io.vn',url:'mailto:nhansu@skyfirst.io.vn',icon:'mail'},{label:'Email Hỗ trợ',value:'support@skyfirst.io.vn',url:'mailto:support@skyfirst.io.vn',icon:'mail'},{label:'Email Hợp tác',value:'hoptac@skyfirst.io.vn',url:'mailto:hoptac@skyfirst.io.vn',icon:'mail'},{label:'Email Truyền thông',value:'truyenthong@skyfirst.io.vn',url:'mailto:truyenthong@skyfirst.io.vn',icon:'mail'},{label:'Điện thoại/Zalo',value:'0924 910 210',url:'tel:0924910210',icon:'phone'}],
   footerPortals:[{label:'Website Sky First Network',domain:'skyfirst.io.vn',url:'https://skyfirst.io.vn/',icon:'globe'},{label:'Cổng Thông tin',domain:'ctt.skyfirst.io.vn',url:'https://ctt.skyfirst.io.vn/',icon:'globe'},{label:'Cổng Tình nguyện viên',domain:'tnv.skyfirst.io.vn',url:'https://tnv.skyfirst.io.vn/',icon:'heart'},{label:'Cổng SFEC',domain:'sfec.skyfirst.io.vn',url:'https://sfec.skyfirst.io.vn/',icon:'graduation'},{label:'Nhà Hán Ngữ',domain:'app.nhahanngu.io.vn',url:'https://app.nhahanngu.io.vn/',icon:'graduation'}],
-  footerLegalLinks:[{label:'Pháp lý & Minh bạch',url:'/phap-ly-minh-bach'},{label:'Chính sách bảo mật',url:'/chinh-sach-bao-mat'},{label:'Điều khoản sử dụng',url:'/dieu-khoan-su-dung'},{label:'Liên hệ',url:'/contact'},{label:'Đăng nhập quản trị',url:'/admin'}],
+  footerLegalLinks:[{label:'Công khai & Minh bạch',url:'/cong-khai'},{label:'Pháp lý & Minh bạch',url:'/phap-ly-minh-bach'},{label:'Chính sách bảo mật',url:'/chinh-sach-bao-mat'},{label:'Điều khoản sử dụng',url:'/dieu-khoan-su-dung'},{label:'Liên hệ',url:'/contact'},{label:'Đăng nhập quản trị',url:'/admin'}],
   directionText:'Tập trung tái cấu trúc, chuẩn hóa hệ thống quản trị, phát triển Core Team và củng cố nền tảng số.',
   programsLabel:'Chương trình & hoạt động', programsHeading:'Những hoạt động đang được cập nhật',
   unitsLabel:'Đơn vị trực thuộc', unitsHeading:'Hệ sinh thái hoạt động chuyên môn', unitsIntro:'Các đơn vị trực thuộc được giới thiệu bằng tên, logo, lĩnh vực, hoạt động và thông tin liên hệ riêng.',
   certificateLabel:'Xác thực thông tin', certificateHeading:'Tra cứu Giấy chứng nhận', certificateText:'Kiểm tra thông tin giấy chứng nhận được ghi nhận trong hệ thống Sky First Network.', certificateButtonText:'Mở trang tra cứu', certificateButtonUrl:'/certificate',
   valuesLabel:'06 giá trị cốt lõi', valuesHeading:'Nguyên tắc định hướng cách mạng lưới vận hành.',
   newsLabel:'Tin tức & hoạt động', newsHeading:'Cập nhật từ mạng lưới',
-  transparencyHeading:'Thông tin minh bạch', transparencyText:'Sky First Network hiện được vận hành như một mạng lưới độc lập về tổ chức và định hướng hoạt động, nhưng hiện chưa có tư cách pháp lý độc lập.', transparencyButtonText:'Tìm hiểu thêm', transparencyButtonUrl:'/phap-ly-minh-bach',
+  transparencyHeading:'Thông tin minh bạch', transparencyText:'Sky First Network hiện được vận hành như một mạng lưới độc lập về tổ chức và định hướng hoạt động, nhưng hiện chưa có tư cách pháp lý độc lập.', transparencyButtonText:'Tìm hiểu thêm', transparencyButtonUrl:'/cong-khai',
   contact:{mainEmail:'support@skyfirst.io.vn',contactEmail:'support@skyfirst.io.vn',phoneHotline:'0924 910 210',phoneExternal:'',workHoursWeekdays:'',workHoursSaturday:'',facebookUrl:'',linkedinUrl:''},
   unitsBannerHeading:'Đơn vị trực thuộc Sky First Network', unitsBannerSubtext:'Các đơn vị trực thuộc có nhận diện và phạm vi hoạt động riêng trong hệ sinh thái Sky First Network.',
   ctaHeading:'Kết nối cùng Sky First Network', ctaSubtext:'Tìm hiểu các hình thức tham gia, tình nguyện, hợp tác và đồng hành cùng các hoạt động phù hợp.', ctaButtonText:'Tham gia',ctaButtonUrl:'/join',ctaSecondaryButtonText:'Liên hệ hợp tác',ctaSecondaryButtonUrl:'/contact',
@@ -97,6 +120,7 @@ const BASE_CUSTOM_PAGES: CustomPage[] = [
   {id:'page-join',slug:'join',title:'Tham gia Sky First Network',summary:'Tìm hiểu các hình thức tham gia phù hợp.',content:'Sky First Network mở các hình thức tham gia theo từng chương trình, hoạt động và nhu cầu nhân sự được công bố.',contentFormatted:'Sky First Network mở các hình thức tham gia theo từng chương trình, hoạt động và nhu cầu nhân sự được công bố.',isPublished:true,publishedAt:'08/09/2026',author:'Sky First Network',type:'join',showInFooter:true},
   {id:'page-contact',slug:'contact',title:'Liên hệ',summary:'Các kênh liên hệ chính thức của Sky First Network.',content:'Email liên hệ chính: support@skyfirst.io.vn\nEmail Nhân sự: nhansu@skyfirst.io.vn\nEmail Hỗ trợ: support@skyfirst.io.vn\nEmail Hợp tác: hoptac@skyfirst.io.vn\nEmail Truyền thông: truyenthong@skyfirst.io.vn\nĐiện thoại/Zalo: 0924 910 210',contentFormatted:'Email liên hệ chính: support@skyfirst.io.vn\nEmail Nhân sự: nhansu@skyfirst.io.vn\nEmail Hỗ trợ: support@skyfirst.io.vn\nEmail Hợp tác: hoptac@skyfirst.io.vn\nEmail Truyền thông: truyenthong@skyfirst.io.vn\nĐiện thoại/Zalo: 0924 910 210',isPublished:true,publishedAt:'08/09/2026',author:'Sky First Network',type:'contact',showInFooter:true},
   {id:'page-transparency',slug:'phap-ly-minh-bach',title:'Pháp lý & Minh bạch',summary:'Thông tin về cách Sky First Network được tổ chức và vận hành.',content:'Sky First Network hiện được vận hành như một mạng lưới độc lập về tổ chức và định hướng hoạt động, nhưng hiện chưa có tư cách pháp lý độc lập.',contentFormatted:'Sky First Network hiện được vận hành như một mạng lưới độc lập về tổ chức và định hướng hoạt động, nhưng hiện chưa có tư cách pháp lý độc lập.',isPublished:true,publishedAt:'08/09/2026',author:'Sky First Network',type:'legal',showInFooter:true},
+  {id:'page-public-transparency',slug:'cong-khai',title:'Công khai & Minh bạch',badge:'CỔNG CÔNG KHAI',summary:'Không gian tập trung các hồ sơ, tài liệu, báo cáo và dữ liệu được phép công khai của Sky First Network.',content:'Các nội dung tại Cổng Công khai được quản trị theo trạng thái xuất bản. Chỉ dữ liệu đã được phép công khai mới hiển thị; dữ liệu cá nhân và thông tin nội bộ không được tự động đưa ra ngoài.',contentFormatted:'Các nội dung tại Cổng Công khai được quản trị theo trạng thái xuất bản. Chỉ dữ liệu đã được phép công khai mới hiển thị; dữ liệu cá nhân và thông tin nội bộ không được tự động đưa ra ngoài.',isPublished:true,publishedAt:'06/10/2026',author:'Sky First Network',type:'custom',showInFooter:true,pageBlocks:[{id:'transparency-stats',type:'stats',title:'Thông tin công khai theo từng hoạt động',background:'soft',stats:[{value:'—',label:'Dự án/Chương trình công khai',note:'Cập nhật từ CMS'},{value:'—',label:'Báo cáo & tài liệu',note:'Cập nhật từ CMS'},{value:'—',label:'Cập nhật minh bạch',note:'Cập nhật từ CMS'}]},{id:'transparency-cta',type:'cta',title:'Bạn cần kiểm tra một hồ sơ cụ thể?',body:'Sử dụng các mục Tra cứu, Tài liệu công khai hoặc liên hệ đầu mối phụ trách để được hướng dẫn.',buttonLabel:'Tài liệu công khai',buttonUrl:'/tai-lieu-cong-khai',secondaryButtonLabel:'Liên hệ',secondaryButtonUrl:'/contact',background:'navy'}]},
   {id:'page-privacy',slug:'chinh-sach-bao-mat',title:'Chính sách bảo mật',summary:'Nguyên tắc tiếp nhận và bảo vệ thông tin người dùng trên website Sky First Network.',content:'Sky First Network chỉ tiếp nhận thông tin cần thiết cho mục đích người dùng chủ động gửi, như liên hệ, đăng ký hoặc bình luận. Website không yêu cầu người dùng cung cấp mật khẩu, mã OTP hay thông tin định danh nhạy cảm qua biểu mẫu công khai.\n\nThông tin liên hệ được sử dụng để tiếp nhận và xử lý yêu cầu phù hợp. Email dùng khi gửi bình luận chỉ phục vụ quản lý và phản hồi khi cần, không hiển thị công khai.\n\nCác dữ liệu nội bộ, hồ sơ cá nhân và thông tin chưa được phép công khai không được đưa lên website. Khi cần hỗ trợ về dữ liệu hoặc nội dung đã gửi, vui lòng liên hệ support@skyfirst.io.vn.',contentFormatted:'Sky First Network chỉ tiếp nhận thông tin cần thiết cho mục đích người dùng chủ động gửi, như liên hệ, đăng ký hoặc bình luận. Website không yêu cầu người dùng cung cấp mật khẩu, mã OTP hay thông tin định danh nhạy cảm qua biểu mẫu công khai.\n\nThông tin liên hệ được sử dụng để tiếp nhận và xử lý yêu cầu phù hợp. Email dùng khi gửi bình luận chỉ phục vụ quản lý và phản hồi khi cần, không hiển thị công khai.\n\nCác dữ liệu nội bộ, hồ sơ cá nhân và thông tin chưa được phép công khai không được đưa lên website. Khi cần hỗ trợ về dữ liệu hoặc nội dung đã gửi, vui lòng liên hệ support@skyfirst.io.vn.',isPublished:true,publishedAt:'11/09/2026',author:'Sky First Network',type:'legal',showInFooter:true},
   {id:'page-terms',slug:'dieu-khoan-su-dung',title:'Điều khoản sử dụng',summary:'Nguyên tắc sử dụng nội dung và các chức năng công khai của website Sky First Network.',content:'Website Sky First Network cung cấp thông tin về Mạng lưới, chương trình, hoạt động, đơn vị trực thuộc và các tiện ích công khai theo dữ liệu được cập nhật tại từng thời điểm. Người dùng cần sử dụng các chức năng website đúng mục đích và không gửi nội dung giả mạo, xâm phạm quyền riêng tư hoặc gây ảnh hưởng đến hoạt động của hệ thống.\n\nThông tin về chương trình, tuyển chọn, hợp tác và giấy chứng nhận chỉ có giá trị theo trạng thái hiển thị và dữ liệu được ghi nhận trên hệ thống chính thức. Nội dung cũ có thể được cập nhật khi hoạt động thay đổi.\n\nSky First Network hiện chưa phải là một pháp nhân độc lập; các nội dung và chức danh trên website phục vụ nhận diện, quản trị và vận hành Mạng lưới, không phải bằng chứng về tư cách pháp nhân. Nếu cần làm rõ thông tin, vui lòng liên hệ kênh chính thức của Sky First Network.',contentFormatted:'Website Sky First Network cung cấp thông tin về Mạng lưới, chương trình, hoạt động, đơn vị trực thuộc và các tiện ích công khai theo dữ liệu được cập nhật tại từng thời điểm. Người dùng cần sử dụng các chức năng website đúng mục đích và không gửi nội dung giả mạo, xâm phạm quyền riêng tư hoặc gây ảnh hưởng đến hoạt động của hệ thống.\n\nThông tin về chương trình, tuyển chọn, hợp tác và giấy chứng nhận chỉ có giá trị theo trạng thái hiển thị và dữ liệu được ghi nhận trên hệ thống chính thức. Nội dung cũ có thể được cập nhật khi hoạt động thay đổi.\n\nSky First Network hiện chưa phải là một pháp nhân độc lập; các nội dung và chức danh trên website phục vụ nhận diện, quản trị và vận hành Mạng lưới, không phải bằng chứng về tư cách pháp nhân. Nếu cần làm rõ thông tin, vui lòng liên hệ kênh chính thức của Sky First Network.',isPublished:true,publishedAt:'11/09/2026',author:'Sky First Network',type:'legal',showInFooter:true},
   {id:'content-04',slug:'tam-nhin',title:'Tầm nhìn',summary:'Định hướng dài hạn của Sky First Network.',content:'Nội dung được cập nhật theo tài liệu chính thức của Sky First Network.',contentFormatted:'Nội dung được cập nhật theo tài liệu chính thức của Sky First Network.',isPublished:true,publishedAt:'08/09/2026',author:'Sky First Network',type:'custom',showInFooter:false},
@@ -224,6 +248,7 @@ export interface DataContextType {
   // Firebase Database Sync
   isFirebaseConfigured: boolean;
   isFirebaseSyncing: boolean;
+  isPublicDataReady: boolean;
   firebaseSyncStatus: 'synced' | 'syncing' | 'error' | 'not_configured' | 'idle';
   firebaseSyncMessage: string;
   uploadAllDataToFirestore: () => Promise<{ success: boolean; message: string }>;
@@ -274,6 +299,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const [isFirebaseSyncing, setIsFirebaseSyncing] = useState(false);
+  const [isPublicDataReady, setIsPublicDataReady] = useState(false);
   const [firebaseSyncStatus, setFirebaseSyncStatus] = useState<
     'synced' | 'syncing' | 'error' | 'not_configured' | 'idle'
   >(isFirebaseConfigured ? 'idle' : 'not_configured');
@@ -420,41 +446,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // This prevents a cached/stale first snapshot from replacing newer initial state.
   const remoteReadyRef = useRef(false);
 
-  // Nạp dữ liệu website từ Cloudflare D1. Firebase chỉ còn dùng cho Authentication.
+  // Nạp dữ liệu public theo một bundle duy nhất để giảm số lần đọc D1 trên mỗi lần mở trang.
+  // Public response có cache ở edge; Admin có token vẫn nhận dữ liệu mới nhất.
   useEffect(() => {
     let isMounted = true;
     const loadD1Data = async () => {
       try {
         setIsFirebaseSyncing(true); setFirebaseSyncStatus('syncing'); setFirebaseSyncMessage('Đang đồng bộ dữ liệu website...');
-        const [remoteConfig, pillars, timelineData, teamData, faqsData, remotePages, remotePrograms, remoteUnits, remoteNews, remoteCertificates] = await Promise.all([
-          fetchDocumentFromFirestore<SiteConfig>('site_config','current'),
-          fetchDocumentFromFirestore<any>('cms_modules','core_pillars'),
-          fetchDocumentFromFirestore<any>('cms_modules','timeline'),
-          fetchDocumentFromFirestore<any>('cms_modules','team_members'),
-          fetchDocumentFromFirestore<any>('cms_modules','faqs'),
-          fetchCollectionFromFirestore<CustomPage>('custom_pages'),
-          fetchCollectionFromFirestore<Program>('programs'),
-          fetchCollectionFromFirestore<NetworkUnit>('network_units'),
-          fetchCollectionFromFirestore<NewsArticle>('news_articles'),
-          fetchCollectionFromFirestore<Certificate>('certificates'),
-        ]);
-        if(!isMounted) return;
+        const bundle = await fetchCMSBundle();
+        if (!isMounted) return;
+        const first = (name:string) => Array.isArray(bundle?.[name]?.items) ? bundle[name].items : [];
+        const configItems = first('site_config');
+        const moduleItems = first('cms_modules');
+        const findModule = (id:string) => moduleItems.find((item:any) => item?.id === id);
+        const remoteConfig = configItems.find((item:any) => item?.id === 'current') || configItems[0];
         if(remoteConfig) setSiteConfig(prev=>({...prev,...remoteConfig,homeSections:{...prev.homeSections,...(remoteConfig.homeSections||{})}}));
-        if(Array.isArray(pillars?.items)) setCorePillars(pillars.items);
-        if(Array.isArray(timelineData?.items)) setTimeline(timelineData.items);
-        if(Array.isArray(teamData?.items)) setTeamMembers(teamData.items);
-        if(Array.isArray(faqsData?.items)) setFaqs(faqsData.items);
+        const pillars=findModule('core_pillars'); if(Array.isArray(pillars?.items)) setCorePillars(pillars.items);
+        const timelineData=findModule('timeline'); if(Array.isArray(timelineData?.items)) setTimeline(timelineData.items);
+        const teamData=findModule('team_members'); if(Array.isArray(teamData?.items)) setTeamMembers(teamData.items);
+        const faqsData=findModule('faqs'); if(Array.isArray(faqsData?.items)) setFaqs(faqsData.items);
+        const remotePages=first('custom_pages') as CustomPage[];
+        const remotePrograms=first('programs') as Program[];
+        const remoteUnits=first('network_units') as NetworkUnit[];
+        const remoteNews=first('news_articles') as NewsArticle[];
         if(remotePages.length || isCMSCollectionInitialized('custom_pages')) setCustomPages(mergeOfficialPages(remotePages));
         if(remotePrograms.length || isCMSCollectionInitialized('programs')) setPrograms(remotePrograms);
         if(remoteUnits.length || isCMSCollectionInitialized('network_units')) setNetworkUnits(mergeCMSCollection('network_units',DEFAULT_NETWORK_UNITS,remoteUnits));
         if(remoteNews.length || isCMSCollectionInitialized('news_articles')) setNewsArticles(remoteNews);
-        if(remoteCertificates.length || isCMSCollectionInitialized('certificates')) setCertificates(Object.fromEntries(remoteCertificates.map(c=>[c.code,c])));
         remoteReadyRef.current=true; setFirebaseSyncStatus('synced'); setFirebaseSyncMessage('Đã đồng bộ dữ liệu.');
-      } catch { if(isMounted){setFirebaseSyncStatus('error');setFirebaseSyncMessage('Không thể kết nối dịch vụ dữ liệu lúc này.');} }
-      finally { if(isMounted)setIsFirebaseSyncing(false); }
+      } catch {
+        if(isMounted){setFirebaseSyncStatus('error');setFirebaseSyncMessage('Không thể kết nối dịch vụ dữ liệu lúc này.');}
+      } finally {
+        if(isMounted){setIsFirebaseSyncing(false);setIsPublicDataReady(true);}
+      }
     };
     void loadD1Data();
-    const timer=window.setInterval(()=>{ if(document.visibilityState==='visible'&&!auth?.currentUser&&pendingCloudWrites.current.size===0) void loadD1Data(); },30000);
+    const timer=window.setInterval(()=>{ if(document.visibilityState==='visible'&&!auth?.currentUser&&pendingCloudWrites.current.size===0) void loadD1Data(); },60000);
     return()=>{isMounted=false;window.clearInterval(timer)};
   }, []);
 
@@ -746,6 +773,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         importDataJSON,
         isFirebaseConfigured,
         isFirebaseSyncing,
+        isPublicDataReady,
         firebaseSyncStatus,
         firebaseSyncMessage,
         uploadAllDataToFirestore,

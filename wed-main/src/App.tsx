@@ -19,7 +19,7 @@ import { PageRoute } from './types';
 import { useDataContext, DataProvider } from './context/DataContext';
 import { SiteClosedTopBanner } from './components/SiteClosedTopBanner';
 import { SiteClosedNotice } from './components/SiteClosedNotice';
-import { getProgramSlug, getArticleSlug } from './utils/slug';
+import { getProgramSlug, getArticleSlug, normalizeStoredSlug } from './utils/slug';
 
 const VALID_ROUTES: PageRoute[] = [
   'home',
@@ -94,7 +94,7 @@ const parseUrlRoute = (): ParsedRoute => {
 
   // Match /du-an/:slug
   if (segments[0] === 'du-an' && segments[1]) {
-    return { page: 'program-detail', slug: decodeURIComponent(segments[1]) };
+    return { page: 'program-detail', slug: normalizeStoredSlug(decodeURIComponent(segments[1])) };
   }
   if (segments[0] === 'du-an' && !segments[1]) {
     return { page: 'programs' };
@@ -102,7 +102,7 @@ const parseUrlRoute = (): ParsedRoute => {
 
   // Match /tin-tuc/:slug
   if (segments[0] === 'tin-tuc' && segments[1]) {
-    return { page: 'news-detail', slug: decodeURIComponent(segments[1]) };
+    return { page: 'news-detail', slug: normalizeStoredSlug(decodeURIComponent(segments[1])) };
   }
   if (segments[0] === 'tin-tuc' && !segments[1]) {
     return { page: 'news' };
@@ -152,10 +152,10 @@ const parseUrlRoute = (): ParsedRoute => {
     return { page: 'admin' };
   }
   if (hashSegments[0] === 'du-an' && hashSegments[1]) {
-    return { page: 'program-detail', slug: decodeURIComponent(hashSegments[1]) };
+    return { page: 'program-detail', slug: normalizeStoredSlug(decodeURIComponent(hashSegments[1])) };
   }
   if (hashSegments[0] === 'tin-tuc' && hashSegments[1]) {
-    return { page: 'news-detail', slug: decodeURIComponent(hashSegments[1]) };
+    return { page: 'news-detail', slug: normalizeStoredSlug(decodeURIComponent(hashSegments[1])) };
   }
   if ((hashSegments[0] === 'trang' || hashSegments[0] === 'page') && hashSegments[1]) {
     return { page: 'custom-page', slug: decodeURIComponent(hashSegments[1]) };
@@ -225,10 +225,14 @@ function AppMainContent() {
     let pageTitle = (PAGE_TITLES[page] || 'Sky First Network').replace('Sky First Network', brandName);
 
     if (page === 'program-detail' && slug) {
-      targetPath = `/du-an/${slug}`;
+      const cleanSlug = normalizeStoredSlug(slug);
+      targetPath = `/du-an/${cleanSlug}`;
+      setCurrentSlug(cleanSlug);
       pageTitle = `Chi Tiết Dự Án | ${brandName}`;
     } else if (page === 'news-detail' && slug) {
-      targetPath = `/tin-tuc/${slug}`;
+      const cleanSlug = normalizeStoredSlug(slug);
+      targetPath = `/tin-tuc/${cleanSlug}`;
+      setCurrentSlug(cleanSlug);
       pageTitle = `Chi Tiết Bản Tin | ${brandName}`;
     } else if (page === 'custom-page' && slug) {
       targetPath = `/${slug}`;

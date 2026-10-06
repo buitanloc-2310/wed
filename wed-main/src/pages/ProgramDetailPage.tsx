@@ -36,7 +36,7 @@ export const ProgramDetailPage: React.FC<ProgramDetailPageProps> = ({
   onShowToast,
   onSelectProgram
 }) => {
-  const { programs } = useDataContext();
+  const { programs, isPublicDataReady } = useDataContext();
 
   // Find program by slug or id
   const program = programs.find(
@@ -58,6 +58,22 @@ export const ProgramDetailPage: React.FC<ProgramDetailPageProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [applicationCode, setApplicationCode] = useState('');
+
+  if (!isPublicDataReady) {
+    return (
+      <div className="min-h-[70vh] bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 animate-pulse">
+          <div className="h-5 w-40 rounded bg-slate-100" />
+          <div className="mt-8 h-10 w-4/5 rounded-xl bg-slate-100" />
+          <div className="mt-4 h-5 w-3/5 rounded bg-slate-100" />
+          <div className="mt-8 aspect-video w-full rounded-[28px] bg-slate-100" />
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[0,1,2,3].map((i)=><div key={i} className="h-20 rounded-2xl bg-slate-100" />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!program || program.isPublished === false) {
     return (

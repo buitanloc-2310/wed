@@ -15,7 +15,6 @@ import {
   RotateCcw
 } from 'lucide-react';
 
-import { CERTIFICATES_DATABASE } from '../data/mockData';
 import { useDataContext } from '../context/DataContext';
 import { Certificate } from '../types';
 
@@ -123,14 +122,23 @@ export const CertificatePage: React.FC<CertificatePageProps> = ({ onShowToast })
           c.code?.toUpperCase() === target
       );
 
-    const localFound =
-      dynamicFound ||
-      CERTIFICATES_DATABASE[target];
-
-    if (localFound) {
-      setSearchedCert(localFound);
+    if (dynamicFound) {
+      setSearchedCert(dynamicFound);
       onShowToast(`Đã tìm thấy Giấy chứng nhận: ${target}`);
       return;
+    }
+
+    // Chỉ tra đúng mã được yêu cầu; public không tải toàn bộ kho chứng nhận/PII vào trình duyệt.
+    try {
+      const localResponse = await fetch(`/api/cms?collection=certificates&id=${encodeURIComponent(target)}`, { cache: 'no-store' });
+      const localPayload = await localResponse.json().catch(() => null);
+      if (localResponse.ok && localPayload?.item) {
+        setSearchedCert(localPayload.item as Certificate);
+        onShowToast(`Đã tìm thấy Giấy chứng nhận: ${target}`);
+        return;
+      }
+    } catch {
+      // Tiếp tục thử các nguồn tra cứu liên kết bên dưới.
     }
 
     // =====================================================

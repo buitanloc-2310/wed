@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 import { motion } from 'motion/react';
-import { CORE_VALUES } from '../data/mockData';
+import { CORE_VALUES } from '../data/baselineData';
 import { useDataContext } from '../context/DataContext';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
 import { EntityBadge } from '../components/EntityColorSystem';

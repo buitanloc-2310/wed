@@ -233,7 +233,16 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   const escapeHtml=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
   const rememberMediaSelection=()=>{const selection=window.getSelection();if(selection?.rangeCount&&editorRef.current?.contains(selection.anchorNode))mediaSelection.current=selection.getRangeAt(0).cloneRange();};
-  const insertMedia=(item:MediaItem)=>{const editor=editorRef.current;if(!editor)return;editor.focus();const selection=window.getSelection();selection?.removeAllRanges();const range=mediaSelection.current;if(range&&editor.contains(range.commonAncestorContainer))selection?.addRange(range);else{const end=document.createRange();end.selectNodeContents(editor);end.collapse(false);selection?.addRange(end);}applyFormat('insertHTML',`<figure><img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.alt||item.name)}"/>${item.caption?`<figcaption>${escapeHtml(item.caption)}</figcaption>`:''}</figure><p><br></p>`);rememberMediaSelection();};
+  const insertMedia=(item:MediaItem)=>{
+    const editor=editorRef.current;if(!editor)return;editor.focus();
+    const selection=window.getSelection();selection?.removeAllRanges();
+    const range=mediaSelection.current;
+    if(range&&editor.contains(range.commonAncestorContainer))selection?.addRange(range);
+    else{const end=document.createRange();end.selectNodeContents(editor);end.collapse(false);selection?.addRange(end);}
+    const caption=escapeHtml(item.caption||'Nhập chú thích ảnh');
+    const figure=`<figure class="article-media"><img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.alt||item.name)}"/><figcaption><span class="media-caption">${caption}</span><br><span class="media-credit">ẢNH/NGUỒN: Nhập nguồn ảnh</span></figcaption></figure><p><br></p>`;
+    applyFormat('insertHTML',figure);rememberMediaSelection();
+  };
   const handleInsertImage = () => {
     rememberMediaSelection();
     const input=document.createElement('input'); input.type='file'; input.accept='image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml'; input.multiple=true;

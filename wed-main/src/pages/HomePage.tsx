@@ -16,13 +16,40 @@ import {
   UserRoundPlus,
 } from 'lucide-react';
 
-import { PageRoute, Program, NewsArticle } from '../types';
+import { PageRoute, Program, NewsArticle, CounterAnimationConfig } from '../types';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
 import { EntityBadge } from '../components/EntityColorSystem';
 import { useDataContext } from '../context/DataContext';
 
 
-const AnimatedStat:React.FC<{value:string}>=({value})=>{const ref=useRef<HTMLSpanElement|null>(null);const[shown,setShown]=useState('0');const ran=useRef(false);useEffect(()=>{const el=ref.current;if(!el)return;const ob=new IntersectionObserver((entries)=>{if(!entries[0]?.isIntersecting||ran.current)return;ran.current=true;const raw=String(value||'0');const m=raw.match(/[\d.,]+/);if(!m){setShown(raw);ob.disconnect();return}const number=Number(m[0].replace(/\./g,'').replace(',','.'));if(!Number.isFinite(number)){setShown(raw);ob.disconnect();return}const suffix=raw.replace(m[0],'');const start=performance.now(),duration=1050;const step=(now:number)=>{const t=Math.min(1,(now-start)/duration),eased=1-Math.pow(1-t,3),v=Math.round(number*eased);setShown(v.toLocaleString('vi-VN')+suffix);if(t<1)requestAnimationFrame(step)};requestAnimationFrame(step);ob.disconnect()},{threshold:.45});ob.observe(el);return()=>ob.disconnect()},[value]);return <span ref={ref}>{shown}</span>};
+const AnimatedStat:React.FC<{value:string;config?:CounterAnimationConfig}>=({value,config})=>{
+  const [shown,setShown]=useState('0');
+  const lastTarget=useRef<string>('');
+  useEffect(()=>{
+    const raw=String(value??'').trim();
+    if(!raw || raw===lastTarget.current)return;
+    const match=raw.match(/-?[\d.,]+/);
+    if(!match){setShown(raw);lastTarget.current=raw;return}
+    const numeric=Number(match[0].replace(/\./g,'').replace(',','.'));
+    if(!Number.isFinite(numeric)){setShown(raw);lastTarget.current=raw;return}
+    lastTarget.current=raw;
+    const prefix=config?.prefix??raw.slice(0,raw.indexOf(match[0]));
+    const suffix=config?.suffix??raw.slice(raw.indexOf(match[0])+match[0].length);
+    const format=(n:number)=>{const rounded=Math.round(n);const body=config?.numberFormat==='plain'?String(rounded):config?.numberFormat==='en'?rounded.toLocaleString('en-US'):rounded.toLocaleString('vi-VN');return `${prefix}${body}${suffix}`};
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches || numeric===0){setShown(format(numeric));return}
+    setShown(format(0));
+    const duration=Math.max(.25,Math.min(60,Number(config?.durationSeconds||10)))*1000;
+    const mode=config?.mode||'smooth';
+    const baseStep=Math.max(1,Math.abs(Number(config?.step||1)));
+    const step=mode==='large'?Math.max(baseStep,Math.ceil(Math.abs(numeric)/50)):mode==='small'?Math.max(1,Math.ceil(Math.abs(numeric)/500)):mode==='even'?Math.max(2,baseStep):baseStep;
+    const ease=(t:number)=>config?.easing==='linear'?t:config?.easing==='ease-out'?1-Math.pow(1-t,3):t*t*(3-2*t);
+    const start=performance.now();let raf=0;
+    const tick=(now:number)=>{const progress=Math.min(1,(now-start)/duration);let current=numeric*ease(progress);if(mode!=='smooth'&&progress<1)current=Math.floor(current/step)*step;current=numeric>=0?Math.min(numeric,Math.max(0,current)):Math.max(numeric,Math.min(0,current));setShown(format(progress>=1?numeric:current));if(progress<1)raf=requestAnimationFrame(tick)};
+    raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf);
+  },[value,config?.durationSeconds,config?.mode,config?.step,config?.easing,config?.prefix,config?.suffix,config?.numberFormat]);
+  const size=config?.fontSize==='small'?'1.25rem':config?.fontSize==='medium'?'1.5rem':config?.fontSize==='xlarge'?'2.25rem':config?.fontSize==='custom'?(config.customFontSize||'1.75rem'):'1.75rem';
+  return <span className="tabular-nums" style={{fontSize:size}}>{shown}</span>
+};
 
 interface HomePageProps {
   onNavigate: (page: PageRoute, slug?: string) => void;
@@ -81,7 +108,9 @@ export const HomePage: React.FC<HomePageProps> = ({
   const publishedNews = newsArticles
     .filter((n) => n.isPublished !== false)
     .sort((a, b) => Number(Boolean(b.isFeatured)) - Number(Boolean(a.isFeatured)))
-    .slice(0, 6);
+    .slice(0, 8);
+  const featuredNews = publishedNews.find((n) => n.isFeatured) || publishedNews[0];
+  const standardNews = publishedNews.filter((n) => n.id !== featuredNews?.id).slice(0, 6);
 
   const visible = siteConfig.homeSections || {};
 
@@ -137,7 +166,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               </div>
             </div>
 
-            <div className="relative min-h-[360px] overflow-hidden rounded-[36px] border border-white/15 bg-gradient-to-br from-[#0B315E]/80 via-[#0B4D96]/70 to-[#071B3A] p-6 shadow-[0_30px_90px_rgba(0,0,0,.25)] sm:min-h-[420px]">
+            <div className="sf-hero-visual relative min-h-[360px] overflow-hidden rounded-[36px] border border-white/15 bg-gradient-to-br from-[#0B315E]/80 via-[#0B4D96]/70 to-[#071B3A] p-6 shadow-[0_30px_90px_rgba(0,0,0,.25)] sm:min-h-[420px]">
               <div className="absolute inset-0 opacity-90">
                 <div className="absolute left-[8%] top-[14%] h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_28px_8px_rgba(103,232,249,.32)]" />
                 <div className="absolute right-[12%] top-[18%] h-3 w-3 rotate-45 border-2 border-white/80" />
@@ -166,14 +195,14 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           <div className="mt-9 grid overflow-hidden rounded-[26px] border border-white/15 bg-[#071B3A]/80 shadow-2xl backdrop-blur sm:grid-cols-2 lg:grid-cols-4">
             {[
-              [siteConfig.stats.membersCount, siteConfig.stats.membersLabel || 'Thành viên', Users],
-              [siteConfig.stats.communityProjects, siteConfig.stats.projectsLabel || 'Chương trình & hoạt động', BookOpen],
-              [siteConfig.stats.provincesCount, siteConfig.stats.provincesLabel || 'Địa bàn hoạt động', Network],
-              [siteConfig.stats.volunteerHours, siteConfig.stats.hoursLabel || 'Giờ hoạt động', HeartHandshake],
-            ].map(([value,label,Icon]: any, index) => (
-              <div key={String(label)} className={`flex items-center gap-4 px-6 py-5 ${index ? 'border-t border-white/10 sm:border-t-0 sm:border-l' : ''}`}>
-                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/8 text-cyan-300"><Icon size={20}/></span>
-                <div><p className="text-2xl font-black tabular-nums"><AnimatedStat value={String(value || '0')} /></p><p className="mt-0.5 text-xs text-slate-300">{label}</p></div>
+              ['membersCount',siteConfig.stats.membersCount, siteConfig.stats.membersLabel || 'Thành viên', Users],
+              ['communityProjects',siteConfig.stats.communityProjects, siteConfig.stats.projectsLabel || 'Chương trình & hoạt động', BookOpen],
+              ['provincesCount',siteConfig.stats.provincesCount, siteConfig.stats.provincesLabel || 'Địa bàn hoạt động', Network],
+              ['volunteerHours',siteConfig.stats.volunteerHours, siteConfig.stats.hoursLabel || 'Giờ hoạt động', HeartHandshake],
+            ].map(([key,value,label,Icon]: any, index) => (
+              <div key={String(label)} className={`flex items-center gap-4 px-5 py-4 ${index ? 'border-t border-white/10 sm:border-t-0 sm:border-l' : ''}`}>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/8 text-cyan-300"><Icon size={19}/></span>
+                <div><p className="font-black leading-none"><AnimatedStat value={String(value ?? '0')} config={(siteConfig.counterAnimation as any)?.[key]} /></p><p className="mt-1.5 text-xs text-slate-300">{label}</p></div>
               </div>
             ))}
           </div>
@@ -288,7 +317,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                 <h2 className="mt-4 max-w-3xl text-4xl font-black tracking-[-.04em] sm:text-5xl">
                   {siteConfig.certificateHeading ||
-                    'Tra cứu Giấy chứng nhận Sky First'}
+                    'Trung tâm Xác thực Sky First'}
                 </h2>
 
                 <p className="mt-5 max-w-2xl leading-8 text-slate-300">
@@ -360,72 +389,24 @@ export const HomePage: React.FC<HomePageProps> = ({
     ),
 
     news: (
-      <section className="bg-[#F5F9FD] py-20 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[.18em] text-[#0B5FB4]">
-                {siteConfig.newsLabel || 'Nội dung nổi bật'}
-              </div>
-
-              <h2 className="mt-3 text-4xl font-black tracking-[-.04em] text-slate-950 sm:text-5xl">
-                {siteConfig.newsHeading || 'Bài đăng nổi bật & cập nhật mới'}
-              </h2>
-            </div>
-
-            <button
-              onClick={() => onNavigate('news')}
-              className="group inline-flex items-center gap-2 font-black text-[#0B5FB4]"
-            >
-              Xem tin tức
-              <ArrowRight
-                size={16}
-                className="transition-transform group-hover:translate-x-1"
-              />
-            </button>
+      <section className="bg-[#F5F9FD] py-16 lg:py-20">
+        <div className="mx-auto max-w-[1380px] px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div><div className="text-xs font-black uppercase tracking-[.18em] text-[#0B5FB4]">{siteConfig.newsLabel || 'Tin tức & hoạt động'}</div><h2 className="mt-2 text-3xl font-black tracking-[-.04em] text-slate-950 sm:text-4xl">{siteConfig.newsHeading || 'Cập nhật từ mạng lưới'}</h2></div>
+            <button onClick={() => onNavigate('news')} className="group inline-flex items-center gap-2 text-sm font-black text-[#0B5FB4]">Xem tất cả tin <ArrowRight size={15} className="transition-transform group-hover:translate-x-1"/></button>
           </div>
-
-          <div className="grid gap-5 lg:grid-cols-3">
-            {publishedNews.length === 0 ? (
-              <div className="lg:col-span-3 rounded-[26px] border border-dashed border-slate-300 bg-white p-9 text-slate-500">
-                Chưa có tin tức được công bố.
-              </div>
-            ) : (
-              publishedNews.map((n: any) => (
-                <article
-                  key={n.id}
-                  onClick={() => onSelectArticle?.(n)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ')
-                      onSelectArticle?.(n);
-                  }}
-                  className="group cursor-pointer rounded-[26px] border border-slate-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-                >
-                  <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-400">
-                    <span>{n.publishedAt}</span>{n.isFeatured && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">Nổi bật</span>}
-                  </div>
-
-                  <h3 className="mt-4 text-xl font-black leading-snug text-slate-950">
-                    {n.title}
-                  </h3>
-
-                  <p className="mt-3 line-clamp-3 text-sm leading-7 text-slate-500">
-                    {n.summary}
-                  </p>
-
-                  <div className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#0B5FB4]">
-                    Đọc bài viết
-                    <ArrowRight
-                      size={15}
-                      className="transition-transform group-hover:translate-x-1"
-                    />
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
+          {publishedNews.length===0?<div className="rounded-[24px] border border-dashed border-slate-300 bg-white p-8 text-slate-500">Chưa có tin tức được công bố.</div>:
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
+            <div className="grid gap-4 sm:grid-cols-2">{standardNews.map((n:any)=><article key={n.id} onClick={()=>onSelectArticle?.(n)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')onSelectArticle?.(n)}} className="group cursor-pointer rounded-[22px] border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-lg">
+              {n.imageUrl&&<div className="mb-4 overflow-hidden rounded-2xl bg-slate-100"><img src={n.imageUrl} alt={n.imageDescription||n.title} className="h-auto w-full object-contain"/></div>}
+              <div className="text-[11px] font-bold text-slate-400">{n.categoryLabel||'Tin Sky First'} · {n.publishedAt}</div><h3 className="mt-2 text-lg font-black leading-snug text-slate-950">{n.title}</h3><p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-500">{n.summary}</p><div className="mt-4 inline-flex items-center gap-2 text-sm font-black text-[#0B5FB4]">Đọc bài <ArrowRight size={14}/></div>
+            </article>)}</div>
+            {featuredNews&&<aside className="order-first lg:order-none lg:sticky lg:top-[96px] lg:self-start rounded-[26px] border border-sky-200 bg-white p-5 shadow-[0_18px_55px_rgba(7,27,58,.08)]">
+              <div className="inline-flex rounded-full bg-sky-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-[#0B66C3]">Nổi bật</div>
+              {featuredNews.imageUrl&&<div className="mt-4 overflow-hidden rounded-2xl bg-slate-100"><img src={featuredNews.imageUrl} alt={featuredNews.imageDescription||featuredNews.title} className="h-auto w-full object-contain"/></div>}
+              <div className="mt-4 text-[11px] font-bold text-slate-400">{featuredNews.categoryLabel||'Tin Sky First'} · {featuredNews.publishedAt}</div><h3 className="mt-2 text-xl font-black leading-snug text-slate-950">{featuredNews.title}</h3><p className="mt-2 line-clamp-4 text-sm leading-6 text-slate-500">{featuredNews.summary}</p><button onClick={()=>onSelectArticle?.(featuredNews)} className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#0B5FB4]">Đọc bài nổi bật <ArrowRight size={14}/></button>
+            </aside>}
+          </div>}
         </div>
       </section>
     ),

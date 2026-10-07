@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   BookOpen,
@@ -46,6 +46,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
   const [openDesktopGroup, setOpenDesktopGroup] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const closeTimer=useRef<number|undefined>(undefined);
+  const cancelClose=()=>{if(closeTimer.current)window.clearTimeout(closeTimer.current);closeTimer.current=undefined;};
+  const scheduleClose=()=>{cancelClose();closeTimer.current=window.setTimeout(()=>setOpenDesktopGroup(null),300);};
+  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpenDesktopGroup(null);setSearchOpen(false);setMobileOpen(false)}};const onPointer=(e:PointerEvent)=>{const target=e.target as HTMLElement;if(openDesktopGroup&&!target.closest('[data-sf-menu-root]'))setOpenDesktopGroup(null)};document.addEventListener('keydown',onKey);document.addEventListener('pointerdown',onPointer);return()=>{document.removeEventListener('keydown',onKey);document.removeEventListener('pointerdown',onPointer);cancelClose()};},[openDesktopGroup]);
 
   const activityGroup = useMemo(() => groups.find((g) => g.label === 'Hoạt động'), [groups]);
   const searchResults = useMemo(() => {
@@ -72,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
     const headerIcon = group.label === 'Giới thiệu' ? Info : group.label === 'Tin tức' ? Newspaper : group.label === 'Tra cứu' ? ScanSearch : group.label === 'Tham gia' ? UserRoundPlus : Sparkles;
     const HeaderIcon=headerIcon;
     return (
-      <div key={group.label} className="relative" onMouseEnter={() => setOpenDesktopGroup(group.label)}>
+      <div key={group.label} className="relative" data-sf-menu-root onMouseEnter={() => {cancelClose();setOpenDesktopGroup(group.label)}} onMouseLeave={scheduleClose}>
         <button
           onClick={() => setOpenDesktopGroup(open ? null : group.label)}
           aria-expanded={open}
@@ -81,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
           <HeaderIcon size={16}/>{group.label}<ChevronDown size={15} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
         {open && (
-          <div className="absolute top-full left-1/2 -translate-x-1/2 pt-3 z-[80]">
+          <div className="absolute top-full left-1/2 -translate-x-1/2 pt-3 z-[80]" onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
             <div className={`${isLarge?'w-[720px]':'w-[430px]'} rounded-[26px] border border-slate-200/80 bg-white shadow-[0_28px_70px_rgba(15,23,42,.18)] p-3`}>
               <div className="mb-2 flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-white text-[#0B66C3] shadow-sm"><HeaderIcon size={17}/></span><div><div className="font-black text-slate-950">{group.label}</div><div className="text-[11px] text-slate-500">Chọn nội dung bạn muốn khám phá</div></div></div>
               <div className={`grid gap-1 ${isLarge?'grid-cols-2':''}`}>
@@ -106,16 +110,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/80">
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="h-[88px] flex items-center justify-between gap-5">
+        <div className="h-[76px] flex items-center justify-between gap-5">
           <button onClick={() => go('home')} className="flex items-center min-w-0 text-left" aria-label={`${siteConfig.siteName || 'Sky First Network'} - Trang chủ`}>
             {siteConfig.logoUrl ? (
-              <img src={siteConfig.logoUrl} alt={siteConfig.siteName || 'Sky First Network'} className="h-12 sm:h-[58px] w-auto object-contain" />
+              <img src={siteConfig.logoUrl} alt={siteConfig.siteName || 'Sky First Network'} className="h-10 sm:h-[50px] w-auto object-contain" />
             ) : (
               <span className="font-black text-slate-900">{siteConfig.siteName || 'Sky First Network'}</span>
             )}
           </button>
 
-          <nav className="hidden lg:flex flex-1 items-center justify-center gap-5 xl:gap-9 px-5" onMouseLeave={() => setOpenDesktopGroup(null)}>
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-4 xl:gap-7 px-4" data-sf-menu-root onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
             <button onClick={() => go('home')} className={`px-4 py-2.5 rounded-2xl text-[15px] font-semibold transition flex items-center gap-1.5 ${currentPage === 'home' ? 'text-[#0B66C3] bg-sky-50' : 'text-slate-700 hover:text-[#0B66C3] hover:bg-sky-50'}`}><Home size={16}/>Trang chủ</button>
             {groups.filter((g) => g.label !== 'Đơn vị trực thuộc').map((group) => {
               if (group.label !== 'Hoạt động') return renderStandardDropdown(group);
@@ -124,12 +128,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
               const first = items.slice(0, 5);
               const second = items.slice(5);
               return (
-                <div key={group.label} className="relative" onMouseEnter={() => setOpenDesktopGroup(group.label)}>
+                <div key={group.label} className="relative" data-sf-menu-root onMouseEnter={() => {cancelClose();setOpenDesktopGroup(group.label)}} onMouseLeave={scheduleClose}>
                   <button onClick={() => setOpenDesktopGroup(open ? null : group.label)} aria-expanded={open} className="px-4 py-2.5 rounded-2xl text-[15px] font-semibold text-slate-700 hover:text-[#0B66C3] hover:bg-sky-50 transition flex items-center gap-1.5">
                     {group.label}<ChevronDown size={15} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
                   </button>
                   {open && (
-                    <div className="fixed left-1/2 -translate-x-1/2 top-[76px] pt-3 z-[80] w-[min(1120px,calc(100vw-48px))]">
+                    <div className="fixed left-1/2 -translate-x-1/2 top-[70px] pt-5 z-[80] w-[min(1120px,calc(100vw-48px))]" onMouseEnter={cancelClose} onMouseLeave={scheduleClose}>
                       <div className="grid grid-cols-[1fr_1fr_.72fr] gap-0 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_34px_90px_rgba(15,23,42,.20)]">
                         <section className="p-6 border-r border-slate-100">
                           <div className="mb-4 flex items-start gap-3">
@@ -181,7 +185,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
       </div>
 
       {mobileOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white max-h-[calc(100vh-88px)] overflow-y-auto">
+        <div className="lg:hidden border-t border-slate-200 bg-white max-h-[calc(100vh-76px)] overflow-y-auto">
           <div className="px-4 py-4 space-y-2">
             <button onClick={() => go('home')} className="w-full text-left px-4 py-3 rounded-xl font-bold bg-slate-50">Trang chủ</button>
             {groups.filter((g) => g.label !== 'Đơn vị trực thuộc').map((group) => (

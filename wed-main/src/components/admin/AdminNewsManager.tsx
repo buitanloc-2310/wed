@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDataContext } from '../../context/DataContext';
 import {
   FileText,
   Plus,
@@ -56,6 +57,8 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
   actionRef,
   onViewModeChange,
 }) => {
+  const {siteConfig}=useDataContext();
+  const taxonomyOptions=(siteConfig.taxonomyCategories||[]).filter((x:any)=>x.visible!==false);
   const [viewMode, setViewMode] = useState<'list' | 'edit'>('list');
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -593,30 +596,13 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                 <select
                   value={activeArticle.category}
                   onChange={(e) => {
-                    const category = e.target.value;
-                    const labels: Record<string, string> = {
-                      announcement:'Thông báo',event:'Sự kiện & Hoạt động',community:'Tình nguyện & Cộng đồng',training:'Hội thảo & Kỹ năng',media:'Truyền thông & Lan tỏa',education:'Giáo dục & Đào tạo',youth:'Phát triển Người trẻ',environment:'Môi trường & Phát triển bền vững',research:'Nghiên cứu & Đổi mới sáng tạo',technology:'Công nghệ & Chuyển đổi số',recruitment:'Tuyển dụng & Nhân sự',project:'Chương trình & Dự án',opportunity:'Cơ hội',report:'Báo cáo & Công khai',culture:'Văn hóa & Xã hội',other:'Khác'
-                    };
-                    onUpdateArticle(activeArticle.id, { category, categoryLabel: labels[category] || category });
+                    const category=e.target.value;
+                    const found=taxonomyOptions.find((x:any)=>x.id===category);
+                    onUpdateArticle(activeArticle.id,{category,categoryLabel:found?.label||category});
                   }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
                 >
-                  <option value="education">Giáo dục & Đào tạo</option>
-                  <option value="youth">Phát triển Người trẻ</option>
-                  <option value="community">Tình nguyện & Cộng đồng</option>
-                  <option value="environment">Môi trường & Phát triển bền vững</option>
-                  <option value="media">Truyền thông & Lan tỏa</option>
-                  <option value="event">Sự kiện & Hoạt động</option>
-                  <option value="training">Hội thảo & Kỹ năng</option>
-                  <option value="research">Nghiên cứu & Đổi mới sáng tạo</option>
-                  <option value="technology">Công nghệ & Chuyển đổi số</option>
-                  <option value="recruitment">Tuyển dụng & Nhân sự</option>
-                  <option value="project">Chương trình & Dự án</option>
-                  <option value="opportunity">Cơ hội</option>
-                  <option value="culture">Văn hóa & Xã hội</option>
-                  <option value="announcement">Thông báo</option>
-                  <option value="report">Báo cáo & Công khai</option>
-                  <option value="other">Khác...</option>
+                  {taxonomyOptions.map((x:any)=><option key={x.id} value={x.id}>{x.label}</option>)}
                 </select>
                 {activeArticle.category==='other'&&<input value={activeArticle.categoryLabel==='Khác'?'':activeArticle.categoryLabel||''} onChange={e=>onUpdateArticle(activeArticle.id,{categoryLabel:e.target.value})} placeholder="Nhập chuyên mục riêng" className="mt-2 w-full px-3 py-2 bg-white border border-sky-200 rounded-xl text-xs font-bold"/>}
               </div>

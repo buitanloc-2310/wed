@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDataContext } from '../../context/DataContext';
 import {
   Building2,
   Plus,
@@ -49,6 +50,8 @@ export const AdminUnitsManager: React.FC<AdminUnitsManagerProps> = ({
   actionRef,
   onViewModeChange,
 }) => {
+  const {siteConfig}=useDataContext();
+  const taxonomyOptions=(siteConfig.taxonomyCategories||[]).filter((x:any)=>x.visible!==false);
   const [viewMode, setViewMode] = useState<'list' | 'edit'>('list');
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,7 +99,7 @@ export const AdminUnitsManager: React.FC<AdminUnitsManagerProps> = ({
       ],
       contact: {
         address: '',
-        email: 'support@skyfirst.io.vn',
+        email: 'lienhe@skyfirst.io.vn',
         phone: '0924 910 210',
         portal: 'https://skyfirst.network'
       }
@@ -645,23 +648,13 @@ export const AdminUnitsManager: React.FC<AdminUnitsManagerProps> = ({
                 <select
                   value={activeUnit.category}
                   onChange={(e) => {
-                    const val = e.target.value as any;
-                    const labels: Record<string, string> = {
-                      education: 'Giáo dục & Đào tạo',
-                      volunteer: 'Tình nguyện & Phong trào',
-                      research: 'Nghiên cứu & Chuyển đổi số',
-                      media: 'Truyền thông & Thương hiệu',
-                      technology: 'Công nghệ & Dữ liệu'
-                    };
-                    onUpdateUnit(activeUnit.id, { category: val, categoryLabel: labels[val] || 'Chuyên môn' });
+                    const val=e.target.value;
+                    const found=taxonomyOptions.find((x:any)=>x.id===val);
+                    onUpdateUnit(activeUnit.id,{category:val,categoryLabel:found?.label||val});
                   }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
                 >
-                  <option value="education">Giáo dục & Đào tạo</option>
-                  <option value="volunteer">Tình nguyện & Phong trào</option>
-                  <option value="research">Nghiên cứu & Chuyển đổi số</option>
-                  <option value="media">Truyền thông & Thương hiệu</option>
-                  <option value="technology">Công nghệ & Dữ liệu</option>
+                  {taxonomyOptions.map((x:any)=><option key={x.id} value={x.id}>{x.label}</option>)}
                 </select>
               </div>
 
@@ -971,7 +964,7 @@ export const AdminUnitsManager: React.FC<AdminUnitsManagerProps> = ({
                     contact: { ...activeUnit.contact, email: e.target.value }
                   })
                 }
-                placeholder="support@skyfirst.io.vn"
+                placeholder="lienhe@skyfirst.io.vn"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:border-sky-500"
               />
             </div>

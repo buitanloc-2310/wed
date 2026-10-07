@@ -34,5 +34,5 @@ export const TEAM_DATA: TeamMember[] = [];
 export const FAQS_DATA: FAQItem[] = [
  {category:'general',question:'Sky First Network là gì?',answer:'Sky First Network là Mạng lưới Giáo dục & Phát triển Cộng đồng, được xây dựng như một không gian chung để kết nối các hoạt động giáo dục, phát triển người trẻ, tình nguyện, hợp tác và truyền thông cộng đồng.'},
  {category:'volunteer',question:'Làm thế nào để đăng ký tham gia hoạt động tình nguyện?',answer:'Bạn có thể sử dụng mục “Tham gia” trên website. Thông tin cụ thể về từng đợt hoạt động chỉ được công bố khi có kế hoạch chính thức.'},
- {category:'cert',question:'Tra cứu Giấy chứng nhận như thế nào?',answer:'Nhập mã Giấy chứng nhận tại trang Tra cứu Giấy chứng nhận để kiểm tra thông tin đã được ghi nhận trong hệ thống Sky First Network.'}
+ {category:'cert',question:'Xác thực Giấy chứng nhận như thế nào?',answer:'Nhập mã Giấy chứng nhận tại Trung tâm Xác thực Sky First để kiểm tra thông tin đã được ghi nhận trong hệ thống Sky First Network.'}
 ];

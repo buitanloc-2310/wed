@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDataContext } from '../../context/DataContext';
 import {
   Layers,
   Plus,
@@ -51,6 +52,8 @@ export const AdminProgramsManager: React.FC<AdminProgramsManagerProps> = ({
   actionRef,
   onViewModeChange,
 }) => {
+  const {siteConfig}=useDataContext();
+  const taxonomyOptions=(siteConfig.taxonomyCategories||[]).filter((x:any)=>x.visible!==false);
   const [viewMode, setViewMode] = useState<'list' | 'edit'>('list');
   const [selectedProgId, setSelectedProgId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -649,21 +652,13 @@ export const AdminProgramsManager: React.FC<AdminProgramsManagerProps> = ({
                 <select
                   value={activeProg.category}
                   onChange={(e) => {
-                    const val = e.target.value as any;
-                    const labels: Record<string, string> = {
-                      volunteer: 'Tình nguyện & Xã hội',
-                      education: 'Giáo dục & Đào tạo',
-                      recruitment: 'Tuyển dụng & Nhân sự',
-                      workshop: 'Hội thảo & Kỹ năng'
-                    };
-                    onUpdateProgram(activeProg.id, { category: val, categoryLabel: labels[val] || 'Dự án' });
+                    const val=e.target.value;
+                    const found=taxonomyOptions.find((x:any)=>x.id===val);
+                    onUpdateProgram(activeProg.id,{category:val,categoryLabel:found?.label||val});
                   }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
                 >
-                  <option value="volunteer">Tình nguyện & Xã hội</option>
-                  <option value="education">Giáo dục & Đào tạo</option>
-                  <option value="recruitment">Tuyển dụng & Nhân sự</option>
-                  <option value="workshop">Hội thảo & Kỹ năng</option>
+                  {taxonomyOptions.map((x:any)=><option key={x.id} value={x.id}>{x.label}</option>)}
                 </select>
               </div>
             </div>

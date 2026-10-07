@@ -18,3 +18,7 @@
 - All Cloudflare Functions JavaScript files pass `node --check`.
 - Release contains 100 files and excludes node_modules, .git, dist, .wrangler and environment secret files.
 - A complete Vite/TypeScript build could not be re-run in the packaging environment because dependency installation timed out; deploy/build should run `npm ci && npm run check && npm run build` in CI before production promotion.
+
+## Production final 2026-10-07
+- Applied global CMS/public synchronization hardening, configurable homepage counters, stable mega menu, featured-news sidebar, compact footer/ecosystem, updated contact channels, Sky First verification naming, global taxonomy, natural-ratio media rules, partnership form, and certificate stats timestamp fix.
+- Final source remains exactly 100 files; no node_modules/build/cache/secrets included.

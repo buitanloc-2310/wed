@@ -15,6 +15,16 @@ export const SponsorPage:React.FC<SponsorPageProps>=({onNavigate,onShowToast})=>
   const [amount,setAmount]=useState('');
   const [transferNote,setTransferNote]=useState(p?.sponsorTransferSyntax||'');
   const [confirmed,setConfirmed]=useState(false);
+  const [partnerName,setPartnerName]=useState('');
+  const [partnerOrg,setPartnerOrg]=useState('');
+  const [partnerEmail,setPartnerEmail]=useState('');
+  const [partnerPhone,setPartnerPhone]=useState('');
+  const [partnerType,setPartnerType]=useState('Hợp tác chương trình / dự án');
+  const [partnerMessage,setPartnerMessage]=useState('');
+  const [partnerLink,setPartnerLink]=useState('');
+  const [partnerConsent,setPartnerConsent]=useState(false);
+  const [partnerSending,setPartnerSending]=useState(false);
+  const [partnerCode,setPartnerCode]=useState('');
   const goalAmount=Number(String(p?.sponsorGoalAmount||'').replace(/\D/g,''))||0;
   const receivedAmount=Number(String(p?.sponsorReceivedAmount||'').replace(/\D/g,''))||0;
   const progress=goalAmount>0?Math.min(100,Math.max(0,(receivedAmount/goalAmount)*100)):0;
@@ -34,6 +44,19 @@ export const SponsorPage:React.FC<SponsorPageProps>=({onNavigate,onShowToast})=>
   const qrSrc=autoQr || p?.sponsorQrCodeUrl || '';
 
   const copy=async(text:string,label:string)=>{try{await navigator.clipboard.writeText(text);onShowToast(`Đã sao chép ${label}.`)}catch{onShowToast(`Không thể tự động sao chép ${label}.`)} };
+  const submitPartnership=async(e:React.FormEvent)=>{
+    e.preventDefault();
+    if(!partnerConsent){onShowToast('Vui lòng xác nhận đồng ý để Sky First tiếp nhận nội dung đề xuất.');return}
+    setPartnerSending(true);
+    try{
+      const detail=[`Tổ chức/Đơn vị: ${partnerOrg||'—'}`,`Điện thoại: ${partnerPhone||'—'}`,`Hình thức: ${partnerType}`,`Link/Tài liệu: ${partnerLink||'—'}`,'',partnerMessage].join('\n');
+      const r=await fetch('/api/contact',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:partnerName,email:partnerEmail,topic:'Hợp tác & Đồng hành',message:detail})});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok||!d?.ok)throw new Error(d?.error||'Không thể gửi đề xuất.');
+      setPartnerCode(d.reference||'');setPartnerName('');setPartnerOrg('');setPartnerEmail('');setPartnerPhone('');setPartnerMessage('');setPartnerLink('');setPartnerConsent(false);
+      onShowToast(d?.message||'Đề xuất đã được tiếp nhận.');
+    }catch(err:any){onShowToast(err?.message||'Không thể gửi đề xuất. Vui lòng liên hệ hoptac@skyfirst.io.vn.')}finally{setPartnerSending(false)}
+  };
   const go=(url?:string)=>{
     if(!url) return;
     if(url.startsWith('#')){document.getElementById(url.slice(1))?.scrollIntoView({behavior:'smooth'});return;}
@@ -54,6 +77,18 @@ export const SponsorPage:React.FC<SponsorPageProps>=({onNavigate,onShowToast})=>
 
     <section className="py-16 lg:py-20"><div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-14">
       {(p?.contentFormatted||p?.content)&&<RichTextRenderer content={p?.contentFormatted||p?.content||''}/>} 
+
+      <section id="de-xuat-dong-hanh" className="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,.75fr)]">
+        <form onSubmit={submitPartnership} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+          <div className="text-xs font-black uppercase tracking-[.16em] text-[#0B66C3]">Hợp tác & Đồng hành</div><h2 className="mt-2 text-3xl font-black text-slate-950">Gửi đề xuất đồng hành</h2><p className="mt-2 text-sm leading-6 text-slate-500">Thông tin được lưu trên hệ thống để bộ phận phụ trách tiếp nhận và theo dõi. Không gửi mật khẩu, OTP hoặc thông tin tài chính nhạy cảm.</p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2"><label className="text-sm font-bold">Họ và tên<input required value={partnerName} onChange={e=>setPartnerName(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"/></label><label className="text-sm font-bold">Tổ chức / Đơn vị<input value={partnerOrg} onChange={e=>setPartnerOrg(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"/></label><label className="text-sm font-bold">Email<input required type="email" value={partnerEmail} onChange={e=>setPartnerEmail(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"/></label><label className="text-sm font-bold">Điện thoại<input value={partnerPhone} onChange={e=>setPartnerPhone(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"/></label></div>
+          <label className="mt-4 block text-sm font-bold">Hình thức muốn đồng hành<select value={partnerType} onChange={e=>setPartnerType(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"><option>Hợp tác chương trình / dự án</option><option>Đồng hành chuyên môn</option><option>Truyền thông & lan tỏa</option><option>Nguồn lực / tài trợ</option><option>Sự kiện</option><option>Đề xuất khác</option></select></label>
+          <label className="mt-4 block text-sm font-bold">Nội dung đề xuất<textarea required rows={6} value={partnerMessage} onChange={e=>setPartnerMessage(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"/></label><label className="mt-4 block text-sm font-bold">Link hoặc tài liệu đính kèm<input type="url" value={partnerLink} onChange={e=>setPartnerLink(e.target.value)} placeholder="https://..." className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3"/></label>
+          <label className="mt-4 flex gap-3 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><input type="checkbox" checked={partnerConsent} onChange={e=>setPartnerConsent(e.target.checked)} className="mt-1"/><span>Tôi đồng ý để Sky First sử dụng thông tin đã gửi nhằm tiếp nhận, liên hệ và xử lý đề xuất này.</span></label>
+          <button disabled={partnerSending} className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#0B66C3] px-5 py-3 font-black text-white disabled:opacity-60">{partnerSending?'Đang gửi...':'Gửi đề xuất'}</button>{partnerCode&&<div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">Mã tiếp nhận: <strong className="font-mono">{partnerCode}</strong></div>}
+        </form>
+        <aside className="rounded-[28px] border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-6 lg:sticky lg:top-24 lg:self-start"><HeartHandshake className="text-[#0B66C3]"/><h3 className="mt-4 text-xl font-black">Kênh hợp tác chính thức</h3><p className="mt-2 text-sm leading-6 text-slate-600">Đề xuất hợp tác và đồng hành được ưu tiên tiếp nhận qua biểu mẫu hoặc email chuyên trách.</p><a href="mailto:hoptac@skyfirst.io.vn" className="mt-5 block rounded-xl bg-white p-4 font-black text-[#0B66C3] shadow-sm">hoptac@skyfirst.io.vn</a><a href="tel:0924910210" className="mt-3 block rounded-xl bg-white p-4 font-black text-slate-900 shadow-sm">0924 910 210</a></aside>
+      </section>
 
       {commitments.length>0&&<section><div className="max-w-3xl"><h2 className="text-3xl font-black">{p?.sponsorCommitmentHeading||'Nguyên tắc tiếp nhận và minh bạch'}</h2>{p?.sponsorCommitmentSubtitle&&<p className="mt-3 text-slate-600 leading-7">{p.sponsorCommitmentSubtitle}</p>}</div><div className="mt-7 grid md:grid-cols-2 gap-4">{commitments.map((x,i)=><article key={i} className="rounded-2xl border border-slate-200 p-5"><ShieldCheck className="text-[#0B5FB4]"/><h3 className="mt-3 font-extrabold text-lg">{x.title}</h3>{x.desc&&<p className="mt-2 text-sm leading-6 text-slate-600">{x.desc}</p>}</article>)}</div></section>}
 

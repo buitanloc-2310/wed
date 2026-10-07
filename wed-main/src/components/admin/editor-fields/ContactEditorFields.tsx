@@ -230,7 +230,7 @@ export const ContactEditorFields: React.FC<ContactEditorFieldsProps> = ({
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="support@skyfirst.io.vn"
+                placeholder="lienhe@skyfirst.io.vn"
                 className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono focus:outline-hidden"
               />
             </div>
@@ -242,7 +242,7 @@ export const ContactEditorFields: React.FC<ContactEditorFieldsProps> = ({
                 type="text"
                 value={secondaryEmail}
                 onChange={(e) => setSecondaryEmail(e.target.value)}
-                placeholder="support@skyfirst.io.vn"
+                placeholder="lienhe@skyfirst.io.vn"
                 className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono focus:outline-hidden"
               />
             </div>

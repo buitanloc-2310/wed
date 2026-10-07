@@ -116,3 +116,13 @@ body{background:#fff;color:#142b47}h1,h2,h3{font-kerning:normal}button:focus-vis
 html[data-motion="reduced"] .cms-anim{animation:none!important}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 .article-media img{display:block;max-width:100%;height:auto;margin-inline:auto}.article-media figcaption{font-size:.78rem;line-height:1.45;color:#64748b;text-align:center;margin-top:.65rem}.article-media .media-credit{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+
+/* Production density: 100% browser zoom is intentionally compact; never use CSS zoom/scale. */
+@media (min-width:1024px){:root{--sfn-container:1380px}body{font-size:15px}section[class*="py-20"]{padding-top:4rem;padding-bottom:4rem}section[class*="py-24"]{padding-top:4.5rem;padding-bottom:4.5rem}}
+.sf-hero-visual{animation:sfnHeroArrival .95s cubic-bezier(.22,.61,.36,1) both}
+@keyframes sfnHeroArrival{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
+.sf-hero-visual:hover{transform:translateY(-2px);transition:transform .25s ease}
+img{height:auto}.formatted-content img,.prose img,.article-media img{width:auto;max-width:100%;height:auto;object-fit:contain}
+.sf-media-original{width:auto!important;height:auto!important;object-fit:contain!important}.sf-media-fit{object-fit:contain!important}.sf-media-cover{object-fit:cover!important}
+@media(max-width:767px){button,a,input,select,textarea{min-height:44px}.sf-hero-visual:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){.sf-hero-visual{animation:none!important}.sf-hero-visual:hover{transform:none!important}}

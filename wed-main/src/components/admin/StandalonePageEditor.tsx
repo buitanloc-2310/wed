@@ -601,9 +601,9 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
   );
 
   // 6. Contact Page specific states
-  const [email, setEmail] = useState(page.email || 'support@skyfirst.io.vn');
+  const [email, setEmail] = useState(page.email || 'lienhe@skyfirst.io.vn');
   const [secondaryEmail, setSecondaryEmail] = useState(
-    page.secondaryEmail || 'support@skyfirst.io.vn'
+    page.secondaryEmail || 'lienhe@skyfirst.io.vn'
   );
   const [hotline, setHotline] = useState(page.hotline || '0924 910 210');
   const [secondaryHotline, setSecondaryHotline] = useState(

@@ -6,8 +6,9 @@ export async function onRequestPost(context) {
   const name = clean(body.name, 100), email = clean(body.email, 180), message = clean(body.message, 4000), topic = clean(body.topic || 'Liên hệ chung', 120);
   if (!name || !email || !message) return json({ ok: false, error: 'Vui lòng nhập đầy đủ thông tin.' }, { status: 400 });
   const id = crypto.randomUUID();
+  const reference = `SFN-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${id.slice(0,6).toUpperCase()}`;
   await context.env.DB.prepare("INSERT INTO website_contacts (id, name, email, topic, message, status, created_at) VALUES (?, ?, ?, ?, ?, 'new', datetime('now'))").bind(id, name, email, topic, message).run();
-  return json({ ok: true, message: 'Thông tin của bạn đã được tiếp nhận.' });
+  return json({ ok: true, reference, message: 'Thông tin của bạn đã được tiếp nhận.' });
 }
 
 export async function onRequestGet(context) {

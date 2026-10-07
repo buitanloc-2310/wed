@@ -32,6 +32,18 @@ export interface AdminUser {
 
 export type SiteClosedReason = 'maintenance' | 'editing' | 'upgrading' | 'custom';
 
+export interface CounterAnimationConfig {
+  durationSeconds?: number;
+  mode?: 'smooth' | 'even' | 'large' | 'small' | 'custom';
+  step?: number;
+  easing?: 'linear' | 'ease-out' | 'smooth';
+  fontSize?: 'small' | 'medium' | 'large' | 'xlarge' | 'custom';
+  customFontSize?: string;
+  prefix?: string;
+  suffix?: string;
+  numberFormat?: 'vi' | 'plain' | 'en';
+}
+
 export interface SiteConfig {
   siteName: string;
   tagline: string;
@@ -66,6 +78,13 @@ export interface SiteConfig {
     projectsSubtext: string;
     projectsLabel?: string;
   };
+  counterAnimation?: {
+    membersCount?: CounterAnimationConfig;
+    communityProjects?: CounterAnimationConfig;
+    provincesCount?: CounterAnimationConfig;
+    volunteerHours?: CounterAnimationConfig;
+  };
+  taxonomyCategories?: { id: string; label: string; visible?: boolean }[];
   pillarsHeading?: string;
   pillarsSubtext?: string;
   contact: {
@@ -149,7 +168,7 @@ export interface SiteConfig {
   navigationGroups?: { label: string; items: { label: string; page: PageRoute; slug?: string; description?: string }[] }[];
   footerQuickLinks?: { label: string; url: string }[];
   footerContacts?: { label: string; value: string; url: string; icon?: string }[];
-  footerPortals?: { label: string; domain: string; url: string; icon?: string }[];
+  footerPortals?: { label: string; domain: string; url: string; icon?: string; description?: string }[];
   footerLegalLinks?: { label: string; url: string }[];
   organizationInfo?: { label: string; value: string; url?: string; icon?: string; visible?: boolean }[];
   designSystem?: { primary?: string; navy?: string; accent?: string; radius?: string; container?: string; motion?: 'reduced'|'balanced'|'rich' };
@@ -164,7 +183,7 @@ export interface NetworkUnit {
   tagline: string;
   slug?: string;
   isPublished?: boolean;
-  category: 'education' | 'volunteer' | 'research' | 'media' | 'technology';
+  category: string;
   categoryLabel: string;
   leader: {
     name: string;
@@ -194,7 +213,7 @@ export interface Program {
   slug?: string;
   isPublished?: boolean;
   title: string;
-  category: 'education' | 'volunteer' | 'recruitment' | 'workshop';
+  category: string;
   categoryLabel: string;
   status: ProgramStatus;
   statusLabel: string;

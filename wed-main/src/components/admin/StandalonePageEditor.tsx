@@ -7,6 +7,7 @@ import {
   Link as LinkIcon,
   User,
   Calendar,
+  Eye,
 } from 'lucide-react';
 import { CustomPage, CorePillar, TimelineMilestone, TeamMember, CoreValueItem, PageBlock, PageBlockType } from '../../types';
 import { CORE_PILLARS, CORE_VALUES, TIMELINE_DATA, TEAM_DATA } from '../../data/baselineData';
@@ -50,6 +51,9 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
   const [summary, setSummary] = useState(page.summary || '');
   const [content, setContent] = useState(page.contentFormatted || page.content || '');
   const [imageUrl, setImageUrl] = useState(page.imageUrl || '');
+  const [imageFit,setImageFit]=useState<'original'|'contain'|'cover'>(page.imageFit||'original');
+  const [imageFocalX,setImageFocalX]=useState<number>(Number.isFinite(page.imageFocalX)?Number(page.imageFocalX):50);
+  const [imageFocalY,setImageFocalY]=useState<number>(Number.isFinite(page.imageFocalY)?Number(page.imageFocalY):50);
   const [secondaryImageUrl, setSecondaryImageUrl] = useState(page.secondaryImageUrl || '');
   const [pageBlocks, setPageBlocks] = useState<PageBlock[]>(Array.isArray(page.pageBlocks) ? page.pageBlocks : []);
   const [seoTitle,setSeoTitle]=useState(page.seoTitle||'');
@@ -208,6 +212,15 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
   const [certCtaButtonUrl, setCertCtaButtonUrl] = useState(
     page.certCtaButtonUrl || '/contact'
   );
+
+  const [certStatIssuedMode,setCertStatIssuedMode]=useState<'auto'|'manual'>(page.certStatIssuedMode||'auto');
+  const [certStatIssuedManual,setCertStatIssuedManual]=useState(page.certStatIssuedManual||'');
+  const [certStatValidMode,setCertStatValidMode]=useState<'auto'|'manual'>(page.certStatValidMode||'auto');
+  const [certStatValidManual,setCertStatValidManual]=useState(page.certStatValidManual||'');
+  const [certStatProgramsMode,setCertStatProgramsMode]=useState<'auto'|'manual'>(page.certStatProgramsMode||'auto');
+  const [certStatProgramsManual,setCertStatProgramsManual]=useState(page.certStatProgramsManual||'');
+  const [certStatUpdatedMode,setCertStatUpdatedMode]=useState<'auto'|'manual'>(page.certStatUpdatedMode||'auto');
+  const [certStatUpdatedManual,setCertStatUpdatedManual]=useState(page.certStatUpdatedManual||'');
 
   // 4. Sponsor Page specific states
   // 4.1 Hero Buttons
@@ -686,7 +699,7 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
 
     if (!title.trim()) {
       onShowToast('Vui lòng nhập tiêu đề cho trang!');
-      return;
+      return false;
     }
 
     const finalSlug = page.slug ? (slug.trim() || page.slug) : createUniqueSlug(slug.trim() || title, existingSlugs, page.slug);
@@ -699,6 +712,9 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
       content: content.trim(),
       contentFormatted: content.trim(),
       imageUrl: imageUrl.trim(),
+      imageFit,
+      imageFocalX,
+      imageFocalY,
       secondaryImageUrl: secondaryImageUrl.trim(),
       pageBlocks,
       seoTitle:seoTitle.trim(),
@@ -758,6 +774,14 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
       certCtaDescription: certCtaDescription.trim(),
       certCtaButtonLabel: certCtaButtonLabel.trim(),
       certCtaButtonUrl: certCtaButtonUrl.trim(),
+      certStatIssuedMode,
+      certStatIssuedManual: certStatIssuedManual.trim(),
+      certStatValidMode,
+      certStatValidManual: certStatValidManual.trim(),
+      certStatProgramsMode,
+      certStatProgramsManual: certStatProgramsManual.trim(),
+      certStatUpdatedMode,
+      certStatUpdatedManual: certStatUpdatedManual.trim(),
       // Sponsor fields
       sponsorHeroPrimaryButtonLabel: sponsorHeroPrimaryButtonLabel.trim(),
       sponsorHeroPrimaryButtonUrl: sponsorHeroPrimaryButtonUrl.trim(),
@@ -918,13 +942,21 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
 
     if (saved === false) {
       onShowToast('Chưa thể lưu lên máy chủ. Nội dung đang được giữ trên thiết bị để bạn thử lại.');
-      return;
+      return false;
     }
     if (finalPublishState) {
       onShowToast(`Đã lưu và xuất bản trang "${title.trim()}" thành công lên website chính!`);
     } else {
       onShowToast(`Đã lưu các chỉnh sửa của trang "${title.trim()}" (Bản nháp)!`);
     }
+    return true;
+  };
+
+  const handlePreview = async () => {
+    const ok=await handleSave(isPublished);
+    if(!ok)return;
+    const previewSlug=page.slug ? (slug.trim()||page.slug) : createUniqueSlug(slug.trim()||title,existingSlugs,page.slug);
+    window.open(`/${encodeURI(previewSlug)}?cmsPreview=1&cmsPreviewId=${encodeURIComponent(page.id)}`,'_blank','noopener');
   };
 
   return (
@@ -974,6 +1006,9 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
 
         {/* Nút hành động */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {!isPublished && <button type="button" onClick={()=>void handlePreview()} className="px-3 py-2 bg-white hover:bg-sky-50 text-[#0B66C3] border border-sky-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5" title="Lưu bản nháp hiện tại và xem bằng đúng giao diện public">
+            <Eye size={15}/><span className="hidden sm:inline">XEM TRƯỚC</span>
+          </button>}
           {!isPublished ? (
             <>
               {/* Trang đang ở trạng thái Bản nháp: Cần ấn lưu để lưu các chỉnh sửa, và ấn đăng bài thì bài mới được xuất bản */}
@@ -1205,6 +1240,22 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
             setCertCtaButtonLabel={setCertCtaButtonLabel}
             certCtaButtonUrl={certCtaButtonUrl}
             setCertCtaButtonUrl={setCertCtaButtonUrl}
+            certStatIssuedMode={certStatIssuedMode}
+            setCertStatIssuedMode={setCertStatIssuedMode}
+            certStatIssuedManual={certStatIssuedManual}
+            setCertStatIssuedManual={setCertStatIssuedManual}
+            certStatValidMode={certStatValidMode}
+            setCertStatValidMode={setCertStatValidMode}
+            certStatValidManual={certStatValidManual}
+            setCertStatValidManual={setCertStatValidManual}
+            certStatProgramsMode={certStatProgramsMode}
+            setCertStatProgramsMode={setCertStatProgramsMode}
+            certStatProgramsManual={certStatProgramsManual}
+            setCertStatProgramsManual={setCertStatProgramsManual}
+            certStatUpdatedMode={certStatUpdatedMode}
+            setCertStatUpdatedMode={setCertStatUpdatedMode}
+            certStatUpdatedManual={certStatUpdatedManual}
+            setCertStatUpdatedManual={setCertStatUpdatedManual}
             contentFormatted={content}
             setContentFormatted={setContent}
           />
@@ -1562,6 +1613,12 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
             setSummary={setSummary}
             imageUrl={imageUrl}
             setImageUrl={setImageUrl}
+            imageFit={imageFit}
+            setImageFit={setImageFit}
+            imageFocalX={imageFocalX}
+            setImageFocalX={setImageFocalX}
+            imageFocalY={imageFocalY}
+            setImageFocalY={setImageFocalY}
             contentFormatted={content}
             setContentFormatted={setContent}
             secondaryImageUrl={secondaryImageUrl}
@@ -1615,7 +1672,7 @@ export const StandalonePageEditor: React.FC<StandalonePageEditorProps> = ({
 
                     {['text','quote','html'].includes(block.type) && <textarea value={block.body || ''} onChange={(e)=>updatePageBlock(block.id,{body:e.target.value})} rows={block.type==='html'?7:4} placeholder={block.type==='html'?'HTML an toàn (script sẽ bị loại bỏ)':'Nội dung'} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-sky-400" />}
 
-                    {block.type === 'image' && <div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><ImageUrlInput label="Ảnh trong nội dung" value={block.imageUrl||''} onChange={url=>updatePageBlock(block.id,{imageUrl:url})} helperText="Tải trực tiếp lên R2, chọn từ Media Library hoặc dán URL." category="media" placeholder="Chọn hoặc tải ảnh"/></div><input value={block.alt || ''} onChange={(e)=>updatePageBlock(block.id,{alt:e.target.value})} placeholder="Alt text" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.caption || ''} onChange={(e)=>updatePageBlock(block.id,{caption:e.target.value})} placeholder="Chú thích ảnh" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.credit || ''} onChange={(e)=>updatePageBlock(block.id,{credit:e.target.value})} placeholder="Nguồn/Tác giả ảnh" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.sourceUrl || ''} onChange={(e)=>updatePageBlock(block.id,{sourceUrl:e.target.value})} placeholder="URL nguồn ảnh (nếu có)" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/></div>}
+                    {block.type === 'image' && <div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><ImageUrlInput label="Ảnh trong nội dung" value={block.imageUrl||''} onChange={url=>updatePageBlock(block.id,{imageUrl:url})} helperText="Tải trực tiếp lên R2, chọn từ Media Library hoặc dán URL." category="media" placeholder="Chọn hoặc tải ảnh"/></div><input value={block.alt || ''} onChange={(e)=>updatePageBlock(block.id,{alt:e.target.value})} placeholder="Alt text" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.caption || ''} onChange={(e)=>updatePageBlock(block.id,{caption:e.target.value})} placeholder="Chú thích ảnh" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.credit || ''} onChange={(e)=>updatePageBlock(block.id,{credit:e.target.value})} placeholder="Nguồn/Tác giả ảnh" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.sourceUrl || ''} onChange={(e)=>updatePageBlock(block.id,{sourceUrl:e.target.value})} placeholder="URL nguồn ảnh (nếu có)" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><label className="text-xs font-bold text-slate-600">Cách hiển thị<select value={block.imageFit||'original'} onChange={e=>updatePageBlock(block.id,{imageFit:e.target.value as PageBlock['imageFit']})} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5"><option value="original">Original — giữ tỷ lệ gốc</option><option value="contain">Fit — vừa khung, không cắt</option><option value="cover">Cover — phủ khung</option></select></label><div className="grid grid-cols-2 gap-2"><label className="text-xs font-bold text-slate-600">Focal X<input type="number" min="0" max="100" value={block.focalX??50} onChange={e=>updatePageBlock(block.id,{focalX:Number(e.target.value)})} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"/></label><label className="text-xs font-bold text-slate-600">Focal Y<input type="number" min="0" max="100" value={block.focalY??50} onChange={e=>updatePageBlock(block.id,{focalY:Number(e.target.value)})} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"/></label></div></div>}
 
                     {block.type === 'video' && <div className="mt-3 grid gap-3 sm:grid-cols-2"><input value={block.videoUrl || ''} onChange={(e)=>updatePageBlock(block.id,{videoUrl:e.target.value})} placeholder="URL MP4/WebM hoặc YouTube" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/><input value={block.posterUrl || ''} onChange={(e)=>updatePageBlock(block.id,{posterUrl:e.target.value})} placeholder="Poster ảnh (không bắt buộc)" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"/></div>}
 

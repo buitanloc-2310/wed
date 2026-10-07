@@ -54,3 +54,11 @@ export async function createAdminAccount(input:{email:string;password:string;nam
 export async function updateAdminAccount(uid:string,input:any){return currentAdminApi('/api/admin-users',{method:'PATCH',body:JSON.stringify({uid,...input})})}
 export async function deleteAdminAccount(uid:string){return currentAdminApi(`/api/admin-users?uid=${encodeURIComponent(uid)}`,{method:'DELETE'})}
 export async function resetAdminPassword(uid:string,password:string){return currentAdminApi('/api/admin-users/password',{method:'POST',body:JSON.stringify({uid,password})})}
+export async function createPermanentRedirect(fromPath:string,toPath:string,title?:string){
+  const clean=(v:string)=>('/'+String(v||'').replace(/^\/+|\/+$/g,'')).replace(/\/{2,}/g,'/');
+  const from=clean(fromPath),to=clean(toPath);
+  if(!from||!to||from===to)return true;
+  const id=`redirect-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+  await currentAdminApi('/api/admin-records',{method:'POST',body:JSON.stringify({id,kind:'redirects',title:title||`${from} → ${to}`,fromPath:from,toPath:to,redirectCode:'301',active:'true',public:true})});
+  return true;
+}

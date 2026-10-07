@@ -100,6 +100,12 @@ export const CertificatePage: React.FC<CertificatePageProps> = ({ onShowToast })
   const [hasSearched, setHasSearched] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [stats,setStats]=useState<{issued:number;valid:number;programs:number;updatedAt:string}|null>(null);
+  const displayStats={
+    issued:pageData?.certStatIssuedMode==='manual'?(pageData.certStatIssuedManual||'—'):(stats?.issued??'—'),
+    valid:pageData?.certStatValidMode==='manual'?(pageData.certStatValidManual||'—'):(stats?.valid??'—'),
+    programs:pageData?.certStatProgramsMode==='manual'?(pageData.certStatProgramsManual||'—'):(stats?.programs??'—'),
+    updatedAt:pageData?.certStatUpdatedMode==='manual'?(pageData.certStatUpdatedManual||'—'):(stats?.updatedAt?new Date(stats.updatedAt).toLocaleDateString('vi-VN'):'—')
+  };
   const [scanOpen,setScanOpen]=useState(false);
   const [scanError,setScanError]=useState('');
   const videoRef=useRef<HTMLVideoElement|null>(null);
@@ -536,7 +542,7 @@ export const CertificatePage: React.FC<CertificatePageProps> = ({ onShowToast })
             </div>
           </div>
         </div>
-        <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[[stats?.issued??'—','GCN đã phát hành',Award],[stats?.valid??'—','Đang hợp lệ',ShieldCheck],[stats?.programs??'—','Chương trình có GCN',Building],[stats?.updatedAt?new Date(stats.updatedAt).toLocaleDateString('vi-VN'):'—','Cập nhật gần nhất',Calendar]].map(([value,label,Icon]:any)=><div key={label} className="rounded-2xl border border-sky-100 bg-white/85 p-4 shadow-sm"><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-sky-50 text-[#0B66C3]"><Icon size={20}/></span><div><div className="text-2xl font-black tabular-nums text-slate-950">{value}</div><div className="text-xs font-bold text-slate-500">{label}</div></div></div></div>)}</div></div>
+        <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[[displayStats.issued,'GCN đã phát hành',Award],[displayStats.valid,'Đang hợp lệ',ShieldCheck],[displayStats.programs,'Chương trình có GCN',Building],[displayStats.updatedAt,'Cập nhật gần nhất',Calendar]].map(([value,label,Icon]:any)=><div key={label} className="rounded-2xl border border-sky-100 bg-white/85 p-4 shadow-sm"><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-sky-50 text-[#0B66C3]"><Icon size={20}/></span><div><div className="text-2xl font-black tabular-nums text-slate-950">{value}</div><div className="text-xs font-bold text-slate-500">{label}</div></div></div></div>)}</div></div>
       </section>
 
       {scanOpen&&<div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-950/75 p-4"><div className="w-full max-w-md overflow-hidden rounded-[28px] bg-white shadow-2xl"><div className="flex items-center justify-between border-b p-4"><div><h3 className="font-black">Quét QR Giấy chứng nhận</h3><p className="text-xs text-slate-500">Đưa QR vào giữa khung camera.</p></div><button onClick={()=>setScanOpen(false)} className="rounded-xl p-2 hover:bg-slate-100"><X size={20}/></button></div><div className="relative aspect-square bg-black"><video ref={videoRef} playsInline muted className="h-full w-full object-cover"/><div className="pointer-events-none absolute inset-[14%] rounded-3xl border-2 border-cyan-300 shadow-[0_0_0_999px_rgba(0,0,0,.25)]"/></div>{scanError&&<div className="p-4 text-sm text-rose-600">{scanError}</div>}</div></div>}

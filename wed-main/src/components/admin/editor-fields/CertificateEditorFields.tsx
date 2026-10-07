@@ -41,6 +41,22 @@ interface CertificateEditorFieldsProps {
   setCertCtaButtonLabel: (val: string) => void;
   certCtaButtonUrl: string;
   setCertCtaButtonUrl: (val: string) => void;
+  certStatIssuedMode: 'auto'|'manual';
+  setCertStatIssuedMode: (val: 'auto'|'manual') => void;
+  certStatIssuedManual: string;
+  setCertStatIssuedManual: (val: string) => void;
+  certStatValidMode: 'auto'|'manual';
+  setCertStatValidMode: (val: 'auto'|'manual') => void;
+  certStatValidManual: string;
+  setCertStatValidManual: (val: string) => void;
+  certStatProgramsMode: 'auto'|'manual';
+  setCertStatProgramsMode: (val: 'auto'|'manual') => void;
+  certStatProgramsManual: string;
+  setCertStatProgramsManual: (val: string) => void;
+  certStatUpdatedMode: 'auto'|'manual';
+  setCertStatUpdatedMode: (val: 'auto'|'manual') => void;
+  certStatUpdatedManual: string;
+  setCertStatUpdatedManual: (val: string) => void;
   // Khối 5: Soạn thảo nội dung quy chuẩn / hướng dẫn bổ sung
   contentFormatted: string;
   setContentFormatted: (val: string) => void;
@@ -83,6 +99,22 @@ export const CertificateEditorFields: React.FC<CertificateEditorFieldsProps> = (
   setCertCtaButtonLabel,
   certCtaButtonUrl,
   setCertCtaButtonUrl,
+  certStatIssuedMode,
+  setCertStatIssuedMode,
+  certStatIssuedManual,
+  setCertStatIssuedManual,
+  certStatValidMode,
+  setCertStatValidMode,
+  certStatValidManual,
+  setCertStatValidManual,
+  certStatProgramsMode,
+  setCertStatProgramsMode,
+  certStatProgramsManual,
+  setCertStatProgramsManual,
+  certStatUpdatedMode,
+  setCertStatUpdatedMode,
+  certStatUpdatedManual,
+  setCertStatUpdatedManual,
   contentFormatted,
   setContentFormatted,
 }) => {
@@ -123,7 +155,7 @@ export const CertificateEditorFields: React.FC<CertificateEditorFieldsProps> = (
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Tra cứu Giấy chứng nhận"
+            placeholder="Xác thực GCN"
             className="w-full text-xl sm:text-2xl font-black text-slate-900 border border-slate-200 rounded-xl px-4 py-3 focus:border-[#0284C7] focus:outline-hidden"
           />
         </div>
@@ -229,13 +261,25 @@ export const CertificateEditorFields: React.FC<CertificateEditorFieldsProps> = (
         </div>
       </div>
 
-      {/* 3. KHỐI 3 CỘT QUY CHUẨN MINH BẠCH & TIÊU CHUẨN CHỨNG NHẬN */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div><h3 className="text-sm font-extrabold text-slate-900">3. Nguồn dữ liệu thống kê GCN</h3><p className="mt-1 text-[11px] text-slate-500">Mỗi chỉ số có thể dùng dữ liệu tự động từ aggregate cache hoặc nhập thủ công độc lập. Chọn Tự động để khôi phục dữ liệu hệ thống.</p></div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[
+            ['GCN đã phát hành',certStatIssuedMode,setCertStatIssuedMode,certStatIssuedManual,setCertStatIssuedManual,'VD: 1250'],
+            ['Đang hợp lệ',certStatValidMode,setCertStatValidMode,certStatValidManual,setCertStatValidManual,'VD: 1210'],
+            ['Chương trình có GCN',certStatProgramsMode,setCertStatProgramsMode,certStatProgramsManual,setCertStatProgramsManual,'VD: 18'],
+            ['Cập nhật gần nhất',certStatUpdatedMode,setCertStatUpdatedMode,certStatUpdatedManual,setCertStatUpdatedManual,'VD: 07/10/2026']
+          ].map(([label,mode,setMode,manual,setManual,placeholder]:any)=><div key={label} className="rounded-xl border border-slate-200 p-4"><div className="text-xs font-black">{label}</div><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setMode('auto')} className={`rounded-lg border px-3 py-2 text-xs font-bold ${mode==='auto'?'border-sky-500 bg-sky-50 text-sky-700':'border-slate-200'}`}>Tự động</button><button type="button" onClick={()=>setMode('manual')} className={`rounded-lg border px-3 py-2 text-xs font-bold ${mode==='manual'?'border-sky-500 bg-sky-50 text-sky-700':'border-slate-200'}`}>Nhập thủ công</button></div>{mode==='manual'&&<><input value={manual} onChange={(e)=>setManual(e.target.value)} placeholder={placeholder} className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"/><button type="button" onClick={()=>{setMode('auto');setManual('')}} className="mt-2 text-[11px] font-black text-[#0B66C3] hover:underline">↺ Khôi phục dữ liệu tự động</button></>}{mode==='auto'&&<div className="mt-3 text-[11px] text-emerald-700">Đang dùng dữ liệu tự động từ aggregate cache.</div>}</div>)}
+        </div>
+      </div>
+
+      {/* 4. KHỐI 3 CỘT QUY CHUẨN MINH BẠCH & TIÊU CHUẨN CHỨNG NHẬN */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <ShieldCheck size={16} className="text-emerald-600" />
             <h3 className="text-sm font-extrabold text-slate-900">
-              3. Khối 3 Cột Quy Chuẩn Minh Bạch (Tiêu Chuẩn hệ thống Giấy chứng nhận)
+              4. Khối 3 Cột Quy Chuẩn Minh Bạch (Tiêu Chuẩn hệ thống Giấy chứng nhận)
             </h3>
           </div>
           <span className="text-[11px] text-slate-400 font-medium">

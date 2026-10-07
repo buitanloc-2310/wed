@@ -11,6 +11,10 @@ interface StandardEditorFieldsProps {
   setSummary: (val: string) => void;
   imageUrl: string;
   setImageUrl: (val: string) => void;
+  imageFit: 'original'|'contain'|'cover';
+  setImageFit: (val:'original'|'contain'|'cover')=>void;
+  imageFocalX:number; setImageFocalX:(val:number)=>void;
+  imageFocalY:number; setImageFocalY:(val:number)=>void;
   contentFormatted: string;
   setContentFormatted: (val: string) => void;
   secondaryImageUrl: string;
@@ -34,6 +38,7 @@ export const StandardEditorFields: React.FC<StandardEditorFieldsProps> = ({
   setSummary,
   imageUrl,
   setImageUrl,
+  imageFit,setImageFit,imageFocalX,setImageFocalX,imageFocalY,setImageFocalY,
   contentFormatted,
   setContentFormatted,
   secondaryImageUrl,
@@ -129,16 +134,10 @@ export const StandardEditorFields: React.FC<StandardEditorFieldsProps> = ({
             placeholder="/media/... hoặc https://..."
             className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-[#0284C7] focus:outline-hidden font-mono"
           />
+          <div className="mt-3 grid gap-3 sm:grid-cols-3"><label className="text-xs font-bold text-slate-600">Cách hiển thị<select value={imageFit} onChange={e=>setImageFit(e.target.value as 'original'|'contain'|'cover')} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2"><option value="original">Original — tỷ lệ gốc</option><option value="contain">Fit — không cắt</option><option value="cover">Cover — phủ khung</option></select></label><label className="text-xs font-bold text-slate-600">Focal X<input type="number" min="0" max="100" value={imageFocalX} onChange={e=>setImageFocalX(Number(e.target.value))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"/></label><label className="text-xs font-bold text-slate-600">Focal Y<input type="number" min="0" max="100" value={imageFocalY} onChange={e=>setImageFocalY(Number(e.target.value))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"/></label></div>
           {imageUrl && (
-            <div className="mt-3 h-48 w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
-              <img
-                src={imageUrl}
-                alt="Banner preview"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
+            <div className={`mt-3 w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 ${imageFit==='cover'?'aspect-video':imageFit==='contain'?'h-64':''}`}>
+              <img src={imageUrl} alt="Banner preview" style={{objectPosition:`${imageFocalX}% ${imageFocalY}%`}} className={imageFit==='cover'?'w-full h-full object-cover':imageFit==='contain'?'w-full h-full object-contain':'block max-w-full h-auto mx-auto'} onError={(e) => {(e.target as HTMLElement).style.display = 'none';}} />
             </div>
           )}
         </div>

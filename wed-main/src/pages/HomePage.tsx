@@ -69,17 +69,19 @@ type Key =
   | 'certificate'
   | 'values'
   | 'news'
-  | 'transparency';
+  | 'transparency'
+  | 'cta';
 
 const DEFAULT_ORDER: Key[] = [
   'hero',
   'pillars',
-  'programs',
-  'units',
-  'certificate',
-  'values',
   'news',
+  'programs',
+  'values',
+  'certificate',
   'transparency',
+  'units',
+  'cta',
 ];
 
 export const HomePage: React.FC<HomePageProps> = ({
@@ -120,8 +122,8 @@ export const HomePage: React.FC<HomePageProps> = ({
       x !== 'direction'
   );
 
-  const order = [
-    ...new Set(saved),
+  const order: Key[] = [
+    ...new Set<Key>(saved),
     ...DEFAULT_ORDER.filter((x) => !saved.includes(x)),
   ];
 
@@ -440,6 +442,22 @@ export const HomePage: React.FC<HomePageProps> = ({
               {siteConfig.transparencyButtonText || 'Tìm hiểu thêm'}
               <ArrowRight size={16} />
             </button>
+          </div>
+        </div>
+      </section>
+    ),
+
+    cta: (
+      <section className="bg-white px-4 py-14 sm:px-6 lg:px-8 lg:py-18">
+        <div className="mx-auto max-w-[1380px] overflow-hidden rounded-[30px] bg-[#071B3A] px-6 py-9 text-white shadow-[0_20px_60px_rgba(7,27,58,.14)] sm:px-9 lg:flex lg:items-center lg:justify-between lg:gap-10 lg:px-12 lg:py-11">
+          <div className="max-w-3xl">
+            <div className="text-[11px] font-black uppercase tracking-[.18em] text-sky-300">Kết nối & Đồng hành</div>
+            <h2 className="mt-3 text-3xl font-black tracking-[-.035em] sm:text-4xl">{siteConfig.ctaHeading || 'Kết nối cùng Sky First Network'}</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">{siteConfig.ctaSubtext}</p>
+          </div>
+          <div className="mt-6 flex shrink-0 flex-wrap gap-3 lg:mt-0 lg:justify-end">
+            <button onClick={() => navigateUrl(siteConfig.ctaButtonUrl || '/join', onNavigate)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-[#071B3A] transition hover:-translate-y-0.5">{siteConfig.ctaButtonText || 'Tham gia'}<ArrowRight size={16}/></button>
+            <button onClick={() => navigateUrl(siteConfig.ctaSecondaryButtonUrl || '/contact', onNavigate)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-5 py-3 text-sm font-black text-white transition hover:bg-white/10">{siteConfig.ctaSecondaryButtonText || 'Liên hệ hợp tác'}<ArrowRight size={16}/></button>
           </div>
         </div>
       </section>

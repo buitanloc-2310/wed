@@ -43,7 +43,7 @@ const PAGE_TITLES: Partial<Record<PageRoute, string>> = {
   programs: 'Chương Trình & Dự Án | Sky First Network',
   units: 'Đơn Vị Trực Thuộc | Sky First Network',
   news: 'Tin Tức & Hoạt Động | Sky First Network',
-  certificate: 'Tra Cứu Giấy Chứng Nhận | Sky First Network',
+  certificate: 'Trung tâm Xác thực Sky First | Sky First Network',
   sponsor: 'Tài Trợ & Đồng Hành | Sky First Network',
   join: 'Tham Gia Sky First Network | Sky First Network',
   contact: 'Liên Hệ & Hợp Tác | Sky First Network',

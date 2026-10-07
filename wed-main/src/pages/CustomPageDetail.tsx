@@ -1,8 +1,10 @@
 import { sanitizeHtml } from '../utils/sanitizeHtml';
 import React from 'react';
 import { useDataContext } from '../context/DataContext';
-import { PageRoute, PageBlock } from '../types';
+import { PageRoute, PageBlock, CustomPage } from '../types';
 import { ArrowLeft, Calendar, FileText, Sparkles, ExternalLink, ArrowRight, Clock, Play, Quote } from 'lucide-react';
+import {adminApi} from '../lib/adminApi';
+import {subscribeToAuthChanges} from '../lib/firebase';
 
 interface CustomPageDetailProps {
   slug: string;
@@ -39,11 +41,34 @@ const RelatedForm:React.FC<{pageSlug:string}>=({pageSlug})=>{const formSlug=rela
 export const CustomPageDetail: React.FC<CustomPageDetailProps> = ({ slug, onNavigate }) => {
   const { customPages, isPublicDataReady } = useDataContext();
 
-  const page = customPages.find((p) => p.slug === slug || p.id === slug || p.slug === decodeURIComponent(slug));
+  const regularPage = customPages.find((p) => p.slug === slug || p.id === slug || p.slug === decodeURIComponent(slug));
   const [redirectChecking,setRedirectChecking]=React.useState(false);
   const [redirectChecked,setRedirectChecked]=React.useState(false);
+  const params=typeof window!=='undefined'?new URLSearchParams(window.location.search):new URLSearchParams();
+  const previewMode=params.get('cmsPreview')==='1';
+  const previewId=params.get('cmsPreviewId')||'';
+  const [previewAuthorized,setPreviewAuthorized]=React.useState<boolean|null>(previewMode?null:false);
+  const [previewPage,setPreviewPage]=React.useState<CustomPage|null>(null);
   React.useEffect(()=>{
-    if(!isPublicDataReady||page||redirectChecked)return;
+    if(!previewMode){setPreviewAuthorized(false);setPreviewPage(null);return;}
+    let live=true;
+    const unsub=subscribeToAuthChanges(async user=>{
+      if(!live)return;
+      if(!user){setPreviewAuthorized(false);return;}
+      try{
+        const id=previewId||regularPage?.id||slug;
+        const d=await adminApi(`/api/cms?collection=custom_pages&id=${encodeURIComponent(id)}`);
+        if(!live)return;
+        setPreviewPage((d?.item||null) as CustomPage|null);
+        setPreviewAuthorized(true);
+      }catch{if(live)setPreviewAuthorized(false)}
+    });
+    return()=>{live=false;unsub?.()};
+  },[previewMode,previewId,regularPage?.id,slug]);
+  const page=previewMode&&previewAuthorized===true&&previewPage?previewPage:regularPage;
+
+  React.useEffect(()=>{
+    if(previewMode||!isPublicDataReady||page||redirectChecked)return;
     let live=true;setRedirectChecking(true);
     fetch('/api/admin-records?kind=redirects&public=1').then(r=>r.json()).then(d=>{
       if(!live)return;const path=window.location.pathname.replace(/\/+$/,'')||'/';
@@ -51,9 +76,9 @@ export const CustomPageDetail: React.FC<CustomPageDetailProps> = ({ slug, onNavi
       if(item?.toPath&&String(item.toPath).startsWith('/')){window.location.replace(String(item.toPath));return;}
     }).catch(()=>{}).finally(()=>{if(live){setRedirectChecking(false);setRedirectChecked(true)}});
     return()=>{live=false};
-  },[isPublicDataReady,page,redirectChecked]);
+  },[previewMode,isPublicDataReady,page,redirectChecked]);
 
-  if (!isPublicDataReady || (!page && redirectChecking)) {
+  if (!isPublicDataReady || (previewMode&&previewAuthorized===null) || (!page && redirectChecking)) {
     return <div className="min-h-[65vh] bg-white"><div className="max-w-4xl mx-auto px-4 py-14 animate-pulse"><div className="h-5 w-32 bg-slate-100 rounded"/><div className="mt-8 h-10 w-4/5 bg-slate-100 rounded-xl"/><div className="mt-4 h-5 w-3/5 bg-slate-100 rounded"/><div className="mt-10 h-80 rounded-[28px] bg-slate-100"/></div></div>;
   }
 
@@ -68,7 +93,10 @@ export const CustomPageDetail: React.FC<CustomPageDetailProps> = ({ slug, onNavi
     );
   }
 
-  if (page.isPublished === false) {
+  if(page.isPublished===false && previewMode && previewAuthorized===null){
+    return <div className="min-h-[65vh] bg-white"><div className="max-w-4xl mx-auto px-4 py-14 animate-pulse"><div className="h-5 w-32 bg-slate-100 rounded"/><div className="mt-8 h-10 w-4/5 bg-slate-100 rounded-xl"/><div className="mt-6 h-40 bg-slate-100 rounded-2xl"/></div></div>;
+  }
+  if (page.isPublished === false && (!previewMode || previewAuthorized!==true)) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4 py-16">
         <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-4 shadow-2xs"><Clock size={28} /></div>
@@ -90,7 +118,7 @@ export const CustomPageDetail: React.FC<CustomPageDetailProps> = ({ slug, onNavi
     if(block.hidden)return null;
     const bg=blockBackground(block.background);
     if(block.type==='divider')return <div key={block.id} className="py-4"><hr className="border-slate-200"/></div>;
-    if(block.type==='image')return <section key={block.id} className={`rounded-[28px] p-4 sm:p-6 ${bg}`}><figure className="article-media"><img src={block.imageUrl} alt={block.alt||block.title||page.title} className="max-h-[760px] w-auto max-w-full mx-auto rounded-2xl object-contain"/>{(block.caption||block.credit)&&<figcaption className="mt-3 text-center text-sm opacity-75">{block.caption&&<span>{block.caption}</span>}{block.caption&&block.credit&&<br/>}{block.credit&&<span className="text-[11px] font-bold uppercase tracking-wide">ẢNH/NGUỒN: {block.credit}</span>}</figcaption>}</figure></section>;
+    if(block.type==='image'){const fit=block.imageFit||'original';return <section key={block.id} className={`rounded-[28px] p-4 sm:p-6 ${bg}`}><figure className="article-media"><div className={fit==='cover'?'aspect-video overflow-hidden rounded-2xl bg-slate-100':fit==='contain'?'min-h-40 max-h-[760px] overflow-hidden rounded-2xl bg-slate-100 flex items-center justify-center':''}><img src={block.imageUrl} alt={block.alt||block.title||page.title} style={{objectPosition:`${block.focalX??50}% ${block.focalY??50}%`}} className={fit==='cover'?'h-full w-full object-cover':fit==='contain'?'max-h-[760px] w-full object-contain':'block h-auto max-w-full mx-auto rounded-2xl'}/></div>{(block.caption||block.credit)&&<figcaption className="mt-3 text-center text-sm opacity-75">{block.caption&&<span>{block.caption}</span>}{block.caption&&block.credit&&<br/>}{block.credit&&<span className="text-[11px] font-bold uppercase tracking-wide">ẢNH/NGUỒN: {block.credit}</span>}</figcaption>}</figure></section>;}
     if(block.type==='video'){
       const embed=youtubeEmbed(block.videoUrl);
       return <section key={block.id} className={`rounded-[28px] p-5 sm:p-7 ${bg}`}>{block.title&&<h2 className="text-2xl font-black mb-5">{block.title}</h2>}{embed?<div className="aspect-video overflow-hidden rounded-2xl bg-black"><iframe src={embed} title={block.title||'Video'} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/></div>:block.videoUrl?<video controls preload="metadata" poster={block.posterUrl} className="w-full max-h-[720px] rounded-2xl bg-black"><source src={block.videoUrl}/></video>:<div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center opacity-60"><Play className="mx-auto"/>Chưa cấu hình video.</div>}</section>;
@@ -99,7 +127,7 @@ export const CustomPageDetail: React.FC<CustomPageDetailProps> = ({ slug, onNavi
     if(block.type==='cta')return <section key={block.id} className={`rounded-[30px] p-7 sm:p-10 ${bg}`}><h2 className="text-3xl font-black tracking-tight">{block.title||'Cùng đồng hành'}</h2>{block.body&&<p className="mt-3 max-w-3xl leading-7 opacity-75">{block.body}</p>}<div className="mt-6 flex flex-wrap gap-3">{block.buttonLabel&&<button onClick={()=>handleButtonClick(block.buttonUrl)} className="rounded-xl bg-[#0B66C3] px-5 py-3 text-sm font-black text-white">{block.buttonLabel}<ArrowRight size={15} className="inline ml-2"/></button>}{block.secondaryButtonLabel&&<button onClick={()=>handleButtonClick(block.secondaryButtonUrl)} className="rounded-xl border border-current/20 px-5 py-3 text-sm font-black">{block.secondaryButtonLabel}</button>}</div></section>;
     if(block.type==='quote')return <section key={block.id} className={`rounded-[28px] p-7 sm:p-9 ${bg}`}><Quote size={26} className="text-sky-500"/>{block.title&&<h2 className="mt-4 text-xl font-black">{block.title}</h2>}<blockquote className="mt-3 text-lg leading-8 font-medium opacity-80">{block.body}</blockquote></section>;
     if(block.type==='html')return <section key={block.id} className={`rounded-[28px] p-6 sm:p-8 ${bg}`}>{block.title&&<h2 className="text-2xl font-black mb-4">{block.title}</h2>}<div className="formatted-content prose prose-slate max-w-none" dangerouslySetInnerHTML={{__html:sanitizeHtml(block.body||'')}}/></section>;
-    if(['gallery','timeline','logos','accordion','tabs','table','documents','people','campaign','funding','transparency','marquee'].includes(block.type))return <section key={block.id} className={`${block.mobileHidden?'hidden sm:block':''} ${blockWidth(block.width)} ${blockAnim(block.animation)} mx-auto rounded-[28px] p-6 sm:p-8 ${bg}`}><h2 className="text-2xl font-black">{block.title||({gallery:'Thư viện',timeline:'Dòng thời gian',logos:'Đơn vị đồng hành',accordion:'Thông tin',tabs:'Nội dung',documents:'Tài liệu',people:'Con người',campaign:'Chiến dịch',funding:'Nguồn lực',transparency:'Công khai & Minh bạch',marquee:'Cập nhật'} as any)[block.type]||''}</h2>{block.body&&<p className="mt-2 opacity-70 leading-7">{block.body}</p>}<div className={block.type==='marquee'?'mt-5 flex gap-6 overflow-x-auto whitespace-nowrap':'mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4'} style={block.type==='marquee'?undefined:{gridTemplateColumns:`repeat(${Math.min(4,Math.max(1,block.columns||2))},minmax(0,1fr))`}}>{(block.items||[]).map((item,i)=><article key={i} className={`${block.type==='logos'?'flex items-center justify-center min-h-28':'rounded-2xl border border-current/10 bg-white/70 p-4'} text-slate-900`}>{item.imageUrl&&<img src={item.imageUrl} alt={item.title||''} className={`${block.type==='logos'?'max-h-14 max-w-[160px] object-contain':'mb-3 aspect-video w-full rounded-xl object-cover'}`}/>}<div className="font-extrabold">{item.title||item.label}</div>{item.body&&<div className="mt-1 text-sm text-slate-600 whitespace-normal">{item.body}</div>}{item.url&&<a href={item.url} target={safeExternal(item.url)?'_blank':undefined} rel={safeExternal(item.url)?'noreferrer':undefined} className="mt-3 inline-flex text-xs font-black text-[#0B66C3]">Xem thêm →</a>}</article>)}</div></section>;
+    if(['gallery','timeline','logos','accordion','tabs','table','documents','people','campaign','funding','transparency','marquee'].includes(block.type))return <section key={block.id} className={`${block.mobileHidden?'hidden sm:block':''} ${blockWidth(block.width)} ${blockAnim(block.animation)} mx-auto rounded-[28px] p-6 sm:p-8 ${bg}`}><h2 className="text-2xl font-black">{block.title||({gallery:'Thư viện',timeline:'Dòng thời gian',logos:'Đơn vị đồng hành',accordion:'Thông tin',tabs:'Nội dung',documents:'Tài liệu',people:'Con người',campaign:'Chiến dịch',funding:'Nguồn lực',transparency:'Công khai & Minh bạch',marquee:'Cập nhật'} as any)[block.type]||''}</h2>{block.body&&<p className="mt-2 opacity-70 leading-7">{block.body}</p>}<div className={block.type==='marquee'?'mt-5 flex gap-6 overflow-x-auto whitespace-nowrap':'mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4'} style={block.type==='marquee'?undefined:{gridTemplateColumns:`repeat(${Math.min(4,Math.max(1,block.columns||2))},minmax(0,1fr))`}}>{(block.items||[]).map((item,i)=><article key={i} className={`${block.type==='logos'?'flex items-center justify-center min-h-28':'rounded-2xl border border-current/10 bg-white/70 p-4'} text-slate-900`}>{item.imageUrl&&<img src={item.imageUrl} alt={item.title||''} style={block.type==='logos'?undefined:{objectPosition:`${block.focalX??50}% ${block.focalY??50}%`}} className={block.type==='logos'?'max-h-14 max-w-[160px] object-contain':block.imageFit==='cover'?'mb-3 aspect-video w-full rounded-xl object-cover':block.imageFit==='contain'?'mb-3 h-44 w-full rounded-xl object-contain bg-slate-50':'mb-3 h-auto max-w-full rounded-xl mx-auto'}/>}<div className="font-extrabold">{item.title||item.label}</div>{item.body&&<div className="mt-1 text-sm text-slate-600 whitespace-normal">{item.body}</div>}{item.url&&<a href={item.url} target={safeExternal(item.url)?'_blank':undefined} rel={safeExternal(item.url)?'noreferrer':undefined} className="mt-3 inline-flex text-xs font-black text-[#0B66C3]">Xem thêm →</a>}</article>)}</div></section>;
     if(block.type==='map'||block.type==='embed'){const src=block.sourceUrl||block.videoUrl||'';return <section key={block.id} className={`${block.mobileHidden?'hidden sm:block':''} ${blockWidth(block.width)} ${blockAnim(block.animation)} mx-auto rounded-[28px] p-5 sm:p-7 ${bg}`}>{block.title&&<h2 className="text-2xl font-black mb-4">{block.title}</h2>}{src&&/^https:\/\//i.test(src)?<div className="aspect-video overflow-hidden rounded-2xl border bg-white"><iframe src={src} title={block.title||block.type} className="h-full w-full" loading="lazy" referrerPolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups"/></div>:<div className="rounded-xl border border-dashed p-8 text-center text-sm opacity-60">Chưa cấu hình URL an toàn.</div>}</section>}
     return <section key={block.id} className={`rounded-[28px] p-6 sm:p-8 ${bg}`}>{block.title&&<h2 className="text-2xl font-black tracking-tight">{block.title}</h2>}{block.body&&<div className="formatted-content prose prose-slate max-w-none mt-4 leading-8" dangerouslySetInnerHTML={{__html:sanitizeHtml(block.body.includes('<')?block.body:block.body.replace(/\n/g,'<br/>'))}}/>}</section>;
   };
@@ -116,7 +144,7 @@ export const CustomPageDetail: React.FC<CustomPageDetailProps> = ({ slug, onNavi
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-8 space-y-5">
         {(page.imageUrl || page.contentFormatted || page.content || page.secondaryImageUrl) && <article className="bg-white rounded-[30px] border border-slate-200/80 shadow-xs p-6 sm:p-10 space-y-8">
-          {page.imageUrl&&<div className="w-full aspect-video rounded-2xl overflow-hidden border border-slate-200 bg-slate-100"><img src={page.imageUrl} alt={page.title} referrerPolicy="no-referrer" className="w-full h-full object-cover"/></div>}
+          {page.imageUrl&&<div className={`w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 ${page.imageFit==='cover'?'aspect-video':page.imageFit==='contain'?'min-h-56 max-h-[760px] flex items-center justify-center':''}`}><img src={page.imageUrl} alt={page.title} referrerPolicy="no-referrer" style={{objectPosition:`${page.imageFocalX??50}% ${page.imageFocalY??50}%`}} className={page.imageFit==='cover'?'w-full h-full object-cover':page.imageFit==='contain'?'w-full max-h-[760px] object-contain':'block w-auto max-w-full h-auto mx-auto'}/></div>}
           {page.contentFormatted&&page.contentFormatted.includes('<')?<div className="formatted-content prose prose-slate max-w-none text-slate-700 text-sm sm:text-base leading-relaxed" dangerouslySetInnerHTML={{__html:sanitizeHtml(page.contentFormatted)}}/>:<div className="formatted-content prose prose-slate max-w-none space-y-4 text-slate-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{page.contentFormatted||page.content}</div>}
           {page.secondaryImageUrl&&<div className="w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-100"><img src={page.secondaryImageUrl} alt="Ảnh minh họa đính kèm" referrerPolicy="no-referrer" className="w-full h-auto object-contain"/></div>}
         </article>}

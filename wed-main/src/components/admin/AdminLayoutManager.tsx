@@ -10,13 +10,13 @@ interface Props {
   onSwitchTab?: (tabId: string) => void;
 }
 
-type SectionKey = 'hero'|'direction'|'pillars'|'programs'|'units'|'certificate'|'values'|'news'|'transparency';
+type SectionKey = 'hero'|'direction'|'pillars'|'programs'|'units'|'certificate'|'values'|'news'|'transparency'|'cta';
 
 const LABELS: Record<SectionKey,string> = {
   hero:'Đầu trang', direction:'Định hướng 2026', pillars:'05 Trụ cột hoạt động', programs:'Chương trình & hoạt động',
-  units:'Đơn vị trực thuộc', certificate:'Tra cứu Giấy chứng nhận', values:'06 Giá trị cốt lõi', news:'Tin tức & hoạt động', transparency:'Thông tin minh bạch'
+  units:'Đơn vị trực thuộc', certificate:'Xác thực GCN', values:'06 Giá trị cốt lõi', news:'Tin tức & hoạt động', transparency:'Thông tin minh bạch', cta:'Kêu gọi tham gia & đồng hành'
 };
-const DEFAULT_ORDER: SectionKey[] = ['hero','pillars','programs','units','certificate','values','news','transparency'];
+const DEFAULT_ORDER: SectionKey[] = ['hero','pillars','news','programs','values','certificate','transparency','units','cta'];
 
 export const AdminLayoutManager: React.FC<Props> = ({ onShowToast, onSwitchTab }) => {
   const { siteConfig, updateSiteConfig } = useDataContext();
@@ -24,7 +24,7 @@ export const AdminLayoutManager: React.FC<Props> = ({ onShowToast, onSwitchTab }
   const [draft, setDraft] = useState<Record<string,string>>({});
   const sections = siteConfig.homeSections || {};
   const order = useMemo(() => {
-    const saved=(siteConfig.homeSectionOrder||[]).filter((x): x is SectionKey => DEFAULT_ORDER.includes(x as SectionKey));
+    const saved=(siteConfig.homeSectionOrder||[]).filter((x): x is SectionKey => x!=='direction'&&DEFAULT_ORDER.includes(x as SectionKey));
     return [...new Set(saved), ...DEFAULT_ORDER.filter(x=>!saved.includes(x))];
   }, [siteConfig.homeSectionOrder]);
 
@@ -50,6 +50,7 @@ export const AdminLayoutManager: React.FC<Props> = ({ onShowToast, onSwitchTab }
       values:{valuesLabel:siteConfig.valuesLabel||'',valuesHeading:siteConfig.valuesHeading||''},
       news:{newsLabel:siteConfig.newsLabel||'',newsHeading:siteConfig.newsHeading||''},
       transparency:{transparencyHeading:siteConfig.transparencyHeading||'',transparencyText:siteConfig.transparencyText||'',transparencyButtonText:siteConfig.transparencyButtonText||'',transparencyButtonUrl:siteConfig.transparencyButtonUrl||''},
+      cta:{ctaHeading:siteConfig.ctaHeading||'',ctaSubtext:siteConfig.ctaSubtext||'',ctaButtonText:siteConfig.ctaButtonText||'',ctaButtonUrl:siteConfig.ctaButtonUrl||'',ctaSecondaryButtonText:siteConfig.ctaSecondaryButtonText||'',ctaSecondaryButtonUrl:siteConfig.ctaSecondaryButtonUrl||''},
     };
     setDraft(data[key]); setEditing(key);
   };

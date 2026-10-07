@@ -693,7 +693,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
 
         <label className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-900"><input type="checkbox" checked={Boolean(activeArticle.isFeatured)} onChange={e=>onUpdateArticle(activeArticle.id,{isFeatured:e.target.checked})}/> Ghim là bài đăng nổi bật trên Trang chủ</label>
 
-        {/* KHỐI 3: HÌNH ẢNH ĐẠI DIỆN BÀI VIẾT (16:9) */}
+        {/* KHỐI 3: HÌNH ẢNH ĐẠI DIỆN — giữ ảnh gốc, chế độ hiển thị do CMS chọn */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
@@ -708,7 +708,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
               label="Ảnh bìa bài viết"
               value={activeArticle.imageUrl || ''}
               onChange={(url) => onUpdateArticle(activeArticle.id, { imageUrl: url })}
-              helperText="1200x675px (không khóa tỉ lệ)"
+              helperText="Giữ ảnh gốc; có thể ngang, dọc, vuông hoặc panorama. Chọn cách hiển thị bên dưới."
               category="media"
               placeholder="Chọn ảnh từ kho Media hoặc tải ảnh lên"
             />
@@ -725,7 +725,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:border-sky-500"
               />
             </div>
-            <div className="grid sm:grid-cols-2 gap-3"><input value={activeArticle.imageAlt||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageAlt:e.target.value})} placeholder="Alt text cho ảnh" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><input value={activeArticle.imageCredit||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageCredit:e.target.value})} placeholder="Nguồn/Tác giả ảnh" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><input value={activeArticle.imageSourceUrl||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageSourceUrl:e.target.value})} placeholder="URL nguồn ảnh (nếu có)" className="sm:col-span-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><select value={activeArticle.heroImageMode||'16:9'} onChange={e=>onUpdateArticle(activeArticle.id,{heroImageMode:e.target.value as any})} className="sm:col-span-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"><option value="16:9">Public: crop 16:9</option><option value="original">Trang chi tiết: ảnh nguyên tỷ lệ</option><option value="hidden">Trang chi tiết: ẩn ảnh đầu bài</option></select></div>
+            <div className="grid sm:grid-cols-2 gap-3"><input value={activeArticle.imageAlt||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageAlt:e.target.value})} placeholder="Alt text cho ảnh" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><input value={activeArticle.imageCredit||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageCredit:e.target.value})} placeholder="Nguồn/Tác giả ảnh" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><input value={activeArticle.imageSourceUrl||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageSourceUrl:e.target.value})} placeholder="URL nguồn ảnh (nếu có)" className="sm:col-span-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><select value={activeArticle.heroImageMode==='hidden'?'hidden':'original'} onChange={e=>onUpdateArticle(activeArticle.id,{heroImageMode:e.target.value as any})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"><option value="original">Hiện ảnh đầu bài</option><option value="hidden">Ẩn ảnh đầu bài</option></select><select value={activeArticle.imageFit||'original'} onChange={e=>onUpdateArticle(activeArticle.id,{imageFit:e.target.value as any})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"><option value="original">Original — giữ tỷ lệ gốc</option><option value="contain">Fit — vừa khung, không cắt</option><option value="cover">Cover — phủ khung (crop theo focal point)</option></select><div className="sm:col-span-2 grid grid-cols-2 gap-3"><label className="text-[11px] font-bold text-slate-500">Focal X<input type="number" min="0" max="100" value={activeArticle.imageFocalX??50} onChange={e=>onUpdateArticle(activeArticle.id,{imageFocalX:Number(e.target.value)})} className="mt-1 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/></label><label className="text-[11px] font-bold text-slate-500">Focal Y<input type="number" min="0" max="100" value={activeArticle.imageFocalY??50} onChange={e=>onUpdateArticle(activeArticle.id,{imageFocalY:Number(e.target.value)})} className="mt-1 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/></label></div></div>
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { adminApi } from './adminApi';
-export interface MediaItem {key:string;url:string;name:string;type:string;size:number;uploaded?:string;alt?:string;caption?:string;credit?:string;sourceUrl?:string;focalX?:number;focalY?:number}
+export interface MediaItem {key:string;url:string;name:string;type:string;size:number;uploaded?:string;alt?:string;caption?:string;credit?:string;sourceUrl?:string;focalX?:number;focalY?:number;displayMode?:'original'|'contain'|'cover'}
 export const MEDIA_ACCEPT='image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,application/pdf';
 export function validateMediaFile(file:File,imageOnly=false){if(!MEDIA_ACCEPT.split(',').includes(file.type)||(imageOnly&&!file.type.startsWith('image/')))throw new Error('Chọn ảnh JPG, PNG, WebP, GIF, AVIF, SVG'+(imageOnly?'.':' hoặc PDF.'));if(!file.size)throw new Error('Tệp rỗng không thể tải lên.');if(file.size>20*1024*1024)throw new Error('Mỗi tệp tối đa 20 MB.');}
 export async function uploadMedia(file:File,imageOnly=false):Promise<MediaItem>{validateMediaFile(file,imageOnly);const form=new FormData();form.append('file',file);const d=await adminApi('/api/media/upload',{method:'POST',body:form});if(!d?.url||!d?.key)throw new Error('Máy chủ chưa trả về tệp đã lưu.');return d;}

@@ -11,6 +11,7 @@ import {
   fetchCollectionFromFirestore,
   fetchDocumentFromFirestore,
   fetchCMSBundle,
+  createPermanentRedirect,
 } from '../lib/firebase';
 import {
   NetworkUnit,
@@ -187,9 +188,19 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   unitsBannerHeading:'Đơn vị trực thuộc Sky First Network', unitsBannerSubtext:'Các đơn vị trực thuộc có nhận diện và phạm vi hoạt động riêng trong hệ sinh thái Sky First Network.',
   ctaHeading:'Kết nối cùng Sky First Network', ctaSubtext:'Tìm hiểu các hình thức tham gia, tình nguyện, hợp tác và đồng hành cùng các hoạt động phù hợp.', ctaButtonText:'Tham gia',ctaButtonUrl:'/join',ctaSecondaryButtonText:'Liên hệ hợp tác',ctaSecondaryButtonUrl:'/contact',
   heroButton1Text:'Khám phá mạng lưới',heroButton1Url:'/about',heroButton2Text:'Tham gia cùng chúng tôi',heroButton2Url:'/join',heroButton3Text:'',heroButton3Url:'',
-  homeSections:{hero:true,direction:true,pillars:true,programs:true,units:true,certificate:true,values:true,news:true,transparency:true},
-  homeSectionOrder:['hero','direction','pillars','programs','units','certificate','values','news','transparency'],
+  homeSections:{hero:true,direction:true,pillars:true,programs:true,units:true,certificate:true,values:true,news:true,transparency:true,cta:true},
+  homeSectionOrder:['hero','pillars','news','programs','values','certificate','transparency','units','cta'],
   footerSlogan:'', footerAboutText:'', footerCopyright:'© 2026. Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First.', footerCertBadgeText:'Xác thực GCN',footerUnitsBadgeText:'Đơn vị trực thuộc',footerSocialFacebook:'',footerSocialInstagram:'',footerSocialTiktok:'',footerSocialLinkedin:'',footerSocialYoutube:'',footerSocialZalo:''
+};
+
+const LEGACY_HOME_ORDER = ['hero','direction','pillars','programs','units','certificate','values','news','transparency'];
+const PRODUCTION_HOME_ORDER = ['hero','pillars','news','programs','values','certificate','transparency','units','cta'];
+const normalizeHomeSectionOrder=(value?:string[])=>{
+  const items=Array.isArray(value)?value.filter(Boolean):[];
+  const legacy=items.join('|')===LEGACY_HOME_ORDER.join('|') || items.filter(x=>x!=='direction').join('|')===LEGACY_HOME_ORDER.filter(x=>x!=='direction').join('|');
+  if(!items.length||legacy)return [...PRODUCTION_HOME_ORDER];
+  const cleaned=items.filter(x=>x!=='direction');
+  return [...new Set([...cleaned,...PRODUCTION_HOME_ORDER.filter(x=>!cleaned.includes(x))])];
 };
 
 export const DEFAULT_ADMIN_USERS: AdminUser[] = [];
@@ -475,6 +486,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...prev,
           ...configData,
           homeSections: { ...prev.homeSections, ...(configData.homeSections || {}) },
+          homeSectionOrder: normalizeHomeSectionOrder(configData.homeSectionOrder),
         }));
       }
 
@@ -543,7 +555,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const moduleItems = first('cms_modules');
         const findModule = (id:string) => moduleItems.find((item:any) => item?.id === id);
         const remoteConfig = configItems.find((item:any) => item?.id === 'current') || configItems[0];
-        if(remoteConfig) setSiteConfig(prev=>({...prev,...remoteConfig,homeSections:{...prev.homeSections,...(remoteConfig.homeSections||{})}}));
+        if(remoteConfig) setSiteConfig(prev=>({...prev,...remoteConfig,homeSections:{...prev.homeSections,...(remoteConfig.homeSections||{})},homeSectionOrder:normalizeHomeSectionOrder(remoteConfig.homeSectionOrder)}));
         const pillars=findModule('core_pillars'); if(Array.isArray(pillars?.items)) setCorePillars(pillars.items);
         const timelineData=findModule('timeline'); if(Array.isArray(timelineData?.items)) setTimeline(timelineData.items);
         const teamData=findModule('team_members'); if(Array.isArray(teamData?.items)) setTeamMembers(teamData.items);
@@ -607,13 +619,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setNetworkUnits(prev => prev.filter(u => u.id !== id)); return true;
   };
 
+  const slugChanged=(before?:string,after?:string)=>Boolean(before&&after&&before.replace(/^\/+|\/+$/g,'')!==after.replace(/^\/+|\/+$/g,''));
+
   const updateProgram = async (id: string, updates: Partial<Program>): Promise<boolean> => {
     const current = programs.find(p => p.id === id); if (!current) return false;
     const target={...current,...updates};
+    const redirectNeeded=current.isPublished===true&&slugChanged((current as any).slug,(target as any).slug);
     setPrograms(prev=>prev.map(p=>p.id===id?target:p));
-    if (Object.prototype.hasOwnProperty.call(updates, 'isPublished') && isFirebaseConfigured && db) {
+    if ((Object.prototype.hasOwnProperty.call(updates, 'isPublished')||redirectNeeded) && isFirebaseConfigured && db) {
       cancelPendingCloudSync('programs', id);
-      const ok=await syncDocumentToFirestore('programs', id, target);if(!ok){setPrograms(prev=>prev.map(item=>item.id===id?{...item,isPublished:current.isPublished}:item));}return ok;
+      const ok=await syncDocumentToFirestore('programs', id, target);
+      if(!ok){setPrograms(prev=>prev.map(item=>item.id===id?current:item));return false;}
+      if(redirectNeeded)try{await createPermanentRedirect(`/du-an/${(current as any).slug}`,`/du-an/${(target as any).slug}`,`Chuyển hướng chương trình: ${current.title}`)}catch{}
+      return true;
     }
     scheduleCloudSync('programs', id, target);
     return true;
@@ -629,13 +647,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateNewsArticle = async (id: string, updates: Partial<NewsArticle>): Promise<boolean> => {
-    const current = newsArticles.find((item) => item.id === id);
-    if (!current) return false;
+    const current = newsArticles.find((item) => item.id === id); if (!current) return false;
     const target = { ...current, ...updates };
+    const redirectNeeded=current.isPublished===true&&slugChanged((current as any).slug,(target as any).slug);
     setNewsArticles((prev) => prev.map((item) => (item.id === id ? target : item)));
-    if (Object.prototype.hasOwnProperty.call(updates, 'isPublished') && isFirebaseConfigured && db) {
+    if ((Object.prototype.hasOwnProperty.call(updates, 'isPublished')||redirectNeeded) && isFirebaseConfigured && db) {
       cancelPendingCloudSync('news_articles', id);
-      const ok=await syncDocumentToFirestore('news_articles', id, target);if(!ok){setNewsArticles(prev=>prev.map(item=>item.id===id?{...item,isPublished:current.isPublished}:item));}return ok;
+      const ok=await syncDocumentToFirestore('news_articles', id, target);
+      if(!ok){setNewsArticles(prev=>prev.map(item=>item.id===id?current:item));return false;}
+      if(redirectNeeded)try{await createPermanentRedirect(`/tin-tuc/${(current as any).slug}`,`/tin-tuc/${(target as any).slug}`,`Chuyển hướng bài viết: ${current.title}`)}catch{}
+      return true;
     }
     scheduleCloudSync('news_articles', id, target);
     return true;
@@ -697,13 +718,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Custom Page methods
   const updateCustomPage = async (id: string, updates: Partial<CustomPage>): Promise<boolean> => {
-    const current = customPages.find((item) => item.id === id);
-    if (!current) return false;
+    const current = customPages.find((item) => item.id === id); if (!current) return false;
     const target = { ...current, ...updates };
+    const redirectNeeded=current.isPublished===true&&slugChanged(current.slug,target.slug);
     setCustomPages((prev) => prev.map((item) => (item.id === id ? target : item)));
-    if (Object.prototype.hasOwnProperty.call(updates, 'isPublished') && isFirebaseConfigured && db) {
+    if ((Object.prototype.hasOwnProperty.call(updates, 'isPublished')||redirectNeeded) && isFirebaseConfigured && db) {
       cancelPendingCloudSync('custom_pages', id);
-      const ok=await syncDocumentToFirestore('custom_pages', id, target);if(!ok){setCustomPages(prev=>prev.map(item=>item.id===id?{...item,isPublished:current.isPublished}:item));}return ok;
+      const ok=await syncDocumentToFirestore('custom_pages', id, target);
+      if(!ok){setCustomPages(prev=>prev.map(item=>item.id===id?current:item));return false;}
+      if(redirectNeeded)try{await createPermanentRedirect(`/${current.slug}`,`/${target.slug}`,`Chuyển hướng trang: ${current.title}`)}catch{}
+      return true;
     }
     scheduleCloudSync('custom_pages', id, target);
     return true;

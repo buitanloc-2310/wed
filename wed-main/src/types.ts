@@ -85,6 +85,7 @@ export interface SiteConfig {
     volunteerHours?: CounterAnimationConfig;
   };
   taxonomyCategories?: { id: string; label: string; visible?: boolean }[];
+  contactRouting?: { topic: string; email: string; label?: string }[];
   pillarsHeading?: string;
   pillarsSubtext?: string;
   contact: {
@@ -123,6 +124,7 @@ export interface SiteConfig {
     values?: boolean;
     news?: boolean;
     transparency?: boolean;
+    cta?: boolean;
   };
   homeSectionOrder?: string[];
   directionLabel?: string;
@@ -285,6 +287,9 @@ export interface NewsArticle {
   imageCredit?: string;
   imageSourceUrl?: string;
   heroImageMode?: '16:9' | 'original' | 'hidden';
+  imageFit?: 'original' | 'contain' | 'cover';
+  imageFocalX?: number;
+  imageFocalY?: number;
   seoTitle?: string;
   seoDescription?: string;
   ogImageUrl?: string;
@@ -400,6 +405,9 @@ export interface PageBlock {
   autoplay?: boolean;
   loop?: boolean;
   muted?: boolean;
+  imageFit?: 'original' | 'contain' | 'cover';
+  focalX?: number;
+  focalY?: number;
 }
 
 export interface CustomPage {
@@ -411,6 +419,9 @@ export interface CustomPage {
   contentFormatted?: string;
   imageUrl?: string;
   secondaryImageUrl?: string;
+  imageFit?: 'original' | 'contain' | 'cover';
+  imageFocalX?: number;
+  imageFocalY?: number;
   pageBlocks?: PageBlock[];
   isPublished?: boolean;
   publishedAt?: string;
@@ -510,6 +521,14 @@ export interface CustomPage {
   certCtaDescription?: string;
   certCtaButtonLabel?: string;
   certCtaButtonUrl?: string;
+  certStatIssuedMode?: 'auto' | 'manual';
+  certStatIssuedManual?: string;
+  certStatValidMode?: 'auto' | 'manual';
+  certStatValidManual?: string;
+  certStatProgramsMode?: 'auto' | 'manual';
+  certStatProgramsManual?: string;
+  certStatUpdatedMode?: 'auto' | 'manual';
+  certStatUpdatedManual?: string;
   // Specific fields for Sponsor page
   sponsorRecipientEntity?: string;
   sponsorGoalAmount?: string;

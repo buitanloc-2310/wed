@@ -34,6 +34,28 @@ function safeCertificate(item){
   return publicItem;
 }
 
+async function rebuildCertificateStats(context,updatedBy='system'){
+  const [total,valid,programs,latest]=await Promise.all([
+    context.env.DB.prepare("SELECT COUNT(*) n FROM website_cms_documents WHERE collection_name='certificates' AND is_published=1").first(),
+    context.env.DB.prepare("SELECT COUNT(*) n FROM website_cms_documents WHERE collection_name='certificates' AND is_published=1 AND lower(COALESCE(json_extract(data_json,'$.status'),'valid')) NOT IN ('revoked','invalid','cancelled','canceled','replaced')").first(),
+    context.env.DB.prepare("SELECT COUNT(DISTINCT json_extract(data_json,'$.programTitle')) n FROM website_cms_documents WHERE collection_name='certificates' AND is_published=1 AND trim(COALESCE(json_extract(data_json,'$.programTitle'),''))<>''").first(),
+    context.env.DB.prepare("SELECT MAX(updated_at) updatedAt FROM website_cms_documents WHERE collection_name='certificates' AND is_published=1").first()
+  ]);
+  const now=new Date().toISOString();
+  const stats={id:'certificate_stats',issued:Number(total?.n||0),valid:Number(valid?.n||0),programs:Number(programs?.n||0),updatedAt:latest?.updatedAt||''};
+  await context.env.DB.prepare(`INSERT INTO website_cms_documents(collection_name,doc_id,data_json,is_published,updated_at,updated_by)
+    VALUES('cms_modules','certificate_stats',?,1,?,?)
+    ON CONFLICT(collection_name,doc_id) DO UPDATE SET data_json=excluded.data_json,is_published=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by`)
+    .bind(JSON.stringify(stats),now,updatedBy).run();
+  await context.env.DB.prepare("INSERT OR IGNORE INTO website_cms_collections(collection_name,initialized_at) VALUES('cms_modules',?)").bind(now).run();
+  return stats;
+}
+async function getCertificateStats(context){
+  const row=await context.env.DB.prepare("SELECT data_json FROM website_cms_documents WHERE collection_name='cms_modules' AND doc_id='certificate_stats' LIMIT 1").first();
+  if(row?.data_json){try{return JSON.parse(row.data_json)}catch{}}
+  return rebuildCertificateStats(context);
+}
+
 async function publicBundle(context,admin){
   const marks=BUNDLE_COLLECTIONS.map(()=>'?').join(',');
   const rows=await context.env.DB.prepare(`SELECT collection_name,doc_id,data_json,is_published FROM website_cms_documents WHERE collection_name IN (${marks}) ORDER BY collection_name,updated_at DESC`).bind(...BUNDLE_COLLECTIONS).all();
@@ -65,11 +87,8 @@ export async function onRequestGet(context){
     const collection=safeName(u.searchParams.get('collection')); const id=safeName(u.searchParams.get('id'));
     if(!collection || !PUBLIC_COLLECTIONS.has(collection)) return json({ok:false,error:'Yêu cầu dữ liệu không hợp lệ.'},{status:400});
     if(collection==='certificates' && u.searchParams.get('stats')==='1'){
-      const total=await context.env.DB.prepare("SELECT COUNT(*) n FROM website_cms_documents WHERE collection_name='certificates' AND is_published=1").first();
-      const valid=await context.env.DB.prepare("SELECT COUNT(*) n FROM website_cms_documents WHERE collection_name='certificates' AND is_published=1 AND lower(COALESCE(json_extract(data_json,'$.status'),'valid')) NOT IN ('revoked','invalid','cancelled','canceled','replaced')").first();
-      const programs=await context.env.DB.prepare("SELECT COUNT(DISTINCT json_extract(data_json,'$.programTitle')) n FROM website_cms_documents WHERE collection_name='certificates' AND is_published=1 AND json_extract(data_json,'$.programTitle') IS NOT NULL").first();
-      const latest=await context.env.DB.prepare("SELECT MAX(updated_at) updatedAt FROM website_cms_documents WHERE collection_name='certificates' AND is_published=1").first();
-      return json({ok:true,stats:{issued:Number(total?.n||0),valid:Number(valid?.n||0),programs:Number(programs?.n||0),updatedAt:latest?.updatedAt||''}},{headers:{'cache-control':'public, max-age=60, s-maxage=300, stale-while-revalidate=900'}})
+      const stats=await getCertificateStats(context);
+      return json({ok:true,stats},{headers:{'cache-control':'public, max-age=120, s-maxage=900, stale-while-revalidate=3600'}})
     }
     if(id){
       const row=await context.env.DB.prepare('SELECT data_json,is_published FROM website_cms_documents WHERE collection_name=? AND doc_id=?').bind(collection,id).first();
@@ -101,6 +120,7 @@ export async function onRequestPut(context){
       .bind(collection,id,JSON.stringify(merged),pub,now,access.admin.uid),
     context.env.DB.prepare('INSERT OR IGNORE INTO website_cms_collections(collection_name,initialized_at) VALUES(?,?)').bind(collection,now),
     context.env.DB.prepare('DELETE FROM website_cms_deleted WHERE collection_name=? AND doc_id=?').bind(collection,id)]);
+    if(collection==='certificates')await rebuildCertificateStats(context,access.admin.uid);
     return json({ok:true,item:merged,published:Boolean(pub)});
   }catch(e){ return json({ok:false,error:'Không thể lưu dữ liệu website.'},{status:500}); }
 }
@@ -108,6 +128,6 @@ export async function onRequestDelete(context){
   const denied=await requireAdminToken(context); if(denied)return denied; const access={admin:{uid:context.data.adminUser.uid}};
   try{ await ensureSchema(context); const u=new URL(context.request.url); const collection=safeName(u.searchParams.get('collection')); const id=safeName(u.searchParams.get('id'));
     if(!collection||!id||!PUBLIC_COLLECTIONS.has(collection)) return json({ok:false,error:'Yêu cầu xóa không hợp lệ.'},{status:400});
-    await context.env.DB.batch([context.env.DB.prepare('INSERT OR REPLACE INTO website_cms_deleted(collection_name,doc_id,deleted_at) VALUES(?,?,?)').bind(collection,id,new Date().toISOString()),context.env.DB.prepare('INSERT OR IGNORE INTO website_cms_collections(collection_name,initialized_at) VALUES(?,?)').bind(collection,new Date().toISOString()),context.env.DB.prepare('DELETE FROM website_cms_documents WHERE collection_name=? AND doc_id=?').bind(collection,id)]); return json({ok:true});
+    await context.env.DB.batch([context.env.DB.prepare('INSERT OR REPLACE INTO website_cms_deleted(collection_name,doc_id,deleted_at) VALUES(?,?,?)').bind(collection,id,new Date().toISOString()),context.env.DB.prepare('INSERT OR IGNORE INTO website_cms_collections(collection_name,initialized_at) VALUES(?,?)').bind(collection,new Date().toISOString()),context.env.DB.prepare('DELETE FROM website_cms_documents WHERE collection_name=? AND doc_id=?').bind(collection,id)]); if(collection==='certificates')await rebuildCertificateStats(context,access.admin.uid); return json({ok:true});
   }catch{return json({ok:false,error:'Không thể xóa dữ liệu.'},{status:500});}
 }

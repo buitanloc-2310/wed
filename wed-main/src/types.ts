@@ -350,9 +350,26 @@ export interface CorePillar {
   imageUrl?: string;
 }
 
+export interface TeamPosition {
+  id: string;
+  title: string;
+  unit?: string;
+  /** Smaller numbers appear higher in the organization hierarchy. */
+  rankOrder: number;
+  /** Stable manual display order inside the same rank. */
+  displayOrder: number;
+  color?: string;
+  isActive?: boolean;
+}
+
 export interface TeamMember {
+  /** Stable key; optional to preserve compatibility with existing CMS records. */
+  id?: string;
   name: string;
   role: string;
+  unit?: string;
+  rankOrder?: number;
+  displayOrder?: number;
   bio: string;
   imageSizeText: string;
   imageDescription: string;
@@ -466,6 +483,9 @@ export interface CustomPage {
   teamSectionTitle?: string;
   teamSectionSubtitle?: string;
   customTeam?: TeamMember[];
+  /** Optional role catalogue stored in the existing CMS page document. */
+  customPositions?: TeamPosition[];
+  teamSortMode?: 'priority' | 'manual';
   // About Page: Units Section
   unitsSectionBadge?: string;
   unitsSectionTitle?: string;

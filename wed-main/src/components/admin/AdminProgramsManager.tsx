@@ -25,10 +25,10 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Program, PageRoute, AdminManagerActionRef } from '../../types';
-import { ImageUrlInput } from '../ImageUrlInput';
+import { ImageUrlInput } from '../MediaInputs';
 import { EntityBadge } from '../EntityColorSystem';
 import { EntityColorPicker } from '../EntityColorSystem';
-import { createUniqueSlug, generateSlug, getProgramSlug } from '../../utils/slug';
+import { createUniqueSlug, generateSlug, getProgramSlug } from '../../utils/contentUtils';
 import { getSemanticStatusColor } from '../EntityColorSystem';
 
 interface AdminProgramsManagerProps {

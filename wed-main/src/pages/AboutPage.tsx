@@ -17,7 +17,7 @@ import {
 import { motion } from 'motion/react';
 import { CORE_VALUES } from '../data/baselineData';
 import { useDataContext } from '../context/DataContext';
-import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { ImagePlaceholder } from '../components/UIPrimitives';
 import { EntityBadge } from '../components/EntityColorSystem';
 import { PageRoute } from '../types';
 
@@ -209,9 +209,25 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
     pageData?.teamSectionSubtitle ||
     'Sky First Network';
 
-  const activeTeam = Array.isArray(pageData?.customTeam)
+  const activeTeamSource = Array.isArray(pageData?.customTeam)
     ? pageData.customTeam
     : DEFAULT_TEAM;
+
+  // Keep a deterministic display order: hierarchy first, then manual order.
+  // Missing fields on legacy CMS records fall back to their existing source order.
+  const teamSortMode = pageData?.teamSortMode === 'manual' ? 'manual' : 'priority';
+  const activeTeam = activeTeamSource
+    .map((member: any, sourceIndex: number) => ({ member, sourceIndex }))
+    .sort((a: any, b: any) => {
+      if (teamSortMode === 'manual') {
+        return (a.member.displayOrder ?? a.sourceIndex) - (b.member.displayOrder ?? b.sourceIndex) ||
+          a.sourceIndex - b.sourceIndex;
+      }
+      return (a.member.rankOrder ?? a.sourceIndex * 10) - (b.member.rankOrder ?? b.sourceIndex * 10) ||
+        (a.member.displayOrder ?? a.sourceIndex) - (b.member.displayOrder ?? b.sourceIndex) ||
+        a.sourceIndex - b.sourceIndex;
+    })
+    .map(({ member }: any) => member);
 
   /*
    * 7. ĐƠN VỊ
@@ -768,6 +784,12 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onNavigate }) => {
                           className="rounded-lg px-2.5 py-1 text-left"
                         />
                       </div>
+                    )}
+
+                    {member.unit && (
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {member.unit}
+                      </p>
                     )}
 
                     {member.bio && (

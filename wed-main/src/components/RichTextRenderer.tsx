@@ -1,5 +1,5 @@
 import React from 'react';
-import { sanitizeHtml } from '../utils/sanitizeHtml';
+import { sanitizeHtml } from '../utils/contentUtils';
 
 interface RichTextRendererProps {
   content: string | string[];

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useDataContext } from '../context/DataContext';
-import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { ImagePlaceholder } from '../components/UIPrimitives';
 import { EntityBadge } from '../components/EntityColorSystem';
 import { NewsArticle, PageRoute } from '../types';
 

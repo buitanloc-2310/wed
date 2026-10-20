@@ -12,8 +12,8 @@ import {
 } from 'lucide-react';
 import { useDataContext } from '../context/DataContext';
 import { PageRoute, NewsArticle } from '../types';
-import { getArticleSlug } from '../utils/slug';
-import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { getArticleSlug } from '../utils/contentUtils';
+import { ImagePlaceholder } from '../components/UIPrimitives';
 import { EntityBadge } from '../components/EntityColorSystem';
 import { RichTextRenderer } from '../components/RichTextRenderer';
 import { NewsComments } from '../components/NewsComments';

@@ -34,7 +34,7 @@ import {
   AlertCircle,
   Info
 } from 'lucide-react';
-import { ImageUrlInput } from '../ImageUrlInput';
+import { ImageUrlInput } from '../MediaInputs';
 import { useDataContext } from '../../context/DataContext';
 import {
   SiteConfig,

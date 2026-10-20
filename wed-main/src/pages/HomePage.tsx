@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 import { PageRoute, Program, NewsArticle, CounterAnimationConfig } from '../types';
-import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { ImagePlaceholder } from '../components/UIPrimitives';
 import { EntityBadge } from '../components/EntityColorSystem';
 import { useDataContext } from '../context/DataContext';
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Navbar } from './components/Navbar';
-import { Footer } from './components/Footer';
+import { Navbar } from './components/SiteChrome';
+import { Footer } from './components/SiteChrome';
 import { HomePage } from './pages/HomePage';
 const AboutPage=React.lazy(()=>import('./pages/AboutPage').then(module=>({default:module.AboutPage})));
 const ProgramsPage=React.lazy(()=>import('./pages/ProgramsPage').then(module=>({default:module.ProgramsPage})));
@@ -14,12 +14,12 @@ const AdminPage=React.lazy(()=>import('./pages/AdminPage').then(module=>({defaul
 const ProgramDetailPage=React.lazy(()=>import('./pages/ProgramDetailPage').then(module=>({default:module.ProgramDetailPage})));
 const NewsDetailPage=React.lazy(()=>import('./pages/NewsDetailPage').then(module=>({default:module.NewsDetailPage})));
 const CustomPageDetail=React.lazy(()=>import('./pages/CustomPageDetail').then(module=>({default:module.CustomPageDetail})));
-import { Toast } from './components/Toast';
+import { Toast } from './components/UIPrimitives';
 import { PageRoute } from './types';
 import { useDataContext, DataProvider } from './context/DataContext';
-import { SiteClosedTopBanner } from './components/SiteClosedTopBanner';
-import { SiteClosedNotice } from './components/SiteClosedNotice';
-import { getProgramSlug, getArticleSlug, normalizeStoredSlug } from './utils/slug';
+import { SiteClosedTopBanner } from './components/SiteStatusNotices';
+import { SiteClosedNotice } from './components/SiteStatusNotices';
+import { getProgramSlug, getArticleSlug, normalizeStoredSlug } from './utils/contentUtils';
 
 const VALID_ROUTES: PageRoute[] = [
   'home',

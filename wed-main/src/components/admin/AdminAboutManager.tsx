@@ -13,8 +13,8 @@ import {
   X,
   CalendarDays,
 } from 'lucide-react';
-import { TeamMember, CorePillar, TimelineMilestone, PageRoute, CoreValueItem } from '../../types';
-import { ImageUrlInput } from '../ImageUrlInput';
+import { TeamMember, TeamPosition, CorePillar, TimelineMilestone, PageRoute, CoreValueItem } from '../../types';
+import { ImageUrlInput } from '../MediaInputs';
 import { EntityBadge } from '../EntityColorSystem';
 import { EntityColorPicker } from '../EntityColorSystem';
 import { useDataContext } from '../../context/DataContext';
@@ -69,6 +69,10 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
   const [activeTab, setActiveTab] = useState<TabKey>('content');
   const [searchMember, setSearchMember] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [newPositionTitle, setNewPositionTitle] = useState('');
+  const [newPositionUnit, setNewPositionUnit] = useState('');
+  const [newPositionRank, setNewPositionRank] = useState('');
+  const [newPositionColor, setNewPositionColor] = useState('#0284C7');
 
   /*
    * QUAN TRỌNG:
@@ -92,6 +96,24 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
     ? aboutPage!.customValues!
     : DEFAULT_VALUES;
 
+  // Older records do not have a position catalogue. Build a compatible view from
+  // the existing team data until an administrator saves the catalogue explicitly.
+  const positionCatalog: TeamPosition[] = Array.isArray(aboutPage?.customPositions)
+    ? aboutPage!.customPositions!
+    : Array.from(new Set(activeTeam.map((member) => String(member.role || '').trim()).filter(Boolean))).map((title, index) => {
+        const example = activeTeam.find((member) => String(member.role || '').trim() === title);
+        return {
+          id: `legacy-position-${index}`,
+          title,
+          unit: example?.unit || '',
+          rankOrder: example?.rankOrder ?? (index + 1) * 10,
+          displayOrder: example?.displayOrder ?? index + 1,
+          color: example?.roleColor || '#0284C7',
+          isActive: true,
+        };
+      });
+  const teamSortMode = aboutPage?.teamSortMode === 'manual' ? 'manual' : 'priority';
+
   const updateAbout = (updates: Record<string, unknown>, message?: string) => {
     if (!aboutPage) {
       onShowToast('Không tìm thấy dữ liệu trang Giới thiệu (slug: about).');
@@ -112,8 +134,12 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
 
   const addTeam = () => {
     const member: TeamMember = {
+      id: `member-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: 'Thành viên mới',
       role: 'Chức danh',
+      unit: '',
+      rankOrder: activeTeam.reduce((max, item, index) => Math.max(max, item.rankOrder ?? index * 10), 0) + 10,
+      displayOrder: activeTeam.reduce((max, item, index) => Math.max(max, item.displayOrder ?? index), 0) + 1,
       bio: '',
       theme: 'sky',
       imageSizeText: '1:1 (400x400px)',
@@ -208,12 +234,75 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
     setDeleteTarget(null);
   };
 
-  const filteredMembers = activeTeam
+  const savePositionCatalog = (next: TeamPosition[], nextTeam?: TeamMember[]) => {
+    if (!aboutPage) {
+      onShowToast('Không tìm thấy trang Giới thiệu để lưu danh mục chức vụ.');
+      return;
+    }
+    updateAbout({ customPositions: next, ...(nextTeam ? { customTeam: nextTeam } : {}) });
+  };
+
+  const addPosition = () => {
+    const title = newPositionTitle.trim();
+    if (!title) { onShowToast('Vui lòng nhập tên chức vụ.'); return; }
+    if (positionCatalog.some((item) => item.title.trim().toLocaleLowerCase() === title.toLocaleLowerCase())) {
+      onShowToast('Chức vụ này đã có trong danh mục.'); return;
+    }
+    const nextRank = Number(newPositionRank);
+    const position: TeamPosition = {
+      id: `position-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title, unit: newPositionUnit.trim(),
+      rankOrder: Number.isFinite(nextRank) && newPositionRank.trim() ? nextRank : positionCatalog.reduce((max, item) => Math.max(max, item.rankOrder), 0) + 10,
+      displayOrder: positionCatalog.reduce((max, item) => Math.max(max, item.displayOrder), 0) + 1,
+      color: newPositionColor, isActive: true,
+    };
+    savePositionCatalog([...positionCatalog, position]);
+    setNewPositionTitle(''); setNewPositionUnit(''); setNewPositionRank('');
+    onShowToast('Đã thêm chức vụ vào danh mục.');
+  };
+
+  const updatePosition = (id: string, updates: Partial<TeamPosition>) => {
+    const previous = positionCatalog.find((item) => item.id === id);
+    if (!previous) return;
+    const nextPosition = { ...previous, ...updates };
+    const nextCatalog = positionCatalog.map((item) => item.id === id ? nextPosition : item);
+    const nextTeam = activeTeam.map((member) => {
+      if (member.role !== previous.title) return member;
+      return {
+        ...member,
+        ...(updates.title !== undefined ? { role: nextPosition.title } : {}),
+        ...(updates.unit !== undefined ? { unit: nextPosition.unit || '' } : {}),
+        ...(updates.rankOrder !== undefined ? { rankOrder: nextPosition.rankOrder } : {}),
+        ...(updates.displayOrder !== undefined ? { displayOrder: nextPosition.displayOrder } : {}),
+        ...(updates.color !== undefined ? { roleColor: nextPosition.color } : {}),
+      };
+    });
+    savePositionCatalog(nextCatalog, nextTeam);
+  };
+
+  const changeMemberRole = (index: number, role: string) => {
+    const position = positionCatalog.find((item) => item.title === role);
+    updateTeam(index, {
+      role,
+      ...(position ? { unit: position.unit || '', rankOrder: position.rankOrder, displayOrder: position.displayOrder, roleColor: position.color } : {}),
+    });
+  };
+
+  const orderedMembers = activeTeam
     .map((member, index) => ({ ...member, originalIndex: index }))
-    .filter((member) => {
+    .sort((a, b) => {
+      if (teamSortMode === 'manual') {
+        return (a.displayOrder ?? a.originalIndex) - (b.displayOrder ?? b.originalIndex) || a.originalIndex - b.originalIndex;
+      }
+      return (a.rankOrder ?? a.originalIndex * 10) - (b.rankOrder ?? b.originalIndex * 10)
+        || (a.displayOrder ?? a.originalIndex) - (b.displayOrder ?? b.originalIndex)
+        || a.originalIndex - b.originalIndex;
+    });
+
+  const filteredMembers = orderedMembers.filter((member) => {
       const q = searchMember.trim().toLowerCase();
       if (!q) return true;
-      return member.name.toLowerCase().includes(q) || member.role.toLowerCase().includes(q);
+      return String(member.name || '').toLowerCase().includes(q) || String(member.role || '').toLowerCase().includes(q);
     });
 
   const inputClass =
@@ -364,7 +453,7 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
             <EmptyState text="Chưa có cột mốc nào. Bấm “Thêm cột mốc” để tạo mới." />
           ) : (
             activeTimeline.map((item, index) => (
-              <div key={`${item.year}-${index}`} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+              <div key={`timeline-item-${index}`} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-[10px] font-black uppercase tracking-wider text-[#0284C7]">Cột mốc #{index + 1}</div>
@@ -419,6 +508,40 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
       {/* TEAM */}
       {activeTab === 'team' && (
         <div className="space-y-4">
+          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black text-slate-900">Danh mục chức vụ & thứ bậc</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Danh mục được lưu trong bản ghi CMS hiện có; không tạo bảng hoặc migration mới.</p>
+              </div>
+              <label className="text-xs font-bold text-slate-600">Cách sắp xếp thành viên
+                <select value={teamSortMode} onChange={(e) => updateAbout({ teamSortMode: e.target.value as 'priority' | 'manual' })} className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2">
+                  <option value="priority">Theo thứ bậc chức vụ</option>
+                  <option value="manual">Theo thứ tự thủ công</option>
+                </select>
+              </label>
+            </div>
+            <datalist id="sfn-team-position-options">
+              {positionCatalog.filter((item) => item.isActive !== false).map((position) => <option key={position.id} value={position.title}>{position.unit || ''}</option>)}
+            </datalist>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_120px_80px_auto]">
+              <input value={newPositionTitle} onChange={(e) => setNewPositionTitle(e.target.value)} className={inputClass} placeholder="Tên chức vụ mới" aria-label="Tên chức vụ mới" />
+              <input value={newPositionUnit} onChange={(e) => setNewPositionUnit(e.target.value)} className={inputClass} placeholder="Ban / Đơn vị" aria-label="Ban hoặc đơn vị của chức vụ" />
+              <input type="number" value={newPositionRank} onChange={(e) => setNewPositionRank(e.target.value)} className={inputClass} placeholder="Thứ bậc" aria-label="Thứ bậc chức vụ" />
+              <input type="color" value={newPositionColor} onChange={(e) => setNewPositionColor(e.target.value)} className="h-10 w-full rounded-lg border border-slate-200 bg-white p-1" aria-label="Màu chức vụ mới" />
+              <button type="button" onClick={addPosition} className="inline-flex items-center justify-center gap-1 rounded-xl bg-[#0284C7] px-3 py-2 text-xs font-bold text-white hover:bg-[#0369A1]"><Plus size={14} /> Thêm chức vụ</button>
+            </div>
+            {positionCatalog.length > 0 && <div className="space-y-2">
+              {positionCatalog.map((position) => <div key={position.id} className="grid gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_100px_100px_60px_110px]">
+                <input value={position.title} onChange={(e) => updatePosition(position.id, { title: e.target.value })} className={inputClass} aria-label={`Tên chức vụ ${position.title}`} />
+                <input value={position.unit || ''} onChange={(e) => updatePosition(position.id, { unit: e.target.value })} className={inputClass} placeholder="Ban / Đơn vị" aria-label={`Đơn vị ${position.title}`} />
+                <input type="number" value={position.rankOrder} onChange={(e) => updatePosition(position.id, { rankOrder: Number(e.target.value) })} className={inputClass} aria-label={`Thứ bậc ${position.title}`} title="Thứ bậc: số nhỏ ưu tiên cao" />
+                <input type="number" min="0" value={position.displayOrder} onChange={(e) => updatePosition(position.id, { displayOrder: Number(e.target.value) })} className={inputClass} aria-label={`Thứ tự hiển thị ${position.title}`} title="Thứ tự hiển thị" />
+                <input type="color" value={position.color || '#0284C7'} onChange={(e) => updatePosition(position.id, { color: e.target.value })} className="h-10 w-full rounded-lg border border-slate-200 bg-white p-1" aria-label={`Màu ${position.title}`} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-600"><input type="checkbox" checked={position.isActive !== false} onChange={(e) => updatePosition(position.id, { isActive: e.target.checked })} /> Đang dùng</label>
+              </div>)}
+            </div>}
+          </section>
           <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
             <div className="relative max-w-md flex-1">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -448,7 +571,7 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
               {filteredMembers.map((member) => {
                 const index = member.originalIndex;
                 return (
-                  <div key={`${member.name}-${index}`} className="space-y-4 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs transition hover:border-sky-300">
+                  <div key={member.id || `legacy-team-${index}`} className="space-y-4 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs transition hover:border-sky-300">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
@@ -474,8 +597,17 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
                       <Field label="Họ & tên">
                         <input className={inputClass} value={member.name} onChange={(e) => updateTeam(index, { name: e.target.value })} />
                       </Field>
-                      <Field label="Chức danh / Ban">
-                        <input className={inputClass} value={member.role} onChange={(e) => updateTeam(index, { role: e.target.value })} />
+                      <Field label="Chức vụ">
+                        <input list="sfn-team-position-options" className={inputClass} value={member.role} onChange={(e) => changeMemberRole(index, e.target.value)} placeholder="Chọn hoặc nhập chức vụ" />
+                      </Field>
+                      <Field label="Ban / Đơn vị">
+                        <input className={inputClass} value={member.unit || ''} onChange={(e) => updateTeam(index, { unit: e.target.value })} placeholder="Ví dụ: Ban Đối ngoại & Sự kiện" />
+                      </Field>
+                      <Field label="Thứ bậc (số nhỏ ưu tiên cao)">
+                        <input type="number" className={inputClass} value={member.rankOrder ?? ''} onChange={(e) => updateTeam(index, { rankOrder: e.target.value === '' ? undefined : Number(e.target.value) })} placeholder="10" />
+                      </Field>
+                      <Field label="Thứ tự hiển thị">
+                        <input type="number" min="0" className={inputClass} value={member.displayOrder ?? index + 1} onChange={(e) => updateTeam(index, { displayOrder: e.target.value === '' ? undefined : Number(e.target.value) })} placeholder={String(index + 1)} />
                       </Field>
                     </div>
 
@@ -523,7 +655,7 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
             ) : (
               <div className="grid gap-4 lg:grid-cols-2">
                 {activePillars.map((pillar, index) => (
-                  <div key={`${pillar.number}-${index}`} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div key={`core-pillar-${index}`} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-center gap-2">
                       <span className="flex h-7 min-w-7 items-center justify-center rounded-lg bg-[#0284C7] px-1 text-xs font-black text-white">{pillar.number || index + 1}</span>
                       <input className={`${inputClass} flex-1 bg-white font-bold`} value={pillar.title} onChange={(e) => updatePillar(index, { title: e.target.value })} />
@@ -566,7 +698,7 @@ export const AdminAboutManager: React.FC<AdminAboutManagerProps> = ({
           >
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {activeValues.map((value, index) => (
-                <div key={`${value.name}-${index}`} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div key={`core-value-${index}`} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black text-[#0284C7]">{String(index + 1).padStart(2, '0')}</span>
                     <input className={`${inputClass} flex-1 bg-white font-bold`} value={value.name} onChange={(e) => updateValue(index, { name: e.target.value })} />

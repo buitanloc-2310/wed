@@ -1,5 +1,5 @@
 import {fieldLabel} from './AdminLayoutManager';
-import {ImageUrlInput} from '../ImageUrlInput';
+import {ImageUrlInput} from '../MediaInputs';
 import React, { useMemo, useState } from 'react';
 import { Monitor, Smartphone, Tablet, Save, ExternalLink, Pencil } from 'lucide-react';
 import { HomePage } from '../../pages/HomePage';

@@ -1,4 +1,4 @@
-import {ImageUrlInput} from '../ImageUrlInput';
+import {ImageUrlInput} from '../MediaInputs';
 import React, { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Check, Eye, EyeOff, Save, X } from 'lucide-react';
 import { useDataContext } from '../../context/DataContext';

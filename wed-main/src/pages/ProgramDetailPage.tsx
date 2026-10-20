@@ -18,9 +18,9 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useDataContext } from '../context/DataContext';
 import { PageRoute, Program } from '../types';
-import { getProgramSlug } from '../utils/slug';
+import { getProgramSlug } from '../utils/contentUtils';
 import { getSemanticStatusColor } from '../components/EntityColorSystem';
-import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { ImagePlaceholder } from '../components/UIPrimitives';
 import { EntityBadge } from '../components/EntityColorSystem';
 
 interface ProgramDetailPageProps {

@@ -1,3 +1,4 @@
+import { AboutEditorFields, CertificateEditorFields, ContactEditorFields, JoinEditorFields, SponsorEditorFields, StandardEditorFields } from './editor-fields/EditorFieldsBundle';
 import React, { useState } from 'react';
 import {
   ArrowLeft,
@@ -11,14 +12,8 @@ import {
 } from 'lucide-react';
 import { CustomPage, CorePillar, TimelineMilestone, TeamMember, CoreValueItem, PageBlock, PageBlockType } from '../../types';
 import { CORE_PILLARS, CORE_VALUES, TIMELINE_DATA, TEAM_DATA } from '../../data/baselineData';
-import { createUniqueSlug, generateSlug } from '../../utils/slug';
-import { AboutEditorFields } from './editor-fields/AboutEditorFields';
-import { CertificateEditorFields } from './editor-fields/CertificateEditorFields';
-import { SponsorEditorFields } from './editor-fields/SponsorEditorFields';
-import { JoinEditorFields } from './editor-fields/JoinEditorFields';
-import { ContactEditorFields } from './editor-fields/ContactEditorFields';
-import { StandardEditorFields } from './editor-fields/StandardEditorFields';
-import { ImageUrlInput } from '../ImageUrlInput';
+import { createUniqueSlug, generateSlug } from '../../utils/contentUtils';
+import { ImageUrlInput } from '../MediaInputs';
 
 interface StandalonePageEditorProps {
   page: CustomPage;

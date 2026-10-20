@@ -1,4 +1,4 @@
-import { sanitizeHtml } from '../utils/sanitizeHtml';
+import { sanitizeHtml } from '../utils/contentUtils';
 import React from 'react';
 import { useDataContext } from '../context/DataContext';
 import { PageRoute, PageBlock, CustomPage } from '../types';

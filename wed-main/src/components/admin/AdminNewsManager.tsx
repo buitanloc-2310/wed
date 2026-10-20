@@ -28,10 +28,10 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { NewsArticle, PageRoute, AdminManagerActionRef } from '../../types';
-import { ImageUrlInput } from '../ImageUrlInput';
+import { ImageUrlInput } from '../MediaInputs';
 import { EntityBadge } from '../EntityColorSystem';
 import { EntityColorPicker } from '../EntityColorSystem';
-import { createUniqueSlug, generateSlug, getArticleSlug } from '../../utils/slug';
+import { createUniqueSlug, generateSlug, getArticleSlug } from '../../utils/contentUtils';
 import { RichTextEditor } from './RichTextEditor';
 
 interface AdminNewsManagerProps {

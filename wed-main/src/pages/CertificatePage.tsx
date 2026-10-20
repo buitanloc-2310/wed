@@ -1,4 +1,4 @@
-import { sanitizeHtml } from '../utils/sanitizeHtml';
+import { sanitizeHtml } from '../utils/contentUtils';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Search,

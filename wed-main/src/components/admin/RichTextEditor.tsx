@@ -1,5 +1,5 @@
-import {sanitizeHtml} from '../../utils/sanitizeHtml';
-import {MediaPicker} from '../MediaPicker';
+import {sanitizeHtml} from '../../utils/contentUtils';
+import {MediaPicker} from '../MediaInputs';
 import {MediaItem,uploadMediaBatch} from '../../lib/mediaApi';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {

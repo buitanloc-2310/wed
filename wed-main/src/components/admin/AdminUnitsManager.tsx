@@ -25,7 +25,7 @@ import {
   Clock
 } from 'lucide-react';
 import { NetworkUnit, PageRoute, AdminManagerActionRef } from '../../types';
-import { ImageUrlInput } from '../ImageUrlInput';
+import { ImageUrlInput } from '../MediaInputs';
 import { EntityBadge } from '../EntityColorSystem';
 import { EntityColorPicker } from '../EntityColorSystem';
 

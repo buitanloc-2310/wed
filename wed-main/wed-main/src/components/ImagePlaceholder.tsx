@@ -1,0 +1,8 @@
+import React,{useEffect,useState} from 'react';
+interface ImagePlaceholderProps{sizeText?:string;description?:string;aspectRatio?:'video'|'square'|'4/3'|'21/9'|'3/2'|'auto';className?:string;theme?:string;imageUrl?:string;objectFit?:'cover'|'contain';objectPosition?:string}
+export const ImagePlaceholder:React.FC<ImagePlaceholderProps>=({sizeText='',description='Sky First Network',aspectRatio='video',className='',theme='sky',imageUrl,objectFit,objectPosition='center'})=>{
+ const [failed,setFailed]=useState(false);useEffect(()=>setFailed(false),[imageUrl]);
+ const aspect={video:'aspect-video',square:'aspect-square','4/3':'aspect-[4/3]','21/9':'aspect-[21/9]','3/2':'aspect-[3/2]',auto:'min-h-[180px]'}[aspectRatio];
+ const fit=objectFit||(/logo|nhận diện|biểu trưng/i.test(sizeText+' '+description)?'contain':'cover');
+ return <div className={`relative ${aspect} overflow-hidden rounded-2xl ${theme==='navy'?'bg-[#102C51]':'bg-slate-100'} ${className}`}>{imageUrl&&!failed?<img src={imageUrl} alt={description} loading="lazy" decoding="async" onError={()=>setFailed(true)} className={`w-full h-full ${aspectRatio==='auto'?'max-h-[480px]':'absolute inset-0'}`} style={{objectFit:fit,objectPosition}}/>:<div className="absolute inset-0 flex flex-col justify-center items-center gap-5 p-7 text-center sf-image-fallback"><div className="bg-white/95 rounded-2xl p-5 w-[70%] max-w-[260px]"><img src="/brand/sky-first-network-web.png" alt="Sky First Network" loading="lazy" decoding="async" className="w-full h-auto object-contain"/></div><p className={`text-[11px] tracking-[.1em] font-bold uppercase ${theme==='navy'?'text-sky-100':'text-slate-500'}`}>Giáo dục · Người trẻ · Cộng đồng</p></div>}</div>;
+};

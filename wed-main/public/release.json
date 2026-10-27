@@ -1,18 +1,23 @@
 {
-  "application": "Sky First Network Website",
-  "track": "WED",
-  "phase": "cms-media-layout",
-  "dataPolicy": "cloud-authoritative",
-  "cachePolicy": "html-no-cache-assets-immutable",
-  "browserBaseline": [
-    "Chrome",
-    "Edge",
-    "Firefox",
-    "Safari",
-    "Android WebView",
-    "iOS Safari"
+  "name": "sky-first-network-official-website",
+  "version": "2026.2.0",
+  "releasedAt": "2026-10-26T00:00:00Z",
+  "fileCount": 67,
+  "migrations": [
+    "0001_initial_schema.sql",
+    "0002_system_automation_analytics.sql"
   ],
-  "version": "1.1.0",
-  "verifiedOn": "2026-10-05",
-  "verification": "isolated-local-build-api-browser"
+  "features": [
+    "18-group-system-config-center",
+    "homepage-video-intro-with-logo-reveal",
+    "original-aspect-ratio-images-and-lightbox",
+    "gutenberg-block-and-richtext-editor",
+    "visual-website-builder-with-revisions",
+    "independent-per-program-form-builder",
+    "email-outbox-queue-and-safe-template-whitelist",
+    "scheduled-publishing-and-form-autoclose",
+    "auto-vs-manual-analytics",
+    "sha256-verified-backup-and-restore",
+    "granular-rbac-capabilities"
+  ]
 }

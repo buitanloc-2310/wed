@@ -1,13 +1,14 @@
-export type PageRoute = 
-  | 'home' 
-  | 'about' 
-  | 'programs' 
-  | 'units' 
-  | 'sponsor' 
-  | 'contact' 
-  | 'news' 
-  | 'certificate' 
-  | 'join' 
+/// <reference types="vite/client" />
+export type PageRoute =
+  | 'home'
+  | 'about'
+  | 'programs'
+  | 'units'
+  | 'sponsor'
+  | 'contact'
+  | 'news'
+  | 'certificate'
+  | 'join'
   | 'admin'
   | 'program-detail'
   | 'news-detail'
@@ -20,11 +21,12 @@ export type AdminUserRole = 'developer' | 'admin' | 'editor';
 
 export interface AdminUser {
   id: string;
-  email: string; // địa chỉ email quản trị
+  email: string;
   name: string;
   role: AdminUserRole;
   createdAt: string;
   status: 'active' | 'inactive';
+  permissions?: string[];
   note?: string;
   lastLogin?: string;
   is_root_owner?: number | boolean;
@@ -44,6 +46,53 @@ export interface CounterAnimationConfig {
   numberFormat?: 'vi' | 'plain' | 'en';
 }
 
+export interface IntroConfig {
+  enabled?: boolean;
+  videoUrl?: string;
+  logoUrl?: string;
+  durationSeconds?: number;
+  logoRevealSeconds?: number;
+  skipLabel?: string;
+  tagline?: string;
+  transitionStyle?: 'fade' | 'zoom' | 'minimal';
+}
+
+export interface EmailConfig {
+  senderName?: string;
+  fromAddress?: string;
+  replyToAddress?: string;
+  adminNotifyAddress?: string;
+  provider?: 'resend' | 'custom_webhook';
+  mode?: 'live' | 'test';
+  retryMaxAttempts?: number;
+  rateLimitPerHour?: number;
+  brandColor?: string;
+  footerText?: string;
+}
+
+export interface AutomationConfig {
+  autoSaveDrafts?: boolean;
+  autoSaveIntervalSeconds?: number;
+  warnUnsavedChanges?: boolean;
+  createRevisionBeforePublish?: boolean;
+  enableScheduledPublishing?: boolean;
+  autoCloseExpiredForms?: boolean;
+  autoUpdateSitemap?: boolean;
+  reviewCycleDays?: number;
+  notifyEditorialChanges?: boolean;
+  aiAssistEnabled?: boolean;
+}
+
+export interface SeoGlobalConfig {
+  defaultTitleSuffix?: string;
+  defaultDescription?: string;
+  defaultOgImageUrl?: string;
+  canonicalDomain?: string;
+  robotsIndexing?: 'allow' | 'noindex';
+  organizationType?: string;
+  autoGenerateMeta?: boolean;
+}
+
 export interface SiteConfig {
   siteName: string;
   tagline: string;
@@ -52,18 +101,21 @@ export interface SiteConfig {
   heroHeading: string;
   heroSubtext: string;
   heroImageUrl?: string;
-  heroImageFit?: 'cover' | 'contain';
+  heroImageFit?: 'original' | 'contain' | 'cover';
   logoUrl?: string;
   email?: string;
   hotline?: string;
   address?: string;
-  // Cấu hình Đóng/Mở website (Bảo trì, biên tập...)
   siteStatus?: 'active' | 'closed';
   closedReason?: SiteClosedReason;
   closedReasonText?: string;
   closedMessage?: string;
   closedEstimatedReopen?: string;
   closedNoticeType?: 'banner' | 'lockscreen';
+  intro?: IntroConfig;
+  emailSettings?: EmailConfig;
+  automationSettings?: AutomationConfig;
+  seoSettings?: SeoGlobalConfig;
   stats: {
     membersCount: string;
     membersSubtext: string;
@@ -106,14 +158,12 @@ export interface SiteConfig {
   ctaButtonUrl?: string;
   ctaSecondaryButtonText?: string;
   ctaSecondaryButtonUrl?: string;
-  // Hero action buttons
   heroButton1Text?: string;
   heroButton1Url?: string;
   heroButton2Text?: string;
   heroButton2Url?: string;
   heroButton3Text?: string;
   heroButton3Url?: string;
-  // Trạng thái hiển thị các phần trên bố cục trang chủ
   homeSections?: {
     hero?: boolean;
     direction?: boolean;
@@ -153,7 +203,6 @@ export interface SiteConfig {
   transparencyText?: string;
   transparencyButtonText?: string;
   transparencyButtonUrl?: string;
-  // Footer customization (Bố cục -> Chân trang)
   footerSlogan?: string;
   footerAboutText?: string;
   footerCopyright?: string;
@@ -162,9 +211,7 @@ export interface SiteConfig {
   footerSocialFacebook?: string;
   footerSocialInstagram?: string;
   footerSocialTiktok?: string;
-  /** @deprecated dữ liệu cũ - chỉ giữ để tương thích */
   footerSocialLinkedin?: string;
-  /** @deprecated dữ liệu cũ - chỉ giữ để tương thích */
   footerSocialYoutube?: string;
   footerSocialZalo?: string;
   navigationGroups?: { label: string; items: { label: string; page: PageRoute; slug?: string; description?: string }[] }[];
@@ -173,10 +220,10 @@ export interface SiteConfig {
   footerPortals?: { label: string; domain: string; url: string; icon?: string; description?: string }[];
   footerLegalLinks?: { label: string; url: string }[];
   organizationInfo?: { label: string; value: string; url?: string; icon?: string; visible?: boolean }[];
-  designSystem?: { primary?: string; navy?: string; accent?: string; radius?: string; container?: string; motion?: 'reduced'|'balanced'|'rich' };
-  announcement?: { enabled?: boolean; text?: string; buttonLabel?: string; buttonUrl?: string; startAt?: string; endAt?: string; tone?: 'info'|'success'|'warning' };
+  designSystem?: { primary?: string; navy?: string; accent?: string; radius?: string; container?: string; fontFamily?: string; spacing?: 'compact' | 'normal' | 'relaxed'; motion?: 'reduced' | 'balanced' | 'rich'; defaultImageDisplay?: 'original' | 'contain' | 'cover' };
+  announcement?: { enabled?: boolean; text?: string; buttonLabel?: string; buttonUrl?: string; startAt?: string; endAt?: string; tone?: 'info' | 'success' | 'warning' };
+  reusableBlockTemplates?: PageBlock[];
 }
-
 
 export interface NetworkUnit {
   id: string;
@@ -224,7 +271,10 @@ export interface Program {
   imageSizeText: string;
   imageDescription: string;
   imageUrl?: string;
+  imageFit?: 'original' | 'contain' | 'cover';
   galleryImages?: string[];
+  formId?: string;
+  formSlug?: string;
   registrationEnabled?: boolean;
   registrationOpenAt?: string;
   registrationCloseAt?: string;
@@ -261,6 +311,8 @@ export interface NewsArticle {
   id: string;
   slug?: string;
   isPublished?: boolean;
+  editorialStatus?: 'draft' | 'pending_review' | 'approved' | 'published';
+  scheduledPublishAt?: string;
   title: string;
   category: 'event' | 'community' | 'training' | 'announcement' | string;
   categoryLabel: string;
@@ -354,16 +406,13 @@ export interface TeamPosition {
   id: string;
   title: string;
   unit?: string;
-  /** Smaller numbers appear higher in the organization hierarchy. */
   rankOrder: number;
-  /** Stable manual display order inside the same rank. */
   displayOrder: number;
   color?: string;
   isActive?: boolean;
 }
 
 export interface TeamMember {
-  /** Stable key; optional to preserve compatibility with existing CMS records. */
   id?: string;
   name: string;
   role: string;
@@ -374,7 +423,6 @@ export interface TeamMember {
   imageSizeText: string;
   imageDescription: string;
   imageUrl?: string;
-  /** Optional HEX override. If omitted, role gets a deterministic colour by name. */
   roleColor?: string;
   theme: string;
 }
@@ -392,11 +440,39 @@ export interface CoreValueItem {
   theme?: string;
 }
 
-export type PageBlockType = 'text' | 'image' | 'video' | 'stats' | 'cta' | 'quote' | 'divider' | 'html' | 'gallery' | 'timeline' | 'logos' | 'accordion' | 'tabs' | 'table' | 'documents' | 'people' | 'campaign' | 'funding' | 'transparency' | 'map' | 'embed' | 'marquee';
+export type PageBlockType =
+  | 'heading'
+  | 'text'
+  | 'list'
+  | 'callout'
+  | 'image'
+  | 'video'
+  | 'stats'
+  | 'cta'
+  | 'quote'
+  | 'divider'
+  | 'html'
+  | 'gallery'
+  | 'timeline'
+  | 'logos'
+  | 'accordion'
+  | 'tabs'
+  | 'table'
+  | 'documents'
+  | 'people'
+  | 'campaign'
+  | 'funding'
+  | 'transparency'
+  | 'map'
+  | 'embed'
+  | 'marquee';
 
 export interface PageBlock {
   id: string;
   type: PageBlockType;
+  headingLevel?: 'h2' | 'h3' | 'h4';
+  listType?: 'ul' | 'ol';
+  calloutTone?: 'info' | 'success' | 'warning';
   title?: string;
   body?: string;
   imageUrl?: string;
@@ -411,7 +487,10 @@ export interface PageBlock {
   secondaryButtonUrl?: string;
   stats?: { value: string; label: string; note?: string }[];
   background?: 'white' | 'soft' | 'navy' | 'sky';
-  align?: 'left' | 'center';
+  align?: 'left' | 'center' | 'right';
+  spacing?: 'compact' | 'normal' | 'relaxed';
+  textColor?: string;
+  fontFamily?: string;
   hidden?: boolean;
   sourceUrl?: string;
   items?: { title?: string; body?: string; imageUrl?: string; url?: string; label?: string; value?: string }[];
@@ -441,6 +520,8 @@ export interface CustomPage {
   imageFocalY?: number;
   pageBlocks?: PageBlock[];
   isPublished?: boolean;
+  editorialStatus?: 'draft' | 'pending_review' | 'approved' | 'published';
+  scheduledPublishAt?: string;
   publishedAt?: string;
   author?: string;
   views?: number;
@@ -453,12 +534,10 @@ export interface CustomPage {
   noIndex?: boolean;
   badge?: string;
   subtitle?: string;
-  // General Button fields (Tên nút và liên kết trỏ đến)
   buttonLabel?: string;
   buttonUrl?: string;
   secondaryButtonLabel?: string;
   secondaryButtonUrl?: string;
-  // Specific fields for fixed pages like About
   visionBadge?: string;
   visionTitle?: string;
   visionContent?: string;
@@ -468,37 +547,29 @@ export interface CustomPage {
   philosophyBadge?: string;
   philosophyTitle?: string;
   philosophyContent?: string;
-  // About Page: Pillars Section
   pillarsSectionTitle?: string;
   pillarsSectionBadge?: string;
   customPillars?: CorePillar[];
-  // About Page: Values Section
   valuesSectionTitle?: string;
   customValues?: CoreValueItem[];
-  // About Page: Timeline Section
   timelineSectionTitle?: string;
   timelineSectionBadge?: string;
   customTimeline?: TimelineMilestone[];
-  // About Page: Team Section
   teamSectionTitle?: string;
   teamSectionSubtitle?: string;
   customTeam?: TeamMember[];
-  /** Optional role catalogue stored in the existing CMS page document. */
   customPositions?: TeamPosition[];
   teamSortMode?: 'priority' | 'manual';
-  // About Page: Units Section
   unitsSectionBadge?: string;
   unitsSectionTitle?: string;
   unitsButtonLabel?: string;
   unitsButtonUrl?: string;
-  // About Page: CTA Section
   ctaTitle?: string;
   ctaDescription?: string;
   ctaButtonLabel?: string;
   ctaButtonUrl?: string;
   ctaSecondaryButtonLabel?: string;
   ctaSecondaryButtonUrl?: string;
-  // Specific fields for fixed pages like Contact
   address?: string;
   hotline?: string;
   secondaryHotline?: string;
@@ -525,7 +596,6 @@ export interface CustomPage {
   contactFaq4A?: string;
   contactCtaTitle?: string;
   contactCtaDescription?: string;
-  // Specific fields for Certificate page
   certSearchLabel?: string;
   certSearchPlaceholder?: string;
   certGuidanceNote?: string;
@@ -549,7 +619,6 @@ export interface CustomPage {
   certStatProgramsManual?: string;
   certStatUpdatedMode?: 'auto' | 'manual';
   certStatUpdatedManual?: string;
-  // Specific fields for Sponsor page
   sponsorRecipientEntity?: string;
   sponsorGoalAmount?: string;
   sponsorReceivedAmount?: string;
@@ -579,12 +648,10 @@ export interface CustomPage {
   sponsorContactEmail?: string;
   sponsorCtaTitle?: string;
   sponsorCtaDescription?: string;
-  // Hero buttons
   sponsorHeroPrimaryButtonLabel?: string;
   sponsorHeroPrimaryButtonUrl?: string;
   sponsorHeroSecondaryButtonLabel?: string;
   sponsorHeroSecondaryButtonUrl?: string;
-  // Commitments section
   sponsorCommitmentHeading?: string;
   sponsorCommitmentSubtitle?: string;
   sponsorCommit1Title?: string;
@@ -595,7 +662,6 @@ export interface CustomPage {
   sponsorCommit3Desc?: string;
   sponsorCommit4Title?: string;
   sponsorCommit4Desc?: string;
-  // Packages section
   sponsorPackagesHeading?: string;
   sponsorPackagesSubtitle?: string;
   sponsorPkg1Title?: string;
@@ -618,7 +684,6 @@ export interface CustomPage {
   sponsorPkg4Unit?: string;
   sponsorPkg4Desc?: string;
   sponsorPkg4Impact?: string;
-  // FAQs section
   sponsorFaqHeading?: string;
   sponsorFaqSubtitle?: string;
   sponsorFaq1Q?: string;
@@ -629,17 +694,14 @@ export interface CustomPage {
   sponsorFaq3A?: string;
   sponsorFaq4Q?: string;
   sponsorFaq4A?: string;
-  // Specific fields for Join page
   joinHotline?: string;
   joinHotlineTitle?: string;
   joinEmail?: string;
   joinEmailTitle?: string;
   joinAddress?: string;
   joinAddressTitle?: string;
-  // Role groups section header
   joinRolesHeading?: string;
   joinRolesSubtitle?: string;
-  // Role 1
   joinRole1Title?: string;
   joinRole1Tag?: string;
   joinRole1Description?: string;
@@ -650,7 +712,6 @@ export interface CustomPage {
   joinRole1Highlight2?: string;
   joinRole1Highlight3?: string;
   joinRole1Highlight4?: string;
-  // Role 2
   joinRole2Title?: string;
   joinRole2Tag?: string;
   joinRole2Description?: string;
@@ -661,7 +722,6 @@ export interface CustomPage {
   joinRole2Highlight2?: string;
   joinRole2Highlight3?: string;
   joinRole2Highlight4?: string;
-  // Role 3
   joinRole3Title?: string;
   joinRole3Tag?: string;
   joinRole3Description?: string;
@@ -672,12 +732,10 @@ export interface CustomPage {
   joinRole3Highlight2?: string;
   joinRole3Highlight3?: string;
   joinRole3Highlight4?: string;
-  // CTA
   joinCtaHeading?: string;
   joinCtaDescription?: string;
   joinCtaButtonLabel?: string;
   joinCtaButtonUrl?: string;
-  // Join FAQs
   joinFaqHeading?: string;
   joinFaqSubtitle?: string;
   joinFaq1Q?: string;

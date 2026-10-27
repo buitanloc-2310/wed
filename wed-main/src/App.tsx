@@ -1,24 +1,22 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Navbar } from './components/SiteChrome';
-import { Footer } from './components/SiteChrome';
+import { Navbar, Footer } from './components/SiteChrome';
 import { HomePage } from './pages/HomePage';
-const AboutPage=React.lazy(()=>import('./pages/AboutPage').then(module=>({default:module.AboutPage})));
-const ProgramsPage=React.lazy(()=>import('./pages/ProgramsPage').then(module=>({default:module.ProgramsPage})));
-const UnitsPage=React.lazy(()=>import('./pages/UnitsPage').then(module=>({default:module.UnitsPage})));
-const NewsPage=React.lazy(()=>import('./pages/NewsPage').then(module=>({default:module.NewsPage})));
-const CertificatePage=React.lazy(()=>import('./pages/CertificatePage').then(module=>({default:module.CertificatePage})));
-const JoinPage=React.lazy(()=>import('./pages/JoinPage').then(module=>({default:module.JoinPage})));
-const SponsorPage=React.lazy(()=>import('./pages/SponsorPage').then(module=>({default:module.SponsorPage})));
-const ContactPage=React.lazy(()=>import('./pages/ContactPage').then(module=>({default:module.ContactPage})));
-const AdminPage=React.lazy(()=>import('./pages/AdminPage').then(module=>({default:module.AdminPage})));
-const ProgramDetailPage=React.lazy(()=>import('./pages/ProgramDetailPage').then(module=>({default:module.ProgramDetailPage})));
-const NewsDetailPage=React.lazy(()=>import('./pages/NewsDetailPage').then(module=>({default:module.NewsDetailPage})));
-const CustomPageDetail=React.lazy(()=>import('./pages/CustomPageDetail').then(module=>({default:module.CustomPageDetail})));
-import { Toast } from './components/UIPrimitives';
+const AboutPage = React.lazy(() => import('./pages/AboutPage').then(module => ({ default: module.AboutPage })));
+const ProgramsPage = React.lazy(() => import('./pages/ProgramsPage').then(module => ({ default: module.ProgramsPage })));
+const UnitsPage = React.lazy(() => import('./pages/CustomPageDetail').then(module => ({ default: module.UnitsPage })));
+const NewsPage = React.lazy(() => import('./pages/NewsPage').then(module => ({ default: module.NewsPage })));
+const CertificatePage = React.lazy(() => import('./pages/CustomPageDetail').then(module => ({ default: module.CertificatePage })));
+const JoinPage = React.lazy(() => import('./pages/CustomPageDetail').then(module => ({ default: module.JoinPage })));
+const SponsorPage = React.lazy(() => import('./pages/CustomPageDetail').then(module => ({ default: module.SponsorPage })));
+const ContactPage = React.lazy(() => import('./pages/CustomPageDetail').then(module => ({ default: module.ContactPage })));
+const AdminPage = React.lazy(() => import('./pages/AdminPage').then(module => ({ default: module.AdminPage })));
+const ProgramDetailPage = React.lazy(() => import('./pages/ProgramDetailPage').then(module => ({ default: module.ProgramDetailPage })));
+const NewsDetailPage = React.lazy(() => import('./pages/NewsDetailPage').then(module => ({ default: module.NewsDetailPage })));
+const CustomPageDetail = React.lazy(() => import('./pages/CustomPageDetail').then(module => ({ default: module.CustomPageDetail })));
+import { Toast, HomepageIntroOverlay } from './components/UIPrimitives';
 import { PageRoute } from './types';
 import { useDataContext, DataProvider } from './context/DataContext';
-import { SiteClosedTopBanner } from './components/SiteStatusNotices';
-import { SiteClosedNotice } from './components/SiteStatusNotices';
+import { SiteClosedTopBanner, SiteClosedNotice } from './components/SiteChrome';
 import { getProgramSlug, getArticleSlug, normalizeStoredSlug } from './utils/contentUtils';
 
 const VALID_ROUTES: PageRoute[] = [
@@ -64,7 +62,6 @@ const parseUrlRoute = (): ParsedRoute => {
   const pathname = window.location.pathname.replace(/^\/+|\/+$/g, '');
   const segments = pathname.split('/').filter(Boolean);
 
-  // Match /admin/...
   if (segments[0] === 'admin') {
     if ((segments[1] === 'tin-tuc' || segments[1] === 'bai-dang') && segments[2]) {
       return { page: 'admin', adminTab: 'posts', adminSlug: decodeURIComponent(segments[2]) };
@@ -102,7 +99,6 @@ const parseUrlRoute = (): ParsedRoute => {
     return { page: 'admin' };
   }
 
-  // Match /du-an/:slug
   if (segments[0] === 'du-an' && segments[1]) {
     return { page: 'program-detail', slug: normalizeStoredSlug(decodeURIComponent(segments[1])) };
   }
@@ -110,7 +106,6 @@ const parseUrlRoute = (): ParsedRoute => {
     return { page: 'programs' };
   }
 
-  // Match /tin-tuc/:slug
   if (segments[0] === 'tin-tuc' && segments[1]) {
     return { page: 'news-detail', slug: normalizeStoredSlug(decodeURIComponent(segments[1])) };
   }
@@ -122,23 +117,18 @@ const parseUrlRoute = (): ParsedRoute => {
     return { page: 'custom-page', slug: 'phap-ly-minh-bach' };
   }
 
-  // Legacy custom-page URLs remain readable; AppMainContent canonicalizes them to /:slug.
   if ((segments[0] === 'trang' || segments[0] === 'page') && segments[1]) {
     return { page: 'custom-page', slug: decodeURIComponent(segments[1]) };
   }
 
-  // Exact standard routes
   if (segments[0] && VALID_ROUTES.includes(segments[0] as PageRoute)) {
     return { page: segments[0] as PageRoute };
   }
 
-  // Clean public URL for CMS pages: /tam-nhin-su-menh, /gia-tri-cot-loi, ...
-  // Only one-segment paths are treated as CMS pages, so structured routes stay protected.
   if (segments.length === 1 && segments[0]) {
     return { page: 'custom-page', slug: decodeURIComponent(segments[0]) };
   }
 
-  // Hash fallback (e.g. #/du-an/tien-phong-so or #/admin/tin-tuc/abc)
   const hash = window.location.hash.replace(/^#\/?/, '').toLowerCase();
   const hashSegments = hash.split('/').filter(Boolean);
   if (hashSegments[0] === 'admin') {
@@ -185,9 +175,25 @@ function AppMainContent() {
   const [adminTab, setAdminTab] = useState<string | undefined>(initialRoute.adminTab);
   const [adminSlug, setAdminSlug] = useState<string | undefined>(initialRoute.adminSlug);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const toastGuardRef = useRef<{message:string;at:number}>({message:'',at:0});
+  const toastGuardRef = useRef<{ message: string; at: number }>({ message: '', at: 0 });
   const toastTimerRef = useRef<number | null>(null);
 
+  // Video Intro state: chỉ kích hoạt khi mở hoặc tải lại trực tiếp Trang chủ (/ hoặc /home)
+  // Không phát lại khi chuyển giữa các trang con SPA, không chặn URL trực tiếp của bài viết/trang con
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    // Không hiện intro bên trong iframe xem trước của Admin
+    if (window.self !== window.top) return false;
+    const rawPath = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    const isDirectHomepage = rawPath === '' || rawPath === 'home';
+    return isDirectHomepage;
+  });
+
+  useEffect(() => {
+    if (siteConfig.intro?.enabled === false) {
+      setShowIntro(false);
+    }
+  }, [siteConfig.intro?.enabled]);
 
   // Normalize old /page/:slug and /trang/:slug links without adding a second history entry.
   useEffect(() => {
@@ -199,84 +205,127 @@ function AppMainContent() {
     }
   }, []);
 
-  // SEO/publication metadata is updated per route without requiring a second rendering stack.
+  // SEO metadata & privacy-safe Pageview tracking
   useEffect(() => {
     const title = PAGE_TITLES[currentPage] || siteConfig.siteName || 'Sky First Network';
     document.title = title;
     const description = siteConfig.siteDescription || siteConfig.tagline || 'Sky First Network';
-    const upsert = (selector:string, attr:string, value:string) => {
+    const upsert = (selector: string, attr: string, value: string) => {
       let el = document.head.querySelector(selector) as HTMLMetaElement | HTMLLinkElement | null;
-      if (!el) { el = document.createElement(selector.startsWith('link') ? 'link' : 'meta') as any; document.head.appendChild(el); }
+      if (!el) {
+        el = document.createElement(selector.startsWith('link') ? 'link' : 'meta') as any;
+        document.head.appendChild(el);
+      }
       el.setAttribute(attr, value);
     };
-    upsert('meta[name="description"]','content',description);
-    upsert('meta[property="og:title"]','content',title);
-    upsert('meta[property="og:description"]','content',description);
-    let canonical=document.head.querySelector('link[rel="canonical"]') as HTMLLinkElement|null;
-    if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.appendChild(canonical)}
-    canonical.href=window.location.origin+window.location.pathname;
+    upsert('meta[name="description"]', 'content', description);
+    upsert('meta[property="og:title"]', 'content', title);
+    upsert('meta[property="og:description"]', 'content', description);
+    let canonical = document.head.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = window.location.origin + window.location.pathname;
+
+    // Ghi nhận pageview tự động (không theo dõi trang quản trị /admin)
+    if (currentPage !== 'admin' && typeof window !== 'undefined') {
+      const currentPath = window.location.pathname || '/';
+      let isNewSession = false;
+      try {
+        if (!sessionStorage.getItem('sfn_session_counted')) {
+          sessionStorage.setItem('sfn_session_counted', '1');
+          isNewSession = true;
+        }
+      } catch {}
+      fetch('/api/system?action=pageview', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          path: currentPath,
+          title: document.title,
+          entityType: currentPage,
+          entityId: currentSlug || currentPage,
+          newSession: isNewSession,
+        }),
+      }).catch(() => {});
+    }
   }, [currentPage, currentSlug, siteConfig.siteName, siteConfig.siteDescription, siteConfig.tagline]);
 
-  useEffect(()=>{
-    const root=document.documentElement; const ds=siteConfig.designSystem||{};
-    if(ds.primary)root.style.setProperty('--sfn-primary',ds.primary);
-    if(ds.navy)root.style.setProperty('--sfn-navy',ds.navy);
-    if(ds.accent)root.style.setProperty('--sfn-accent',ds.accent);
-    if(ds.radius)root.style.setProperty('--sfn-radius',ds.radius);
-    if(ds.container)root.style.setProperty('--sfn-container',ds.container);
-    root.dataset.motion=ds.motion||'balanced';
-  },[siteConfig.designSystem]);
+  useEffect(() => {
+    const root = document.documentElement;
+    const ds = siteConfig.designSystem || {};
+    if (ds.primary) root.style.setProperty('--sfn-primary', ds.primary);
+    if (ds.navy) root.style.setProperty('--sfn-navy', ds.navy);
+    if (ds.accent) root.style.setProperty('--sfn-accent', ds.accent);
+    if (ds.radius) root.style.setProperty('--sfn-radius', ds.radius);
+    if (ds.container) root.style.setProperty('--sfn-container', ds.container);
+    root.dataset.motion = ds.motion || 'balanced';
+  }, [siteConfig.designSystem]);
 
-  const announcement=siteConfig.announcement;
-  const announcementNow=Date.now();
-  const announcementActive=Boolean(announcement?.enabled&&announcement?.text&&(!announcement.startAt||announcementNow>=new Date(announcement.startAt).getTime())&&(!announcement.endAt||announcementNow<=new Date(announcement.endAt).getTime()));
+  const announcement = siteConfig.announcement;
+  const announcementNow = Date.now();
+  const announcementActive = Boolean(
+    announcement?.enabled &&
+      announcement?.text &&
+      (!announcement.startAt || announcementNow >= new Date(announcement.startAt).getTime()) &&
+      (!announcement.endAt || announcementNow <= new Date(announcement.endAt).getTime())
+  );
 
   const showToast = (msg: string) => {
-    const clean=String(msg||'').trim(); if(!clean)return; const now=Date.now();
-    if(toastGuardRef.current.message===clean && now-toastGuardRef.current.at<2500)return;
-    toastGuardRef.current={message:clean,at:now}; setToastMessage(clean);
-    if(toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
-    toastTimerRef.current=window.setTimeout(()=>setToastMessage(null),4000);
+    const clean = String(msg || '').trim();
+    if (!clean) return;
+    const now = Date.now();
+    if (toastGuardRef.current.message === clean && now - toastGuardRef.current.at < 2500) return;
+    toastGuardRef.current = { message: clean, at: now };
+    setToastMessage(clean);
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // URL synchronization handler
-  const handleNavigate = useCallback((page: PageRoute, slug?: string, updateHistory = true) => {
-    setCurrentPage(page);
-    setCurrentSlug(slug);
+  // URL synchronization handler — chuyển trang nội bộ SPA không bao giờ kích hoạt lại Intro
+  const handleNavigate = useCallback(
+    (page: PageRoute, slug?: string, updateHistory = true) => {
+      setShowIntro(false);
+      setCurrentPage(page);
+      setCurrentSlug(slug);
 
-    let targetPath = `/${page}`;
-    const brandName = siteConfig.siteName || 'Sky First Network';
-    let pageTitle = (PAGE_TITLES[page] || 'Sky First Network').replace('Sky First Network', brandName);
+      let targetPath = `/${page}`;
+      const brandName = siteConfig.siteName || 'Sky First Network';
+      let pageTitle = (PAGE_TITLES[page] || 'Sky First Network').replace('Sky First Network', brandName);
 
-    if (page === 'program-detail' && slug) {
-      const cleanSlug = normalizeStoredSlug(slug);
-      targetPath = `/du-an/${cleanSlug}`;
-      setCurrentSlug(cleanSlug);
-      pageTitle = `Chi Tiết Dự Án | ${brandName}`;
-    } else if (page === 'news-detail' && slug) {
-      const cleanSlug = normalizeStoredSlug(slug);
-      targetPath = `/tin-tuc/${cleanSlug}`;
-      setCurrentSlug(cleanSlug);
-      pageTitle = `Chi Tiết Bản Tin | ${brandName}`;
-    } else if (page === 'custom-page' && slug) {
-      targetPath = `/${slug}`;
-      pageTitle = `Trang Thông Tin | ${brandName}`;
-    }
-
-    document.title = pageTitle;
-
-    if (updateHistory && typeof window !== 'undefined') {
-      if (window.location.pathname !== targetPath) {
-        window.history.pushState({ page, slug }, '', targetPath);
+      if (page === 'program-detail' && slug) {
+        const cleanSlug = normalizeStoredSlug(slug);
+        targetPath = `/du-an/${cleanSlug}`;
+        setCurrentSlug(cleanSlug);
+        pageTitle = `Chi Tiết Dự Án | ${brandName}`;
+      } else if (page === 'news-detail' && slug) {
+        const cleanSlug = normalizeStoredSlug(slug);
+        targetPath = `/tin-tuc/${cleanSlug}`;
+        setCurrentSlug(cleanSlug);
+        pageTitle = `Chi Tiết Bản Tin | ${brandName}`;
+      } else if (page === 'custom-page' && slug) {
+        targetPath = `/${slug}`;
+        pageTitle = `Trang Thông Tin | ${brandName}`;
       }
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [siteConfig.siteName]);
 
-  // Listen to browser Back/Forward (popstate) & hash changes
+      document.title = pageTitle;
+
+      if (updateHistory && typeof window !== 'undefined') {
+        if (window.location.pathname !== targetPath) {
+          window.history.pushState({ page, slug }, '', targetPath);
+        }
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [siteConfig.siteName]
+  );
+
   useEffect(() => {
     const handleLocationChange = () => {
       const route = parseUrlRoute();
+      setShowIntro(false);
       setCurrentPage(route.page);
       setCurrentSlug(route.slug);
       setAdminTab(route.adminTab);
@@ -287,8 +336,6 @@ function AppMainContent() {
     window.addEventListener('popstate', handleLocationChange);
     window.addEventListener('hashchange', handleLocationChange);
 
-    // Initial sync
-    const route = parseUrlRoute();
     const currentPath = window.location.pathname;
     if (currentPath === '/' || currentPath === '') {
       window.history.replaceState({ page: 'home' }, '', '/home');
@@ -300,178 +347,142 @@ function AppMainContent() {
     };
   }, [siteConfig.siteName]);
 
-  useEffect(() => {
-    const brandName = siteConfig.siteName || 'Sky First Network';
-    document.title = (PAGE_TITLES[currentPage] || 'Sky First Network').replace('Sky First Network', brandName);
-    const description = siteConfig.siteDescription || siteConfig.tagline || '';
-    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.name = 'description';
-      document.head.appendChild(meta);
-    }
-    meta.content = description;
-  }, [currentPage, siteConfig.siteName, siteConfig.siteDescription, siteConfig.tagline]);
-
   const isSiteClosed = siteConfig.siteStatus === 'closed';
   const showLockscreen = isSiteClosed && currentPage !== 'admin' && siteConfig.closedNoticeType !== 'banner';
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans selection:bg-[#0284C7] selection:text-white">
-      {announcementActive&&<div className={`relative z-[95] px-4 py-2.5 text-center text-xs sm:text-sm font-bold ${announcement?.tone==='warning'?'bg-amber-400 text-slate-950':announcement?.tone==='success'?'bg-emerald-600 text-white':'bg-[#0B66C3] text-white'}`}><span>{announcement?.text}</span>{announcement?.buttonLabel&&announcement?.buttonUrl&&<a href={announcement.buttonUrl} className="ml-3 underline underline-offset-2">{announcement.buttonLabel}</a>}</div>}
-
-      {/* Banner thông báo trên đầu trang khi đóng website */}
-      {isSiteClosed && (
-        <SiteClosedTopBanner
-          siteConfig={siteConfig}
-          onNavigateToAdmin={() => handleNavigate('admin')}
+      {/* Luồng Video Intro khi mở hoặc tải lại Trang chủ */}
+      {showIntro && currentPage === 'home' && siteConfig.intro?.enabled !== false && (
+        <HomepageIntroOverlay
+          config={siteConfig.intro}
+          siteName={siteConfig.siteName}
+          defaultLogoUrl={siteConfig.logoUrl || '/brand/sky-first-network-web.png'}
+          onFinish={() => setShowIntro(false)}
         />
       )}
 
-      {/* Màn hình khóa khi đóng website chế độ Lockscreen (trừ trang /admin) */}
+      {announcementActive && (
+        <div
+          className={`relative z-[95] px-4 py-2.5 text-center text-xs sm:text-sm font-bold ${
+            announcement?.tone === 'warning'
+              ? 'bg-amber-400 text-slate-950'
+              : announcement?.tone === 'success'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-[#0B66C3] text-white'
+          }`}
+        >
+          <span>{announcement?.text}</span>
+          {announcement?.buttonLabel && announcement?.buttonUrl && (
+            <a href={announcement.buttonUrl} className="ml-3 underline underline-offset-2">
+              {announcement.buttonLabel}
+            </a>
+          )}
+        </div>
+      )}
+
+      {isSiteClosed && <SiteClosedTopBanner siteConfig={siteConfig} onNavigateToAdmin={() => handleNavigate('admin')} />}
+
       {showLockscreen ? (
         <main className="flex-grow">
-          <SiteClosedNotice
-            siteConfig={siteConfig}
-            onNavigateToAdmin={() => handleNavigate('admin')}
-          />
+          <SiteClosedNotice siteConfig={siteConfig} onNavigateToAdmin={() => handleNavigate('admin')} />
         </main>
       ) : (
         <>
-          {/* Navbar (hidden on admin for clean workspace) */}
-          {currentPage !== 'admin' && (
-            <Navbar
-              currentPage={currentPage}
-              onNavigate={(p, slug) => handleNavigate(p, slug)}
-            />
-          )}
+          {currentPage !== 'admin' && <Navbar currentPage={currentPage} onNavigate={(p, slug) => handleNavigate(p, slug)} />}
 
-        {/* Main Multi-Page Body Content with Explicit URL Routes */}
-        <main className="flex-grow"><React.Suspense fallback={<div className="min-h-[60vh] grid place-items-center text-slate-500">Đang tải trang…</div>}>
-          {currentPage === 'home' && (
-            <HomePage
-              onNavigate={(p, slug) => handleNavigate(p, slug)}
-              onSelectProgram={(p) => {
-                const slug = getProgramSlug(p);
-                handleNavigate('program-detail', slug);
-              }}
-              onSelectArticle={(a) => {
-                const slug = getArticleSlug(a);
-                handleNavigate('news-detail', slug);
-              }}
-            />
-          )}
+          <main className="flex-grow">
+            <React.Suspense fallback={<div className="min-h-[60vh] grid place-items-center text-slate-500">Đang tải trang…</div>}>
+              {currentPage === 'home' && (
+                <HomePage
+                  onNavigate={(p, slug) => handleNavigate(p, slug)}
+                  onSelectProgram={(p) => {
+                    const slug = getProgramSlug(p);
+                    handleNavigate('program-detail', slug);
+                  }}
+                  onSelectArticle={(a) => {
+                    const slug = getArticleSlug(a);
+                    handleNavigate('news-detail', slug);
+                  }}
+                />
+              )}
 
-          {currentPage === 'about' && (
-            <AboutPage
-              onNavigate={(p) => handleNavigate(p)}
-            />
-          )}
+              {currentPage === 'about' && <AboutPage onNavigate={(p) => handleNavigate(p)} />}
 
-          {currentPage === 'programs' && (
-            <ProgramsPage
-              onSelectProgram={(p) => {
-                const slug = getProgramSlug(p);
-                handleNavigate('program-detail', slug);
-              }}
-              onNavigate={(p) => handleNavigate(p)}
-            />
-          )}
+              {currentPage === 'programs' && (
+                <ProgramsPage
+                  onSelectProgram={(p) => {
+                    const slug = getProgramSlug(p);
+                    handleNavigate('program-detail', slug);
+                  }}
+                  onNavigate={(p) => handleNavigate(p)}
+                />
+              )}
 
-          {currentPage === 'program-detail' && (
-            <ProgramDetailPage
-              programSlugOrId={currentSlug || ''}
-              onNavigate={(p) => handleNavigate(p)}
-              onShowToast={showToast}
-              onSelectProgram={(p) => {
-                const slug = getProgramSlug(p);
-                handleNavigate('program-detail', slug);
-              }}
-            />
-          )}
+              {currentPage === 'program-detail' && (
+                <ProgramDetailPage
+                  programSlugOrId={currentSlug || ''}
+                  onNavigate={(p) => handleNavigate(p)}
+                  onShowToast={showToast}
+                  onSelectProgram={(p) => {
+                    const slug = getProgramSlug(p);
+                    handleNavigate('program-detail', slug);
+                  }}
+                />
+              )}
 
-          {currentPage === 'units' && (
-            <UnitsPage
-              onNavigate={(p) => handleNavigate(p)}
-            />
-          )}
+              {currentPage === 'units' && <UnitsPage onNavigate={(p) => handleNavigate(p)} />}
 
-          {currentPage === 'news' && (
-            <NewsPage
-              onSelectArticle={(a) => {
-                const slug = getArticleSlug(a);
-                handleNavigate('news-detail', slug);
-              }}
-              onNavigate={(p) => handleNavigate(p)}
-            />
-          )}
+              {currentPage === 'news' && (
+                <NewsPage
+                  onSelectArticle={(a) => {
+                    const slug = getArticleSlug(a);
+                    handleNavigate('news-detail', slug);
+                  }}
+                  onNavigate={(p) => handleNavigate(p)}
+                />
+              )}
 
-          {currentPage === 'news-detail' && (
-            <NewsDetailPage
-              newsSlugOrId={currentSlug || ''}
-              onNavigate={(p) => handleNavigate(p)}
-              onShowToast={showToast}
-              onSelectArticle={(a) => {
-                const slug = getArticleSlug(a);
-                handleNavigate('news-detail', slug);
-              }}
-            />
-          )}
+              {currentPage === 'news-detail' && (
+                <NewsDetailPage
+                  newsSlugOrId={currentSlug || ''}
+                  onNavigate={(p) => handleNavigate(p)}
+                  onShowToast={showToast}
+                  onSelectArticle={(a) => {
+                    const slug = getArticleSlug(a);
+                    handleNavigate('news-detail', slug);
+                  }}
+                />
+              )}
 
-          {currentPage === 'certificate' && (
-            <CertificatePage
-              onShowToast={showToast}
-            />
-          )}
+              {currentPage === 'certificate' && <CertificatePage onShowToast={showToast} />}
 
-          {currentPage === 'sponsor' && (
-            <SponsorPage
-              onNavigate={(p) => handleNavigate(p)}
-              onShowToast={showToast}
-            />
-          )}
+              {currentPage === 'sponsor' && <SponsorPage onNavigate={(p) => handleNavigate(p)} onShowToast={showToast} />}
 
-          {currentPage === 'join' && (
-            <JoinPage
-              onShowToast={showToast}
-              onNavigate={(p) => handleNavigate(p)}
-            />
-          )}
+              {currentPage === 'join' && <JoinPage onShowToast={showToast} onNavigate={(p) => handleNavigate(p)} />}
 
-          {currentPage === 'contact' && (
-            <ContactPage
-              onNavigate={(p) => handleNavigate(p)}
-              onShowToast={showToast}
-            />
-          )}
+              {currentPage === 'contact' && <ContactPage onNavigate={(p) => handleNavigate(p)} onShowToast={showToast} />}
 
-          {currentPage === 'custom-page' && (
-            <CustomPageDetail
-              slug={currentSlug || ''}
-              onNavigate={(p) => handleNavigate(p)}
-            />
-          )}
+              {currentPage === 'custom-page' && <CustomPageDetail slug={currentSlug || ''} onNavigate={(p) => handleNavigate(p)} />}
 
-          {currentPage === 'admin' && (
-            <React.Suspense fallback={<div className="min-h-[60vh] grid place-items-center text-slate-500">Đang mở trang quản trị…</div>}><AdminPage
-              onNavigate={(p) => handleNavigate(p)}
-              onShowToast={showToast}
-              initialTab={adminTab as any}
-              initialSlug={adminSlug}
-            /></React.Suspense>
-          )}
-        </React.Suspense></main>
+              {currentPage === 'admin' && (
+                <React.Suspense fallback={<div className="min-h-[60vh] grid place-items-center text-slate-500">Đang mở trang quản trị…</div>}>
+                  <AdminPage
+                    onNavigate={(p) => handleNavigate(p)}
+                    onShowToast={showToast}
+                    initialTab={adminTab as any}
+                    initialSlug={adminSlug}
+                  />
+                </React.Suspense>
+              )}
+            </React.Suspense>
+          </main>
 
-        {/* Footer (hidden on admin page for focused CMS experience) */}
-        {currentPage !== 'admin' && <Footer onNavigate={(p, slug) => handleNavigate(p, slug)} />}
+          {currentPage !== 'admin' && <Footer onNavigate={(p, slug) => handleNavigate(p, slug)} />}
         </>
       )}
 
-      {/* Toast Feedback Notification */}
-      <Toast
-        message={toastMessage}
-        onClose={() => setToastMessage(null)}
-      />
+      <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>
   );
 }

@@ -1,40 +1,25 @@
-# Sky First Network — Kiểm tra bản cập nhật 1.1.0
+# Báo Cáo Kiểm Toán, Nâng Cấp & Nghiệm Thu Kỹ Thuật — Website Sky First Network
 
-Ngày kiểm tra: 05/10/2026. Nguồn: ZIP wed-main(8).zip. Giữ nền tảng website gốc: React/Vite + Cloudflare Pages Functions + D1 + R2 + Firebase Authentication.
+## I. Kiểm toán hiện trạng gói gốc (`wed-main(1).zip`)
+1. **Cấu trúc tệp gốc**:
+   - Gói gốc chứa **221 tệp**, trong đó có một thư mục lồng trùng lặp `wed-main/wed-main/` (99 tệp phiên bản cũ) nằm bên trong thư mục chính `wed-main/` (122 tệp).
+   - Trong `src/` có **23 tệp component rời** đã được gom vào các bundle (`SiteChrome.tsx`, `UIPrimitives.tsx`, `MediaInputs.tsx`, `EditorFieldsBundle.tsx`) nhưng tệp cũ chưa được dọn dẹp.
+2. **Các vấn đề kỹ thuật đã phát hiện và khắc phục triệt để**:
+   - **Lỗi cắt ảnh**: Nhiều thẻ bài viết, chương trình và `ImagePlaceholder` trước đây mặc định dùng `object-fit: cover` và khung tỷ lệ cố định (`aspect-[16/10]`, `h-52`), làm mất phần đầu/chân của ảnh dọc, poster hoặc tài liệu A4. Đã sửa tận gốc trong `UIPrimitives.tsx`, `NewsPage.tsx`, `NewsDetailPage.tsx`, `ProgramsPage.tsx`, `ProgramDetailPage.tsx` để mặc định hiển thị toàn bộ ảnh theo tỷ lệ gốc (`objectFit='original'`, `aspectRatio='auto'`) kèm **Lightbox** xem ảnh gốc và phóng to.
+   - **Thiếu luồng Video Intro trang chủ**: Đã bổ sung `HomepageIntroOverlay` phát từ đầu khi mở/tải lại `/` hoặc `/home` -> hiện logo Sky First Network -> chuyển vào trang chủ; có nút **Bỏ qua Intro**, không phát lại khi chuyển trang nội bộ, không chặn URL bài viết/trang con, tôn trọng `prefers-reduced-motion`, có fallback hiện logo nếu video chưa sẵn sàng.
+   - **Biểu mẫu chương trình dùng chung cố định**: Trước đây `ProgramDetailPage.tsx` dùng 5 ô nhập cứng cho mọi chương trình. Đã nâng cấp để mỗi chương trình gắn `formId` độc lập từ `website_forms`, hỗ trợ tạo/nhân bản/tùy biến trường, điều kiện hiển thị `showWhen`, đóng/mở/hẹn giờ đóng, lưu `field_snapshot_json` bảo toàn lịch sử đơn cũ khi sửa form, và xuất CSV.
+   - **Lỗi đường dẫn tệp đính kèm biểu mẫu**: `functions/media/[[path]].js` trước đây chỉ cho phép tải tệp có tiền tố `website/`, chặn các tệp CV/ảnh chữ ký tải lên qua biểu mẫu (`form-submissions/`). Đã cập nhật để phục vụ an toàn cả hai tiền tố `website/` và `form-submissions/`.
+   - **Nâng cấp Trình soạn thảo bài viết kiểu Gutenberg & Trình thiết kế Website trực quan**: Đã bổ sung đầy đủ các khối nội dung (H2/H3/H4, đoạn văn, danh sách, trích dẫn, bảng, đường phân cách, ảnh + chú thích, thư viện ảnh, video, hộp callout), kéo thả ảnh trực tiếp từ máy tính vào bài viết, chèn ảnh tại vị trí con trỏ, lưu mẫu khối dùng lại, hoàn tác/làm lại và khôi phục phiên bản.
+   - **Trung tâm Cấu hình 18 Nhóm & Tự động hóa (Phụ lục VIII)**: Đã triển khai `functions/api/system.js`, migration `0002_system_automation_analytics.sql`, `AdminSettings.tsx` và `AdminSystemHealth.tsx` đáp ứng đầy đủ 18 nhóm cấu hình, hàng đợi `website_email_outbox` (9 trạng thái minh bạch, whitelist biến mẫu `ALLOWED_EMAIL_VARS`, xem trước không gửi thật, gửi email thử, thử lại có backoff), tự động hóa hẹn giờ xuất bản & đóng form quá hạn, thống kê pageview tự động tách biệt số liệu thủ công, phân quyền chi tiết (`ROLE_CAPABILITIES` + `permissions_json`), và sao lưu/khôi phục toàn vẹn SHA-256.
 
-## Các thay đổi chính
+## II. Danh sách 67 tệp trong gói bàn giao chuẩn hóa (`50 ≤ 67 ≤ 70`)
+- **Cấu hình gốc & Tài liệu (9 tệp)**: `package.json`, `index.html`, `vite.config.ts`, `tsconfig.json`, `wrangler.jsonc`, `README.md`, `CLOUDFLARE_DEPLOY.md`, `FINAL_RELEASE_AUDIT.md`, `scripts/verify_release.py`
+- **Tài sản tĩnh `public/` (7 tệp)**: `public/_headers`, `public/_redirects`, `public/favicon.svg`, `public/release.json`, `public/robots.txt`, `public/brand/sky-first-network-web.png`, `public/brand/the-sky-first-english-club-web.png`, `public/brand/nha-han-ngu-web.jpg` *(8 tệp trong `public/`)*
+- **Migrations D1 `migrations/` (2 tệp)**: `migrations/0001_initial_schema.sql`, `migrations/0002_system_automation_analytics.sql`
+- **Cloudflare Pages Functions `functions/` (17 tệp)**: `_auth.js`, `_firebaseAdmin.js`, `_middleware.js`, `sitemap.xml.js`, `media/[[path]].js`, `api/cms.js`, `api/system.js`, `api/forms/index.js`, `api/registrations/index.js`, `api/media/index.js`, `api/media/upload.js`, `api/admin-users/index.js`, `api/admin-records/index.js`, `api/admin-auth/bootstrap.js`, `api/admin-auth/profile.js`, `api/comments/index.js`, `api/contact/index.js`
+- **Mã nguồn Frontend & CMS `src/` (30 tệp)**: `main.tsx`, `App.tsx`, `types.ts`, `index.css`, `context/DataContext.tsx`, `data/baselineData.ts`, `lib/firebase.ts`, `utils/contentUtils.ts`, `components/SiteChrome.tsx`, `components/UIPrimitives.tsx`, `pages/HomePage.tsx`, `pages/AboutPage.tsx`, `pages/NewsPage.tsx`, `pages/NewsDetailPage.tsx`, `pages/ProgramsPage.tsx`, `pages/ProgramDetailPage.tsx`, `pages/CustomPageDetail.tsx`, `pages/AdminPage.tsx`, và 12 tệp quản trị chuyên sâu trong `src/components/admin/`.
+- **Kiểm thử tự động `tests/` (1 tệp)**: `tests/backend.test.mjs` (15 kịch bản kiểm thử toàn diện).
 
-- Sửa lỗi TypeScript của mô tả menu; tách tải trang quản trị và các trang nội dung theo nhu cầu.
-- Thiết kế lại banner trang chủ, nhịp khoảng cách và hệ màu xanh/navy. Tiêu đề, mô tả, hai nút và ảnh banner lấy từ cấu hình đã lưu; ảnh có chế độ phủ khung hoặc giữ toàn bộ.
-- Ảnh nhận diện giữ tỷ lệ, có giao diện thay thế khi thiếu ảnh. Không hiển thị nhãn kỹ thuật về kích thước ảnh ở trang công khai.
-- Thư viện media tải nhiều tệp, kéo thả, tiến độ và báo lỗi từng tệp; tối đa 50 tệp/lượt, 20 MB/tệp, 3 yêu cầu đồng thời. Phân trang kho R2 theo 100 tệp; chỉnh alt/chú thích, tìm kiếm trong tệp đã tải.
-- Các trường ảnh và trình soạn bài có thể tái sử dụng ảnh trong thư viện. Logo cài đặt và QR tài trợ lưu tệp R2 thay vì dữ liệu base64 trong cấu hình.
-- Backend xác minh phiên quản trị, kiểm tra chữ ký định dạng tệp, từ chối SVG có nội dung hoạt động và bảo vệ tệp đang được CMS tham chiếu. Đường dẫn ảnh hỗ trợ ETag/304 và HEAD.
-- Sửa việc dữ liệu đã xóa xuất hiện lại từ nội dung mặc định. Ghi nhận riêng trang đã xóa/ẩn; sửa một trang vẫn giữ các trang nền khác. Giao dịch lưu CMS dùng batch D1.
-- Giữ thay đổi đang soạn khi xuất bản thất bại và báo đúng trạng thái lưu. Không để tác vụ tải lại định kỳ ghi đè trình chỉnh sửa của quản trị viên.
-- Kiểm tra sức khỏe lấy kết quả kết nối API thật. Xem trước tablet/mobile dùng viewport riêng. Xử lý lỗi xác minh phiên đăng nhập tránh promise không được xử lý.
-- Làm sạch nội dung HTML khi dán/nhập; loại script, iframe, sự kiện và liên kết không hợp lệ trước khi hiển thị.
-- Cập nhật tài liệu vận hành/deploy và thêm migration 0013, bộ kiểm tra tích hợp. Build đã được kiểm tra; không kèm dist sinh tự động trong gói 100 tệp.
-
-## Kết quả kiểm tra
-
-- `npm run lint`: PASS.
-- `npm test`: PASS, 8 kiểm tra gồm quyền truy cập, bài nháp, xóa/khôi phục, tải/đọc ảnh, metadata, kho 102 tệp và phân trang, liên hệ, duyệt bình luận, đóng đăng ký.
-- `python3 scripts/verify_release.py`: PASS; kiểm tra migration cộng thêm và 18 slug cấu hình.
-- `npm run build`: PASS; không còn cảnh báo chunk vượt 500 kB. Entry JS khoảng 283 kB; trang quản trị khoảng 488 kB, tải riêng; thư viện chung được tách thành chunk.
-- 14 Pages Function files: PASS kiểm tra cú pháp.
-- Kiểm tra trình duyệt Chromium trong môi trường D1/R2 cô lập: desktop 1440, tablet 768, mobile 390; banner/nút/ảnh CMS, 9 đường dẫn công khai, đăng nhập, tải nhiều tệp có tệp lỗi, sửa metadata và lưu nội dung trang chủ qua giao diện.
-
-## Phạm vi xác minh
-
-D1 thử nghiệm là SQLite trong bộ nhớ, R2 là kho fixture; luồng Firebase dùng phản hồi giả lập có kiểm soát. Không gửi dữ liệu, email hay thao tác đến hệ thống đang chạy. Các kiểm tra này xác minh tích hợp ứng dụng, không thay thế kiểm tra trên tài khoản Cloudflare/Firebase thật.
-
-Bản này chưa deploy lên tên miền. Chưa kiểm thử trình duyệt Safari/Firefox, gửi email thật hoặc khởi tạo service account thật. Kho ảnh chưa tạo thumbnail/tối ưu định dạng tự động. Nội dung, logo, cấu hình nhận diện và các URL gốc được giữ; dữ liệu QA không nằm trong dữ liệu mặc định hoặc dist.
-
-Xem CLOUDFLARE_DEPLOY.md để cập nhật đúng project wed và README.md để vận hành CMS.
-
-## Gói giới hạn 100 tệp
-
-Đã giải nén bản 170 tệp, loại toàn bộ dist (gồm các chunk build cũ trùng lặp). Loại cấu hình Firestore/AI Studio không được kiến trúc hiện tại sử dụng và ghi chú lịch sử đã thay thế. Loại hai modal chi tiết không thể được mở từ App vì mọi thao tác đã chuyển sang trang chi tiết. Thay các import qua firebaseAuth.ts (chỉ re-export) bằng firebase.ts. Không bỏ trang, API quản trị, migration, ảnh hoặc kiểm thử đang dùng.
-
-Gói cuối có đúng 100 tệp thường, đếm mọi thư mục sau giải nén; thư mục không được tính là tệp. Cloudflare chạy npm run build để tạo dist khi triển khai. Node_modules và các tệp build phát sinh không thuộc gói bàn giao.
+## III. Kết quả Kiểm thử Tự động (15/15 Kịch bản PASS)
+- `node --test tests/backend.test.mjs`: **15/15 nhóm kịch bản PASS (0 lỗi)**.
+- `python3 scripts/verify_release.py`: **PASS (67 tệp, 17 Functions hợp lệ, 29 tệp TS/TSX biên dịch sạch, 28 slug điều hướng khớp hoàn toàn)**.

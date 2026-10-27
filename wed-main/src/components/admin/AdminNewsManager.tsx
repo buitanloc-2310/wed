@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../../context/DataContext';
 import {
   FileText,
@@ -14,25 +14,20 @@ import {
   Clock,
   Tag,
   Save,
-  Send,
   Link as LinkIcon,
   Sparkles,
   Image as ImageIcon,
-  Check,
-  Bold,
-  Italic,
-  Quote,
-  List,
-  ListOrdered,
-  Minus,
-  MessageSquare
+  MessageSquare,
+  Search,
+  History,
+  Globe,
 } from 'lucide-react';
 import { NewsArticle, PageRoute, AdminManagerActionRef } from '../../types';
-import { ImageUrlInput } from '../MediaInputs';
-import { EntityBadge } from '../EntityColorSystem';
-import { EntityColorPicker } from '../EntityColorSystem';
+import { ImageUrlInput } from '../../components/UIPrimitives';
+import { EntityBadge, EntityColorPicker } from '../../components/UIPrimitives';
 import { createUniqueSlug, generateSlug, getArticleSlug } from '../../utils/contentUtils';
 import { RichTextEditor } from './RichTextEditor';
+import { adminApi } from '../../lib/firebase';
 
 interface AdminNewsManagerProps {
   articles: NewsArticle[];
@@ -57,16 +52,18 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
   actionRef,
   onViewModeChange,
 }) => {
-  const {siteConfig}=useDataContext();
-  const taxonomyOptions=(siteConfig.taxonomyCategories||[]).filter((x:any)=>x.visible!==false);
+  const { siteConfig } = useDataContext();
+  const taxonomyOptions = (siteConfig.taxonomyCategories || []).filter((x: any) => x.visible !== false);
   const [viewMode, setViewMode] = useState<'list' | 'edit'>('list');
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [articleToDelete, setArticleToDelete] = useState<NewsArticle | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [revisions, setRevisions] = useState<any[]>([]);
+  const [showRevisions, setShowRevisions] = useState(false);
 
-  // Sync initialSlug from props if provided
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialSlug) {
       const target = articles.find((a) => a.slug === initialSlug || a.id === initialSlug);
       if (target) {
@@ -78,69 +75,114 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
 
   const activeArticle = articles.find((a) => a.id === selectedArticleId) || articles[0];
 
-  const publishedCount = articles.filter((a) => a.isPublished !== false).length;
-  const draftCount = articles.filter((a) => a.isPublished === false).length;
+  // Cảnh báo khi rời trang có thay đổi chưa lưu
+  useEffect(() => {
+    if (viewMode !== 'edit' || !dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [viewMode, dirty]);
+
+  const loadRevisions = async (articleId: string) => {
+    try {
+      const d = await adminApi(`/api/system?action=revisions&entityType=cms:news_articles&entityId=${encodeURIComponent(articleId)}`);
+      setRevisions(d.items || []);
+    } catch {
+      setRevisions([]);
+    }
+  };
+
+  const restoreRevision = async (revId: string) => {
+    try {
+      const d = await adminApi('/api/system?action=restore-revision', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ revisionId: revId }),
+      });
+      if (d?.item && activeArticle) {
+        await onUpdateArticle(activeArticle.id, d.item);
+        onShowToast('Đã khôi phục phiên bản bài viết thành công.');
+        setShowRevisions(false);
+      }
+    } catch (e: any) {
+      onShowToast(e.message || 'Không thể khôi phục phiên bản.');
+    }
+  };
 
   const handleCreateNew = async () => {
     const newId = `news-${Date.now()}`;
     const initialTitle = 'Tiêu Đề Bài Viết Tin Tức Mới';
-    const initialSlug = createUniqueSlug(initialTitle, articles.map(x => x.slug || ''));
+    const initialSlug = createUniqueSlug(initialTitle, articles.map((x) => x.slug || ''));
 
     const newArticle: NewsArticle = {
       id: newId,
       slug: initialSlug,
       title: initialTitle,
       category: 'announcement',
-      categoryLabel: 'Thông Báo',
+      categoryLabel: 'Thông báo',
       date: new Date().toLocaleDateString('vi-VN'),
       summary: 'Đoạn tóm tắt mở đầu (Sapo) giới thiệu ngắn gọn các điểm cốt lõi của bài viết.',
       content: 'Nội dung chi tiết của bài viết được trình bày ở đây với đầy đủ thông tin, luận điểm và hình ảnh minh họa.',
-      contentFormatted: '## Tiêu đề phần 1\nNội dung chi tiết của bài viết được trình bày ở đây với đầy đủ thông tin, luận điểm và hình ảnh minh họa.\n\n## Tiêu đề phần 2\nTiếp tục triển khai các nội dung quan trọng tiếp theo.',
+      contentFormatted:
+        '<h2>Tiêu đề phần 1</h2><p>Nội dung chi tiết của bài viết được trình bày ở đây với đầy đủ thông tin, luận điểm và hình ảnh minh họa.</p><h2>Tiêu đề phần 2</h2><p>Tiếp tục triển khai các nội dung quan trọng tiếp theo.</p>',
+      pageBlocks: [],
       author: 'Sky First Network',
       publishedAt: new Date().toISOString().split('T')[0],
       readTime: '3 phút đọc',
       imageUrl: '',
+      imageFit: 'original',
       imageDescription: 'Ảnh minh họa bài viết tin tức',
       tags: [],
-      isPublished: true,
+      isPublished: false,
+      editorialStatus: 'draft',
       allowComments: true,
-      source: ''
+      source: '',
     };
 
     const created = await onAddArticle(newArticle);
-    if (!created) { onShowToast('Chưa thể tạo bài viết trên máy chủ.'); return; }
+    if (!created) {
+      onShowToast('Chưa thể tạo bài viết trên máy chủ.');
+      return;
+    }
     setSelectedArticleId(newId);
     setViewMode('edit');
-    onShowToast('Đã tạo bài viết mới! Đang mở trình chỉnh sửa chi tiết.');
+    setDirty(false);
+    onShowToast('Đã tạo bài viết mới ở chế độ Bản nháp! Đang mở trình biên tập.');
   };
 
-  // Expose handleCreateNew via actionRef
-  React.useEffect(() => {
+  useEffect(() => {
     if (actionRef) {
-      actionRef.current = {
-        handleCreateNew,
-      };
+      actionRef.current = { handleCreateNew };
     }
     return () => {
       if (actionRef) actionRef.current = null;
     };
   }, [actionRef, articles]);
 
-  // Notify parent of viewMode changes
-  React.useEffect(() => {
+  useEffect(() => {
     onViewModeChange?.(viewMode);
   }, [viewMode, onViewModeChange]);
 
   const handleEditClick = (article: NewsArticle) => {
     setSelectedArticleId(article.id);
+    setDirty(false);
     setViewMode('edit');
   };
 
   const handleTogglePublish = async (article: NewsArticle, e: React.MouseEvent) => {
     e.stopPropagation();
     const nextState = article.isPublished === false;
-    const saved = await onUpdateArticle(article.id, { isPublished: nextState });
-    if (saved === false) { onShowToast('Chưa thể cập nhật trạng thái trên máy chủ.'); return; }
+    const saved = await onUpdateArticle(article.id, {
+      isPublished: nextState,
+      editorialStatus: nextState ? 'published' : 'draft',
+    });
+    if (saved === false) {
+      onShowToast('Chưa thể cập nhật trạng thái trên máy chủ.');
+      return;
+    }
     onShowToast(
       nextState
         ? `Đã xuất bản bài viết "${article.title}" lên website chính!`
@@ -151,7 +193,10 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
   const handleConfirmDelete = async () => {
     if (!articleToDelete) return;
     const deleted = await onDeleteArticle(articleToDelete.id);
-    if (!deleted) { onShowToast('Chưa thể xóa bài viết trên máy chủ.'); return; }
+    if (!deleted) {
+      onShowToast('Chưa thể xóa bài viết trên máy chủ.');
+      return;
+    }
     onShowToast(`Đã xóa bài viết: ${articleToDelete.title}`);
     setArticleToDelete(null);
     if (selectedArticleId === articleToDelete.id) {
@@ -173,19 +218,39 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
     return true;
   });
 
-  // =========================================================================
-  // 1. CHẾ ĐỘ DANH SÁCH (LIST VIEW) - ĐỒNG BỘ CHUẨN XÁC VỚI MỤC TRANG
-  // =========================================================================
   if (viewMode === 'list') {
     return (
       <div className="space-y-4">
-        {/* Bảng danh sách các bài đăng */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white rounded-2xl border border-slate-200 p-4">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm bài viết theo tiêu đề, chuyên mục, slug..."
+              className="w-full rounded-xl border border-slate-200 pl-9 pr-4 py-2 text-xs sm:text-sm outline-none focus:border-sky-500"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            {(['all', 'published', 'draft'] as const).map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setStatusFilter(st)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition ${
+                  statusFilter === st ? 'bg-[#0284C7] text-white' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {st === 'all' ? 'Tất cả' : st === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {filteredArticles.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-xs">
             <FileText size={40} className="mx-auto text-slate-300 mb-3" />
-            <h3 className="text-base font-bold text-slate-800 mb-1">
-              Chưa có bài đăng nào
-            </h3>
+            <h3 className="text-base font-bold text-slate-800 mb-1">Chưa có bài đăng nào</h3>
             <p className="text-xs text-slate-500 mb-5">
               Bắt đầu tạo bài viết tin tức hoặc thông báo đầu tiên cho website Sky First Network.
             </p>
@@ -201,7 +266,6 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            {/* Tiêu đề các cột trong bảng danh sách */}
             <div className="grid grid-cols-12 gap-4 px-5 py-3.5 bg-slate-50/80 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
               <div className="col-span-12 sm:col-span-5">Tiêu đề bài đăng</div>
               <div className="hidden sm:block sm:col-span-2">Nhãn</div>
@@ -209,7 +273,6 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
               <div className="hidden sm:block sm:col-span-3 text-right">Trạng thái & Hành động</div>
             </div>
 
-            {/* Các hàng dữ liệu bài viết */}
             <div className="divide-y divide-slate-100">
               {filteredArticles.map((article) => {
                 const isDraft = article.isPublished === false;
@@ -223,34 +286,31 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                     onClick={() => handleEditClick(article)}
                     className="group grid grid-cols-12 gap-4 px-5 py-4 items-center hover:bg-sky-50/40 cursor-pointer transition relative"
                   >
-                    {/* Cột 1: Tiêu đề bài viết & Đường dẫn slug */}
                     <div className="col-span-12 sm:col-span-5 pr-2">
                       <div className="flex items-center gap-2.5">
-                        {/* Trạng thái Nháp / Đăng */}
                         <span
                           className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                             !isDraft ? 'bg-emerald-500' : 'bg-amber-500'
                           }`}
                           title={!isDraft ? 'Đã xuất bản' : 'Bản nháp'}
                         />
-
                         <div className="min-w-0 flex-1">
                           <h3 className="text-sm font-bold text-slate-900 group-hover:text-sky-600 transition truncate">
                             {article.title || 'Bài viết chưa đặt tên'}
                           </h3>
-                          <p className="text-[11px] text-slate-500 font-mono truncate mt-0.5">
-                            {displayUrl}
-                          </p>
+                          <p className="text-[11px] text-slate-500 font-mono truncate mt-0.5">{displayUrl}</p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Cột 2: Nhãn (Tách riêng biệt thành một cột) */}
                     <div className="hidden sm:flex sm:col-span-2 items-center flex-wrap gap-1">
-                      <EntityBadge label={article.categoryLabel || article.category || 'Tin tức'} color={article.categoryColor} className="rounded-md px-2 py-0.5 text-[10px]" />
+                      <EntityBadge
+                        label={article.categoryLabel || article.category || 'Tin tức'}
+                        color={article.categoryColor}
+                        className="rounded-md px-2 py-0.5 text-[10px]"
+                      />
                     </div>
 
-                    {/* Cột 3: Tác giả & Thời gian đọc */}
                     <div className="hidden sm:block sm:col-span-2 text-xs text-slate-600">
                       <div className="flex items-center gap-1.5 text-slate-700 font-medium truncate">
                         <User size={12} className="text-[#0284C7] shrink-0" />
@@ -262,30 +322,21 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                       </div>
                     </div>
 
-                    {/* Cột 3: Trạng thái xuất bản & Cụm Action Icons khi hover */}
                     <div className="hidden sm:flex sm:col-span-3 items-center justify-end">
-                      {/* Trạng thái bình thường */}
                       <div className="group-hover:hidden text-right">
                         <span
                           className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                            !isDraft
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : 'bg-amber-50 text-amber-700'
+                            !isDraft ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
                           }`}
                         >
-                          {!isDraft ? 'Đã xuất bản' : 'Bản nháp'}
+                          {!isDraft ? 'Đã xuất bản' : article.scheduledPublishAt ? 'Hẹn giờ xuất bản' : 'Bản nháp'}
                         </span>
-                        <span className="text-[11px] text-slate-400 block mt-0.5">
-                          {article.publishedAt || 'Hôm nay'}
-                        </span>
+                        <span className="text-[11px] text-slate-400 block mt-0.5">{article.publishedAt || 'Hôm nay'}</span>
                       </div>
 
-                      {/* Khi rê chuột đến (group-hover): Hiện các icon thao tác */}
                       <div className="hidden group-hover:flex items-center gap-1">
-                        {/* 1. Icon Chỉnh sửa */}
                         <button
                           type="button"
-                          id={`btn-edit-news-${article.id}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleEditClick(article);
@@ -296,10 +347,8 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                           <Edit2 size={15} />
                         </button>
 
-                        {/* 2. Icon Nháp hoặc Đăng */}
                         <button
                           type="button"
-                          id={`btn-toggle-publish-news-${article.id}`}
                           onClick={(e) => handleTogglePublish(article, e)}
                           className={`p-1.5 rounded-lg transition shadow-2xs border cursor-pointer ${
                             !isDraft
@@ -311,10 +360,8 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                           {!isDraft ? <Clock size={15} /> : <CheckCircle2 size={15} />}
                         </button>
 
-                        {/* 3. Icon Xem trang công khai */}
                         <button
                           type="button"
-                          id={`btn-view-public-news-${article.id}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             window.history.pushState({}, '', displayUrl);
@@ -326,10 +373,8 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                           <Eye size={15} />
                         </button>
 
-                        {/* 4. Icon Xóa */}
                         <button
                           type="button"
-                          id={`btn-delete-news-${article.id}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             setArticleToDelete(article);
@@ -348,18 +393,15 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
           </div>
         )}
 
-        {/* Modal xác nhận xóa */}
         {articleToDelete && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
                 <AlertCircle size={26} />
               </div>
-              <h3 className="text-lg font-black text-slate-900">
-                Xác Nhận Xóa Bài Đăng?
-              </h3>
+              <h3 className="text-lg font-black text-slate-900">Xác Nhận Xóa Bài Đăng?</h3>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Bạn có chắc chắn muốn xóa bài viết <strong>{articleToDelete.title}</strong>? Bài viết này sẽ bị gỡ bỏ khỏi website chính.
+                Bạn có chắc chắn muốn xóa bài viết <strong>{articleToDelete.title}</strong>?
               </p>
               <div className="flex items-center justify-end gap-2.5 pt-2">
                 <button
@@ -384,9 +426,6 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
     );
   }
 
-  // =========================================================================
-  // 2. CHẾ ĐỘ CHỈNH SỬA CHI TIẾT (EDIT VIEW) - ĐỘC LẬP THEO CẤU TRÚC TRANG CHÍNH
-  // =========================================================================
   if (!activeArticle) {
     return (
       <div className="p-8 text-center bg-white rounded-2xl border border-slate-200">
@@ -406,30 +445,49 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
   const currentSlug = getArticleSlug(activeArticle);
   const displayUrl = `/tin-tuc/${currentSlug}`;
 
+  const patchArticle = (updates: Partial<NewsArticle>) => {
+    setDirty(true);
+    void onUpdateArticle(activeArticle.id, updates);
+  };
+
   const handleSave = async (publishState?: boolean) => {
     const finalPublishState = publishState !== undefined ? publishState : !isDraft;
-    const saved = await onUpdateArticle(activeArticle.id, { isPublished: finalPublishState });
-    if (saved === false) { onShowToast('Chưa thể lưu lên máy chủ. Nội dung vẫn được giữ để bạn thử lại.'); return; }
+    // Cảnh báo trước khi xuất bản nếu thiếu tiêu đề, ảnh hoặc SEO
+    if (finalPublishState && !activeArticle.title?.trim()) {
+      onShowToast('Cảnh báo: Vui lòng nhập tiêu đề bài viết trước khi xuất bản.');
+      return;
+    }
+    const saved = await onUpdateArticle(activeArticle.id, {
+      isPublished: finalPublishState,
+      editorialStatus: finalPublishState ? 'published' : activeArticle.editorialStatus || 'draft',
+    });
+    if (saved === false) {
+      onShowToast('Chưa thể lưu lên máy chủ. Nội dung vẫn được giữ để bạn thử lại.');
+      return;
+    }
+    setDirty(false);
     if (finalPublishState) {
       onShowToast(`Đã lưu và xuất bản bài viết "${activeArticle.title}" lên website chính!`);
     } else {
-      onShowToast(`Đã lưu các chỉnh sửa của bài viết "${activeArticle.title}" (Bản nháp)!`);
+      onShowToast(`Đã lưu bản nháp bài viết "${activeArticle.title}"!`);
     }
   };
 
-  const rawContent = activeArticle.contentFormatted || (Array.isArray(activeArticle.content) ? activeArticle.content.join('\n\n') : activeArticle.content);
+  const rawContent =
+    activeArticle.contentFormatted ||
+    (Array.isArray(activeArticle.content) ? activeArticle.content.join('\n\n') : activeArticle.content);
 
   return (
     <div className="fixed inset-0 z-50 bg-[#F8FAFC] text-slate-900 flex flex-col font-sans overflow-y-auto">
-      {/* 1. THANH TIÊU ĐỀ ĐỘC LẬP (STICKY HEADER) */}
       <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
-            id="editor-btn-back-news"
-            onClick={() => setViewMode('list')}
+            onClick={() => {
+              if (dirty && !confirm('Bạn có thay đổi vừa chỉnh sửa. Quay lại danh sách?')) return;
+              setViewMode('list');
+            }}
             className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition flex items-center gap-2 text-xs font-bold cursor-pointer"
-            title="Quay lại danh sách bài đăng"
           >
             <ArrowLeft size={18} />
             <span className="hidden sm:inline">Quay lại danh sách</span>
@@ -464,57 +522,58 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
           </div>
         </div>
 
-        {/* Nút hành động */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Nút xem trang công khai */}
           <button
             type="button"
-            id="editor-btn-view-news"
+            onClick={() => {
+              void loadRevisions(activeArticle.id);
+              setShowRevisions(true);
+            }}
+            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+            title="Lịch sử phiên bản & Khôi phục"
+          >
+            <History size={14} />
+            <span className="hidden md:inline">Phiên bản</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => {
               window.history.pushState({}, '', displayUrl);
               onNavigate('news-detail');
             }}
             className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer"
-            title="Xem bài viết trên website"
           >
             <Eye size={14} />
-            <span className="hidden sm:inline">Xem Trên Website</span>
+            <span className="hidden sm:inline">Xem Trước</span>
           </button>
 
           {isDraft ? (
             <>
-              {/* Đang ở trạng thái Bản nháp: Lưu chỉnh sửa hoặc Đăng bài */}
               <button
                 type="button"
-                id="editor-btn-save-draft-news"
                 onClick={() => handleSave(false)}
                 className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold rounded-xl transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                title="Lưu lại các chỉnh sửa (giữ ở trạng thái Bản nháp)"
               >
                 <Save size={15} className="text-[#0284C7]" />
-                <span>LƯU CHỈNH SỬA</span>
+                <span>LƯU NHÁP</span>
               </button>
 
               <button
                 type="button"
-                id="editor-btn-publish-news"
                 onClick={() => handleSave(true)}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer"
-                title="Xuất bản bài viết để hiển thị chính thức trên website"
               >
                 <CheckCircle2 size={15} />
-                <span>ĐĂNG BÀI</span>
+                <span>XUẤT BẢN</span>
               </button>
             </>
           ) : (
             <>
-              {/* Đã xuất bản: Có thể chuyển về Bản nháp hoặc Lưu các thay đổi */}
               <button
                 type="button"
-                id="editor-btn-unpublish-news"
                 onClick={() => handleSave(false)}
                 className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition flex items-center gap-1.5 cursor-pointer"
-                title="Chuyển bài viết về trạng thái Bản nháp"
               >
                 <Clock size={14} className="text-amber-600" />
                 <span>Chuyển về Nháp</span>
@@ -522,10 +581,8 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
 
               <button
                 type="button"
-                id="editor-btn-save-news"
                 onClick={() => handleSave(true)}
                 className="px-4 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-extrabold rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer"
-                title="Lưu các thay đổi và áp dụng trực tiếp lên website chính"
               >
                 <Save size={15} />
                 <span>LƯU THAY ĐỔI</span>
@@ -535,14 +592,13 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
         </div>
       </header>
 
-      {/* 2. THÂN SOẠN THẢO VỚI CÁC KHỐI, CÁC Ô NHƯ CẤU TRÚC TRANG CHÍNH */}
       <main className="max-w-4xl w-full mx-auto p-4 sm:p-8 space-y-6 flex-1">
-        {/* KHỐI 1: CÀI ĐẶT ĐƯỜNG DẪN & THÔNG TIN BÀI VIẾT */}
+        {/* KHỐI 1: TIÊU ĐỀ, ĐƯỜNG DẪN & LỊCH XUẤT BẢN */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <LinkIcon size={15} className="text-[#0284C7]" />
-              Khối 1: Cài Đặt Đường Dẫn & Thông Tin Bài Viết
+              Khối 1: Tiêu đề, Chuyên mục, Thẻ & Lịch xuất bản
             </h2>
             <span className="text-[11px] text-slate-400 font-mono">/tin-tuc/:slug</span>
           </div>
@@ -557,13 +613,13 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                 value={activeArticle.title}
                 onChange={(e) => {
                   const title = e.target.value;
-                  onUpdateArticle(activeArticle.id, {
+                  patchArticle({
                     title,
-                    slug: activeArticle.isPublished===true ? activeArticle.slug : generateSlug(title)
+                    slug: activeArticle.isPublished === true ? activeArticle.slug : generateSlug(title),
                   });
                 }}
-                placeholder="Ví dụ: Lễ Phát Động Chiến Dịch Tình Nguyện Mùa Hè Xanh 2026..."
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
+                placeholder="Nhập tiêu đề bài viết..."
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
               />
             </div>
 
@@ -580,31 +636,59 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                   <input
                     type="text"
                     value={activeArticle.slug || generateSlug(activeArticle.title)}
-                    onChange={(e) =>
-                      onUpdateArticle(activeArticle.id, { slug: generateSlug(e.target.value) })
-                    }
-                    placeholder="duong-dan-tinh"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-[#0284C7] focus:outline-hidden focus:border-sky-500"
+                    onChange={(e) => patchArticle({ slug: generateSlug(e.target.value) })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-[#0284C7]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                  Chuyên Mục Bài Viết
-                </label>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Chuyên Mục Bài Viết</label>
                 <select
                   value={activeArticle.category}
                   onChange={(e) => {
-                    const category=e.target.value;
-                    const found=taxonomyOptions.find((x:any)=>x.id===category);
-                    onUpdateArticle(activeArticle.id,{category,categoryLabel:found?.label||category});
+                    const category = e.target.value;
+                    const found = taxonomyOptions.find((x: any) => x.id === category);
+                    patchArticle({ category, categoryLabel: found?.label || category });
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
                 >
-                  {taxonomyOptions.map((x:any)=><option key={x.id} value={x.id}>{x.label}</option>)}
+                  {taxonomyOptions.map((x: any) => (
+                    <option key={x.id} value={x.id}>
+                      {x.label}
+                    </option>
+                  ))}
                 </select>
-                {activeArticle.category==='other'&&<input value={activeArticle.categoryLabel==='Khác'?'':activeArticle.categoryLabel||''} onChange={e=>onUpdateArticle(activeArticle.id,{categoryLabel:e.target.value})} placeholder="Nhập chuyên mục riêng" className="mt-2 w-full px-3 py-2 bg-white border border-sky-200 rounded-xl text-xs font-bold"/>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                  Trạng Thái Quy Trình Biên Tập
+                </label>
+                <select
+                  value={activeArticle.editorialStatus || (activeArticle.isPublished ? 'published' : 'draft')}
+                  onChange={(e) => patchArticle({ editorialStatus: e.target.value as any })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
+                >
+                  <option value="draft">Bản nháp (Draft)</option>
+                  <option value="pending_review">Chờ duyệt (Pending Review)</option>
+                  <option value="approved">Đã duyệt chờ đăng (Approved)</option>
+                  <option value="published">Đã xuất bản (Published)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                  Hẹn Giờ Tự Động Xuất Bản (Tùy chọn)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={activeArticle.scheduledPublishAt || ''}
+                  onChange={(e) => patchArticle({ scheduledPublishAt: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
+                />
               </div>
             </div>
 
@@ -612,8 +696,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
               label="Màu chuyên mục bài viết"
               entityLabel={activeArticle.categoryLabel || activeArticle.category || 'Tin tức'}
               value={activeArticle.categoryColor}
-              onChange={(categoryColor) => onUpdateArticle(activeArticle.id, { categoryColor })}
-              helperText="Có thể chọn bất kỳ màu nhận diện phù hợp hoặc để Tự động theo tên chuyên mục."
+              onChange={(categoryColor) => patchArticle({ categoryColor })}
             />
 
             <div>
@@ -629,185 +712,240 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                     .split(',')
                     .map((t) => t.trim())
                     .filter(Boolean);
-                  onUpdateArticle(activeArticle.id, { tags: tagsArr });
+                  patchArticle({ tags: tagsArr });
                 }}
-                placeholder="Ví dụ: Thông Báo, Mùa Hè Xanh, Sky First Network 2026"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-hidden focus:border-sky-500"
+                placeholder="Ví dụ: Thông Báo, Tình Nguyện, Sky First Network 2026"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
               />
             </div>
           </div>
         </div>
 
-        {/* KHỐI 2: TÁC GIẢ, THỜI GIAN & THỜI LƯỢNG ĐỌC */}
+        {/* KHỐI 2: TÁC GIẢ & THỜI GIAN */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <User size={15} className="text-[#0284C7]" />
-              Khối 2: Tác Giả, Thời Gian & Thời Lượng Đọc
-            </h2>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-1.5">
-                <User size={13} className="text-[#0284C7]" />
-                Tác Giả / Người Đăng
+                <User size={13} className="text-[#0284C7]" /> Tác Giả / Đơn Vị Đăng
               </label>
               <input
                 type="text"
                 value={activeArticle.author}
-                onChange={(e) => onUpdateArticle(activeArticle.id, { author: e.target.value })}
-                placeholder="Ban Truyền thông Sky First Network"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
+                onChange={(e) => patchArticle({ author: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
               />
             </div>
 
             <div>
               <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-1.5">
-                <Calendar size={13} className="text-[#0284C7]" />
-                Ngày Xuất Bản
+                <Calendar size={13} className="text-[#0284C7]" /> Ngày Xuất Bản
               </label>
               <input
                 type="date"
                 value={activeArticle.publishedAt || ''}
-                onChange={(e) => onUpdateArticle(activeArticle.id, { publishedAt: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
+                onChange={(e) => patchArticle({ publishedAt: e.target.value, date: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
               />
             </div>
 
             <div>
               <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-1.5">
-                <Clock size={13} className="text-[#0284C7]" />
-                Thời Gian Đọc (Ước lượng)
+                <Clock size={13} className="text-[#0284C7]" /> Thời Gian Đọc
               </label>
               <input
                 type="text"
                 value={activeArticle.readTime}
-                onChange={(e) => onUpdateArticle(activeArticle.id, { readTime: e.target.value })}
-                placeholder="3 phút đọc"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
+                onChange={(e) => patchArticle({ readTime: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
               />
             </div>
           </div>
+
+          <label className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-900">
+            <input
+              type="checkbox"
+              checked={Boolean(activeArticle.isFeatured)}
+              onChange={(e) => patchArticle({ isFeatured: e.target.checked })}
+            />
+            Ghim là bài đăng nổi bật trên Trang chủ & Trang Tin tức
+          </label>
         </div>
 
-        <label className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-900"><input type="checkbox" checked={Boolean(activeArticle.isFeatured)} onChange={e=>onUpdateArticle(activeArticle.id,{isFeatured:e.target.checked})}/> Ghim là bài đăng nổi bật trên Trang chủ</label>
-
-        {/* KHỐI 3: HÌNH ẢNH ĐẠI DIỆN — giữ ảnh gốc, chế độ hiển thị do CMS chọn */}
+        {/* KHỐI 3: HÌNH ẢNH ĐẠI DIỆN (GIỮ NGUYÊN TỶ LỆ GỐC MẶC ĐỊNH) */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <ImageIcon size={15} className="text-[#0284C7]" />
-              Khối 3: Hình Ảnh Đại Diện Bài Viết (không khóa tỉ lệ)
+              Khối 3: Hình Ảnh Đại Diện & Thư Viện Ảnh (Mặc định giữ nguyên tỷ lệ gốc)
             </h2>
-            <span className="text-[11px] text-slate-400">Ảnh gốc</span>
           </div>
 
-          <div className="space-y-3">
-            <ImageUrlInput
-              label="Ảnh bìa bài viết"
-              value={activeArticle.imageUrl || ''}
-              onChange={(url) => onUpdateArticle(activeArticle.id, { imageUrl: url })}
-              helperText="Giữ ảnh gốc; có thể ngang, dọc, vuông hoặc panorama. Chọn cách hiển thị bên dưới."
-              category="media"
-              placeholder="Chọn ảnh từ kho Media hoặc tải ảnh lên"
-            />
+          <ImageUrlInput
+            label="Ảnh đại diện bài viết"
+            value={activeArticle.imageUrl || ''}
+            onChange={(url) => patchArticle({ imageUrl: url })}
+            helperText="Mặc định hiển thị đầy đủ 100% ảnh gốc (kể cả ảnh dọc A4, infographic, poster). Chỉ cắt khi bạn chủ động chọn Cover."
+          />
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">
-                Chú Thích Hình Ảnh
-              </label>
-              <input
-                type="text"
-                value={activeArticle.imageDescription || ''}
-                onChange={(e) => onUpdateArticle(activeArticle.id, { imageDescription: e.target.value })}
-                placeholder="Hình ảnh tại hội nghị phát động chiến dịch thường niên"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:border-sky-500"
-              />
-            </div>
-            <div className="grid sm:grid-cols-2 gap-3"><input value={activeArticle.imageAlt||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageAlt:e.target.value})} placeholder="Alt text cho ảnh" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><input value={activeArticle.imageCredit||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageCredit:e.target.value})} placeholder="Nguồn/Tác giả ảnh" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><input value={activeArticle.imageSourceUrl||''} onChange={e=>onUpdateArticle(activeArticle.id,{imageSourceUrl:e.target.value})} placeholder="URL nguồn ảnh (nếu có)" className="sm:col-span-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/><select value={activeArticle.heroImageMode==='hidden'?'hidden':'original'} onChange={e=>onUpdateArticle(activeArticle.id,{heroImageMode:e.target.value as any})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"><option value="original">Hiện ảnh đầu bài</option><option value="hidden">Ẩn ảnh đầu bài</option></select><select value={activeArticle.imageFit||'original'} onChange={e=>onUpdateArticle(activeArticle.id,{imageFit:e.target.value as any})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"><option value="original">Original — giữ tỷ lệ gốc</option><option value="contain">Fit — vừa khung, không cắt</option><option value="cover">Cover — phủ khung (crop theo focal point)</option></select><div className="sm:col-span-2 grid grid-cols-2 gap-3"><label className="text-[11px] font-bold text-slate-500">Focal X<input type="number" min="0" max="100" value={activeArticle.imageFocalX??50} onChange={e=>onUpdateArticle(activeArticle.id,{imageFocalX:Number(e.target.value)})} className="mt-1 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/></label><label className="text-[11px] font-bold text-slate-500">Focal Y<input type="number" min="0" max="100" value={activeArticle.imageFocalY??50} onChange={e=>onUpdateArticle(activeArticle.id,{imageFocalY:Number(e.target.value)})} className="mt-1 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/></label></div></div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <input
+              value={activeArticle.imageDescription || ''}
+              onChange={(e) => patchArticle({ imageDescription: e.target.value, imageCaption: e.target.value })}
+              placeholder="Chú thích ảnh hiển thị dưới ảnh..."
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+            />
+            <input
+              value={activeArticle.imageAlt || ''}
+              onChange={(e) => patchArticle({ imageAlt: e.target.value })}
+              placeholder="Văn bản thay thế (Alt text cho SEO & trợ năng)"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+            />
+            <input
+              value={activeArticle.imageCredit || ''}
+              onChange={(e) => patchArticle({ imageCredit: e.target.value })}
+              placeholder="Nguồn / Tác giả ảnh"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+            />
+            <select
+              value={activeArticle.imageFit || 'original'}
+              onChange={(e) => patchArticle({ imageFit: e.target.value as any })}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"
+            >
+              <option value="original">Original — Hiển thị đầy đủ ảnh gốc, giữ nguyên tỷ lệ</option>
+              <option value="contain">Contain — Vừa khung, không bao giờ cắt ảnh</option>
+              <option value="cover">Cover — Chủ động phủ khung 16:9</option>
+            </select>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5"><div className="mb-3 flex items-center justify-between"><div><div className="text-xs font-black text-slate-800">Thư viện ảnh bài viết</div><div className="text-[11px] text-slate-500">Ảnh đại diện chỉ dùng cho card; bài viết có thể có nhiều ảnh.</div></div><button type="button" onClick={()=>onUpdateArticle(activeArticle.id,{galleryImages:[...(activeArticle.galleryImages||[]),'']})} className="rounded-lg border px-3 py-2 text-xs font-bold text-sky-700">+ Thêm ảnh</button></div><div className="space-y-3">{(activeArticle.galleryImages||[]).map((url,idx)=><div key={idx} className="rounded-xl border border-slate-100 p-3"><ImageUrlInput label={`Ảnh thư viện ${idx+1}`} value={url} onChange={v=>{const a=[...(activeArticle.galleryImages||[])];a[idx]=v;onUpdateArticle(activeArticle.id,{galleryImages:a})}} helperText="Tải ảnh trực tiếp; không cần dán URL."/><button type="button" onClick={()=>onUpdateArticle(activeArticle.id,{galleryImages:(activeArticle.galleryImages||[]).filter((_,i)=>i!==idx)})} className="mt-2 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-bold text-rose-600">Xóa khỏi thư viện</button></div>)}</div></div>
-
-        {/* KHỐI 4: ĐOẠN SAPO / TÓM TẮT MỞ ĐẦU */}
+        {/* KHỐI 4: ĐOẠN SAPO & TRÌNH SOẠN THẢO KIỂU WORDPRESS GUTENBERG */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <Sparkles size={15} className="text-[#0284C7]" />
-              Khối 4: Đoạn Sapo / Tóm Tắt Mở Đầu (In Đậm Đầu Trang)
-            </h2>
-          </div>
-
           <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1.5">
+              Đoạn Sapo / Tóm Tắt Mở Đầu
+            </label>
             <textarea
               rows={3}
               value={activeArticle.summary}
-              onChange={(e) => onUpdateArticle(activeArticle.id, { summary: e.target.value })}
-              placeholder="Nhập đoạn sapo tóm tắt mở đầu bài viết. Phần này sẽ được định dạng chữ lớn, in đậm nổi bật ngay dưới tiêu đề bài viết..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-hidden focus:border-sky-500 leading-relaxed"
+              onChange={(e) => patchArticle({ summary: e.target.value })}
+              placeholder="Nhập đoạn sapo tóm tắt mở đầu bài viết..."
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 leading-relaxed"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-2">
+              Trình Soạn Thảo Nội Dung & Khối Kiểu WordPress Gutenberg
+            </label>
+            <RichTextEditor
+              id="news-content-editor"
+              value={rawContent}
+              onChange={(html) => patchArticle({ contentFormatted: html, content: html })}
+              blocks={activeArticle.pageBlocks || []}
+              onBlocksChange={(pageBlocks) => patchArticle({ pageBlocks })}
+              placeholder="Viết trực tiếp tại đây, kéo thả ảnh từ máy tính vào bài hoặc bấm (+ Thêm khối)..."
+              minHeight="420px"
             />
           </div>
         </div>
 
-        {/* KHỐI 5: NỘI DUNG CHI TIẾT BÀI ĐĂNG */}
+        {/* KHỐI 5: SEO, METADATA CHIA SẺ & NGUỒN TIN */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <FileText size={15} className="text-[#0284C7]" />
-              Khối 5: Nội Dung Chi Tiết Bài Đăng
-            </h2>
-            <span className="text-[11px] text-slate-400">Hỗ trợ tiêu đề H2, H3, in đậm, trích dẫn, danh sách</span>
-          </div>
-
-          <RichTextEditor
-            id="news-content-editor"
-            value={rawContent}
-            onChange={(html) => onUpdateArticle(activeArticle.id, { contentFormatted: html, content: html })}
-            placeholder="Soạn thảo nội dung hoặc dán trực tiếp từ Word / Google Docs..."
-            minHeight="420px"
-          />
-        </div>
-
-        {/* KHỐI 6: NGUỒN TIN & THIẾT LẬP TƯƠNG TÁC */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <MessageSquare size={15} className="text-[#0284C7]" />
-              Khối 6: Nguồn Tin & Thiết Lập Tương Tác
+              <Globe size={15} className="text-[#0284C7]" />
+              Khối 5: SEO, Chia Sẻ Mạng Xã Hội & Bình Luận
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                Nguồn Trích Dẫn / Đơn Vị Phát Hành
-              </label>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <label className="block">
+              <span className="text-xs font-bold text-slate-700">SEO Title (Mặc định lấy tiêu đề bài)</span>
               <input
-                type="text"
-                value={activeArticle.source || ''}
-                onChange={(e) => onUpdateArticle(activeArticle.id, { source: e.target.value })}
-                placeholder="Ví dụ: Sky First Network / Ban Truyền Thông"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-hidden focus:border-sky-500"
+                value={activeArticle.seoTitle || ''}
+                onChange={(e) => patchArticle({ seoTitle: e.target.value })}
+                placeholder={activeArticle.title}
+                className="mt-1 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
               />
-              <input type="url" value={activeArticle.canonicalUrl||''} onChange={e=>onUpdateArticle(activeArticle.id,{canonicalUrl:e.target.value})} placeholder="URL nguồn gốc / canonical (nếu dẫn nguồn ngoài)" className="mt-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"/>
-            </div>
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold text-slate-700">Nguồn trích dẫn / Canonical URL</span>
+              <input
+                value={activeArticle.source || ''}
+                onChange={(e) => patchArticle({ source: e.target.value })}
+                placeholder="Sky First Network / Ban Truyền Thông"
+                className="mt-1 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="text-xs font-bold text-slate-700">SEO Description (Mặc định lấy đoạn Sapo)</span>
+              <textarea
+                rows={2}
+                value={activeArticle.seoDescription || ''}
+                onChange={(e) => patchArticle({ seoDescription: e.target.value })}
+                placeholder={activeArticle.summary}
+                className="mt-1 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+            </label>
+          </div>
 
-            <div className="flex items-center gap-3 pt-6">
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={activeArticle.allowComments ?? true}
-                  onChange={(e) => onUpdateArticle(activeArticle.id, { allowComments: e.target.checked })}
-                  className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
-                />
-                <span>Cho phép độc giả gửi phản hồi & bình luận</span>
-              </label>
-            </div>
+          <div className="flex flex-wrap gap-6 pt-2">
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={activeArticle.allowComments ?? true}
+                onChange={(e) => patchArticle({ allowComments: e.target.checked })}
+                className="w-4 h-4 rounded text-sky-600"
+              />
+              <span>Cho phép độc giả gửi bình luận (qua kiểm duyệt)</span>
+            </label>
+
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(activeArticle.noIndex)}
+                onChange={(e) => patchArticle({ noIndex: e.target.checked })}
+                className="w-4 h-4 rounded text-amber-600"
+              />
+              <span>Ẩn khỏi công cụ tìm kiếm & Sitemap (noIndex)</span>
+            </label>
           </div>
         </div>
       </main>
+
+      {showRevisions && (
+        <div className="fixed inset-0 z-[120] bg-slate-950/55 flex items-center justify-center p-4">
+          <div className="w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
+            <header className="p-4 border-b flex items-center justify-between">
+              <h3 className="font-black text-sm">Lịch sử phiên bản bài viết</h3>
+              <button type="button" onClick={() => setShowRevisions(false)} className="text-xs font-bold text-slate-500">
+                Đóng
+              </button>
+            </header>
+            <div className="max-h-96 overflow-y-auto divide-y p-3">
+              {revisions.length === 0 ? (
+                <p className="p-6 text-center text-xs text-slate-500">Chưa có bản lưu lịch sử nào cho bài viết này.</p>
+              ) : (
+                revisions.map((r) => (
+                  <div key={r.id} className="py-3 px-2 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">{r.version_label || r.id}</div>
+                      <div className="text-[11px] text-slate-500">{r.created_at} · bởi {r.created_by}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void restoreRevision(r.id)}
+                      className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-1.5 text-xs font-bold text-sky-700"
+                    >
+                      Khôi phục
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

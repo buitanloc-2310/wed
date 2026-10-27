@@ -14,9 +14,9 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { TeamMember, TeamPosition, CorePillar, TimelineMilestone, PageRoute, CoreValueItem } from '../../types';
-import { ImageUrlInput } from '../MediaInputs';
-import { EntityBadge } from '../EntityColorSystem';
-import { EntityColorPicker } from '../EntityColorSystem';
+import { ImageUrlInput } from '../../components/UIPrimitives';
+import { EntityBadge } from '../../components/UIPrimitives';
+import { EntityColorPicker } from '../../components/UIPrimitives';
 import { useDataContext } from '../../context/DataContext';
 
 interface AdminAboutManagerProps {

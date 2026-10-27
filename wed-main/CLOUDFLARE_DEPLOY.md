@@ -1,30 +1,36 @@
-# Cập nhật website gốc trên Cloudflare Pages
+# Hướng Dẫn Triển Khai, Vận Hành & Khôi Phục — Sky First Network (Cloudflare Pages + D1 + R2)
 
-## Nền tảng hiện có
+## 1. Cấu hình Bindings trên Cloudflare Pages (`wrangler.jsonc`)
+Dự án sử dụng 2 bindings bắt buộc và các biến môi trường bảo mật:
+- **D1 Database Binding**: `DB` -> cơ sở dữ liệu `skyfirst-db`
+- **R2 Bucket Binding**: `MEDIA` -> bucket lưu trữ tệp `skyfirst-media`
+- **Biến môi trường (Secrets / Environment Variables)**:
+  - `FIREBASE_PROJECT_ID`: `skyfirstnetwork`
+  - `FIREBASE_SERVICE_ACCOUNT_JSON` *(Secret)*: JSON Service Account của Firebase để tạo/đặt lại mật khẩu quản trị viên từ máy chủ.
+  - `RESEND_API_KEY` *(Secret, tùy chọn)*: Khóa API dịch vụ gửi thư Resend. Nếu chưa cấu hình, mọi biểu mẫu vẫn lưu bình thường và thư được xếp hàng an toàn ở trạng thái `unconfigured` trong `website_email_outbox`.
+  - `MAIL_FROM` *(Tùy chọn)*: Địa chỉ gửi thư định danh, ví dụ `Sky First Network <support@skyfirst.io.vn>`.
 
-Giữ project Pages **wed**, D1 binding **DB** → database **wed**, R2 binding **MEDIA** → bucket **wed** trong `wrangler.jsonc`. Website dùng Firebase Authentication để đăng nhập; CMS lưu D1 và media lưu R2 qua Pages Functions. Đây là CMS của website hiện có, không phải cài đặt WordPress PHP.
+## 2. Chạy Migration D1 (An toàn, không làm mất dữ liệu)
+Tất cả các câu lệnh SQL trong `migrations/` đều sử dụng `CREATE TABLE IF NOT EXISTS` và `CREATE INDEX IF NOT EXISTS`, tuyệt đối không có `DROP TABLE` hay `TRUNCATE`:
+```bash
+# Áp dụng schema nền tảng và bảng mở rộng hệ thống (Email Outbox, Revisions, Analytics, Backups)
+npx wrangler d1 execute skyfirst-db --remote --file=./migrations/0001_initial_schema.sql
+npx wrangler d1 execute skyfirst-db --remote --file=./migrations/0002_system_automation_analytics.sql
+```
+Ngoài ra, các API `/api/cms`, `/api/forms`, `/api/system` đều tích hợp cơ chế tự khởi tạo bảng và bổ sung cột còn thiếu (`ensureSystemSchema`, `ensure`) ngay khi được gọi.
 
-## Triển khai qua repository đã liên kết
+## 3. Triển khai lên Cloudflare Pages
+```bash
+npm run build
+npx wrangler pages deploy dist --project-name=skyfirst-network
+```
 
-1. Sao lưu D1 và giữ nguyên bucket R2 trước khi cập nhật.
-2. Đưa các tệp trong thư mục chứa `package.json`, `src/`, `functions/`, `migrations/` vào repository hiện có.
-3. Cloudflare Pages: framework Vite; build command `npm run build`; output directory `dist`; root directory là thư mục chứa `package.json` trong repository. ZIP chứa một thư mục `wed-main/`; đưa nội dung thư mục này vào gốc repository hoặc đặt đúng Root directory.
-4. Áp dụng các migration chưa chạy theo thứ tự 0010 → 0013. Có thể dùng `npx wrangler d1 migrations apply wed --remote` từ thư mục project với tài khoản Cloudflare có quyền. Các migration thêm bảng/chỉ mục, không xóa dữ liệu.
-5. Kiểm tra các binding trong Production và Preview, sau đó triển khai cả giao diện và Pages Functions.
-6. Mở `/api/cms?collection=site_config&id=current`: phải trả JSON `{ok:true,...}`; kiểm tra `/admin`, tải ảnh và lưu một thay đổi thử. Mở lại trang bằng trình duyệt khác để kiểm tra nội dung lưu trên máy chủ.
-
-## Firebase và tài khoản quản trị
-
-Cấu hình công khai Firebase đã có giá trị mặc định của project hiện tại. Chỉ đặt các biến `VITE_FIREBASE_*` trong `.env.example` nếu cần thay cấu hình; build lại sau khi đổi. Bật Email/Password trong Firebase Authentication và thêm tên miền Pages/tên miền riêng vào Authorized domains.
-
-Chủ sở hữu hiện được xác định phía máy chủ bằng `skyfirst.ec@gmail.com`. Nếu tài khoản Firebase này đã tồn tại, đăng nhập bằng mật khẩu hiện tại; không tạo lại. Backend có thể khôi phục hồ sơ D1 cho chủ sở hữu đã xác thực. Không có mật khẩu mặc định trong bản bàn giao.
-
-Secret **FIREBASE_SERVICE_ACCOUNT_JSON** ở Pages dùng cho khởi tạo chủ sở hữu và thao tác quản trị tài khoản đặc quyền. Giá trị là JSON service account của project `skyfirstnetwork` có quyền quản lý Firebase Authentication. Chỉ đặt ở Variables and Secrets phía máy chủ, tuyệt đối không đặt vào `VITE_` hoặc repository. Có thể đặt **FIREBASE_API_KEY** phía máy chủ nếu thay Firebase project.
-
-Nếu đăng nhập báo Email/mật khẩu sai, xác minh tài khoản ở Firebase. Nếu báo cơ sở dữ liệu/kho tệp chưa sẵn sàng, kiểm tra migration, DB/MEDIA và việc deploy Functions. `npm run dev` hoặc hosting chỉ phục vụ tệp tĩnh không cung cấp những API này.
-
-## Khả năng và giới hạn
-
-Ảnh/PDF lưu bản gốc ở R2, tối đa 20 MB/tệp và 50 tệp/lượt phía giao diện. Tải đồng thời 3 tệp; kho thư viện phân trang 100 tệp. Chưa tạo thumbnail riêng hay chuyển đổi định dạng ảnh tự động. Tối ưu ảnh hoạt động trước khi tải để trang nhẹ hơn. Mô tả thư viện dùng để tìm kiếm; alt hiển thị của từng ảnh phụ thuộc trường nội dung của trang.
-
-Bản cập nhật giữ nội dung gốc và các URL; không chứa ảnh hoạt động, số liệu hay tài khoản thử nghiệm. Chưa kiểm tra với tài khoản Cloudflare/Firebase thật và chưa triển khai lên tên miền trực tiếp.
+## 4. Quy trình Sao lưu & Khôi phục (Rollback)
+1. **Sao lưu trực tiếp trong Admin**:
+   - Mở `/admin` -> **Trung tâm Cấu hình** -> tab **Sao Lưu & Khôi Phục**.
+   - Bấm **+ Tạo bản sao lưu ngay**: Hệ thống xuất toàn bộ `website_cms_documents`, `website_forms`, `website_admin_records` kèm mã băm toàn vẹn **SHA-256** vào bảng `website_backups`.
+2. **Khôi phục an toàn (Rollback)**:
+   - Chọn bản sao lưu muốn khôi phục trong danh sách -> nhập chính xác cụm từ xác nhận `KHOI_PHUC_DU_LIEU`.
+   - Hệ thống kiểm tra mã băm SHA-256 trước khi khôi phục và ghi nhật ký vào `website_admin_audit`.
+3. **Khôi phục từng trang / bài viết / cấu hình**:
+   - Trong **Chỉnh sửa Website** hoặc qua API `/api/system?action=revisions`, quản trị viên có thể xem lịch sử phiên bản (`website_revisions`) và khôi phục về bất kỳ phiên bản trước đó nào (hệ thống tự động tạo một bản lưu của trạng thái hiện tại trước khi khôi phục).

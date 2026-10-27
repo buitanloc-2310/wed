@@ -25,9 +25,9 @@ import {
   Clock
 } from 'lucide-react';
 import { NetworkUnit, PageRoute, AdminManagerActionRef } from '../../types';
-import { ImageUrlInput } from '../MediaInputs';
-import { EntityBadge } from '../EntityColorSystem';
-import { EntityColorPicker } from '../EntityColorSystem';
+import { ImageUrlInput } from '../../components/UIPrimitives';
+import { EntityBadge } from '../../components/UIPrimitives';
+import { EntityColorPicker } from '../../components/UIPrimitives';
 
 interface AdminUnitsManagerProps {
   units: NetworkUnit[];

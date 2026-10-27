@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
-import { 
-  Calendar, 
-  MapPin, 
-  Users, 
-  ArrowRight, 
-  Search, 
+import {
+  Calendar,
+  MapPin,
+  Users,
+  ArrowRight,
+  Search,
   CheckCircle2,
-  Filter
+  Filter,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useDataContext } from '../context/DataContext';
 import { ImagePlaceholder } from '../components/UIPrimitives';
-import { EntityBadge } from '../components/EntityColorSystem';
-import { getSemanticStatusColor } from '../components/EntityColorSystem';
+import { EntityBadge, getSemanticStatusColor } from '../components/UIPrimitives';
 import { Program, ProgramCategory, PageRoute } from '../types';
 
 interface ProgramsPageProps {
@@ -22,7 +21,6 @@ interface ProgramsPageProps {
 
 export const ProgramsPage: React.FC<ProgramsPageProps> = ({
   onSelectProgram,
-  onNavigate,
 }) => {
   const { programs, siteConfig } = useDataContext();
   const [selectedCategory, setSelectedCategory] = useState<ProgramCategory>('all');
@@ -39,7 +37,7 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
 
   const filteredPrograms = publishedPrograms.filter((prog) => {
     const matchesCat = selectedCategory === 'all' || prog.category === selectedCategory;
-    const matchesQuery = 
+    const matchesQuery =
       prog.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       prog.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
       prog.location.toLowerCase().includes(searchQuery.toLowerCase());
@@ -48,10 +46,8 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
 
   return (
     <div className="space-y-10 py-6 sm:py-10">
-      
-      {/* Main Page Header */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
@@ -69,7 +65,6 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
         </motion.div>
       </section>
 
-      {/* BỘ LỌC VÀ TÌM KIẾM CHƯƠNG TRÌNH */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
@@ -85,7 +80,6 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
               </p>
             </div>
 
-            {/* Search Input */}
             <div className="relative w-full md:w-80">
               <input
                 type="text"
@@ -98,7 +92,6 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
             </div>
           </div>
 
-          {/* Category Tabs */}
           <div className="flex flex-wrap gap-2 pt-1">
             {categories.map((cat) => {
               const isActive = selectedCategory === cat.id;
@@ -113,9 +106,7 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
                   }`}
                 >
                   <span>{cat.label}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isActive ? 'bg-white text-[#0284C7]' : 'bg-slate-100 text-slate-600'
-                  }`}>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? 'bg-white text-[#0284C7]' : 'bg-slate-100 text-slate-600'}`}>
                     {cat.count}
                   </span>
                 </button>
@@ -124,101 +115,90 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
           </div>
         </div>
 
-        {/* Programs Grid */}
         {filteredPrograms.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 sm:gap-7">
-            {filteredPrograms.map((prog, prIdx) => {
-              return (
-                <motion.div
-                  key={prog.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-30px" }}
-                  transition={{ duration: 0.35, delay: (prIdx % 4) * 0.08 }}
-                  whileHover={{ y: -5 }}
-                  className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-lg transition-all duration-200 flex flex-col justify-between group"
-                >
-                  <div>
-                    {/* Embedded Image Placeholder */}
-                    <div className="p-3.5 bg-slate-50 border-b border-slate-100">
-                      <ImagePlaceholder
-                        sizeText={prog.imageSizeText}
-                        description={prog.imageDescription}
-                        aspectRatio="video"
-                        theme={prog.theme || 'sky'}
-                        imageUrl={prog.imageUrl}
+            {filteredPrograms.map((prog, prIdx) => (
+              <motion.div
+                key={prog.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-30px' }}
+                transition={{ duration: 0.35, delay: (prIdx % 4) * 0.08 }}
+                whileHover={{ y: -5 }}
+                className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-lg transition-all duration-200 flex flex-col justify-between group"
+              >
+                <div>
+                  <div className="p-3.5 bg-slate-50 border-b border-slate-100">
+                    <ImagePlaceholder
+                      sizeText={prog.imageSizeText}
+                      description={prog.imageDescription || prog.title}
+                      aspectRatio="auto"
+                      objectFit={prog.imageFit || 'original'}
+                      theme={prog.theme || 'sky'}
+                      imageUrl={prog.imageUrl}
+                    />
+                  </div>
+
+                  <div className="p-6 space-y-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <EntityBadge label={prog.categoryLabel} color={prog.categoryColor} className="text-xs" />
+                      <EntityBadge
+                        label={prog.statusLabel}
+                        color={prog.statusColor || getSemanticStatusColor(prog.status)}
+                        solid
+                        className="text-xs"
                       />
                     </div>
 
-                    {/* Content */}
-                    <div className="p-6 space-y-3.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <EntityBadge
-                          label={prog.categoryLabel}
-                          color={prog.categoryColor}
-                          className="text-xs"
-                        />
+                    <h3 className="text-xl font-extrabold text-slate-900 group-hover:text-[#0284C7] transition leading-snug">
+                      {prog.title}
+                    </h3>
 
-                        <EntityBadge
-                          label={prog.statusLabel}
-                          color={prog.statusColor || getSemanticStatusColor(prog.status)}
-                          solid
-                          className="text-xs"
-                        />
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                      {prog.summary}
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-[#0284C7] flex-shrink-0" />
+                        <span className="font-medium truncate">{prog.date}</span>
                       </div>
-
-                      <h3 className="text-xl font-extrabold text-slate-900 group-hover:text-[#0284C7] transition leading-snug">
-                        {prog.title}
-                      </h3>
-
-                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-                        {prog.summary}
-                      </p>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                        <div className="flex items-center gap-2">
-                          <Calendar size={14} className="text-[#0284C7] flex-shrink-0" />
-                          <span className="font-medium truncate">{prog.date}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin size={14} className="text-[#0284C7] flex-shrink-0" />
-                          <span className="font-medium truncate">{prog.location}</span>
-                        </div>
-                        <div className="flex items-center gap-2 sm:col-span-2">
-                          <Users size={14} className="text-[#0284C7] flex-shrink-0" />
-                          <span className="font-medium truncate">{prog.targetAudience}</span>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} className="text-[#0284C7] flex-shrink-0" />
+                        <span className="font-medium truncate">{prog.location}</span>
                       </div>
-
-                      {/* Key highlights */}
-                      <div className="space-y-1.5 pt-1">
-                        <div className="text-[11px] font-black text-[#0284C7] uppercase tracking-wider">
-                          Quyền Lợi Tiêu Biểu:
-                        </div>
-                        {prog.benefits.slice(0, 2).map((b, bIdx) => (
-                          <div key={bIdx} className="flex items-start gap-1.5 text-xs text-slate-600">
-                            <CheckCircle2 size={13} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-                            <span className="line-clamp-1">{b}</span>
-                          </div>
-                        ))}
+                      <div className="flex items-center gap-2 sm:col-span-2">
+                        <Users size={14} className="text-[#0284C7] flex-shrink-0" />
+                        <span className="font-medium truncate">{prog.targetAudience}</span>
                       </div>
+                    </div>
 
+                    <div className="space-y-1.5 pt-1">
+                      <div className="text-[11px] font-black text-[#0284C7] uppercase tracking-wider">
+                        Quyền Lợi Tiêu Biểu:
+                      </div>
+                      {(prog.benefits || []).slice(0, 2).map((b, bIdx) => (
+                        <div key={bIdx} className="flex items-start gap-1.5 text-xs text-slate-600">
+                          <CheckCircle2 size={13} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                          <span className="line-clamp-1">{b}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                </div>
 
-                  <div className="p-6 pt-0 border-t border-slate-100 mt-2 flex items-center justify-between gap-3">
-                    <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => onSelectProgram(prog)}
-                      className="w-full py-3 bg-[#0284C7] hover:bg-[#0369A1] text-white font-extrabold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-sm shadow-sky-500/20"
-                    >
-                      <span>Xem Lộ trình & Đăng ký</span>
-                      <ArrowRight size={14} />
-                    </motion.button>
-                  </div>
-                </motion.div>
-              );
-            })}
+                <div className="p-6 pt-0 border-t border-slate-100 mt-2 flex items-center justify-between gap-3">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => onSelectProgram(prog)}
+                    className="w-full py-3 bg-[#0284C7] hover:bg-[#0369A1] text-white font-extrabold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-sm shadow-sky-500/20"
+                  >
+                    <span>Xem Lộ trình & Đăng ký</span>
+                    <ArrowRight size={14} />
+                  </motion.button>
+                </div>
+              </motion.div>
+            ))}
           </div>
         ) : (
           <div className="text-center py-12 bg-white rounded-3xl border border-slate-200 space-y-3">
@@ -226,7 +206,10 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
             <h3 className="text-base font-bold text-slate-700">Không tìm thấy chương trình phù hợp</h3>
             <p className="text-xs text-slate-500">Vui lòng thử tìm với từ khóa khác hoặc chuyển danh mục.</p>
             <button
-              onClick={() => { setSelectedCategory('all'); setSearchQuery(''); }}
+              onClick={() => {
+                setSelectedCategory('all');
+                setSearchQuery('');
+              }}
               className="px-4 py-2 bg-sky-50 text-[#0284C7] rounded-xl text-xs font-bold hover:bg-sky-100 transition"
             >
               Xem tất cả chương trình
@@ -234,7 +217,6 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
           </div>
         )}
       </section>
-
     </div>
   );
 };

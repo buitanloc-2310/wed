@@ -28,7 +28,7 @@ import {
   AdminUserRole,
   SiteClosedReason
 } from '../types';
-import { OFFICIAL_CONTENT_PAGES_2026 } from '../data/officialContent2026';
+import { OFFICIAL_CONTENT_PAGES_2026 } from '../data/baselineData';
 import {
   NETWORK_UNITS as DEFAULT_NETWORK_UNITS,
   PROGRAMS_DATA as DEFAULT_PROGRAMS,
@@ -114,8 +114,6 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
       {label:'Cơ hội đang mở',page:'custom-page',slug:'co-hoi',description:'Các đợt tuyển, chương trình và cơ hội đang nhận đăng ký.'}
     ]},
     {label:'Tra cứu',items:[
-      {label:'Xác thực GCN',page:'certificate',description:'Xác thực thông tin và trạng thái các ghi nhận trên hệ thống Sky First.'},
-      {label:'Quét QR Giấy chứng nhận',page:'certificate',description:'Mở camera trên thiết bị di động để quét QR và xác thực nhanh.'},
       {label:'Tra cứu hồ sơ đăng ký',page:'join',description:'Kiểm tra trạng thái hồ sơ bằng mã được cấp sau khi gửi biểu mẫu.'},
       {label:'Tra cứu chương trình / dự án',page:'programs',description:'Tìm chương trình, dự án và trạng thái hoạt động công khai.'},
       {label:'Công khai & Minh bạch',page:'custom-page',slug:'cong-khai',description:'Hồ sơ công khai, nguồn lực, tiến độ và cập nhật được phép chia sẻ.'},
@@ -132,7 +130,6 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
       {label:'Cơ hội đang tuyển',page:'custom-page',slug:'co-hoi',description:'Các vị trí, chương trình và đợt tuyển đang mở.'},
       {label:'Tham gia chương trình / sự kiện',page:'join',description:'Chọn biểu mẫu đang mở và gửi hồ sơ trực tuyến.'},
       {label:'Hợp tác & Đồng hành',page:'custom-page',slug:'hop-tac-dong-hanh',description:'Đề xuất phối hợp về chuyên môn, truyền thông, chương trình hoặc nguồn lực.'},
-      {label:'Tài trợ & Nguồn lực',page:'sponsor',description:'Thông tin chiến dịch, chủ thể tiếp nhận và hình thức đồng hành.'},
       {label:'Gửi sáng kiến / đề xuất',page:'custom-page',slug:'gui-sang-kien-de-xuat',description:'Gửi ý tưởng, sáng kiến hoặc đề xuất hợp tác đến Sky First.'},
       {label:'Liên hệ',page:'contact',description:'Gửi câu hỏi, phản hồi hoặc nhu cầu kết nối.'}
     ]},
@@ -150,7 +147,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
       {label:'Thư viện ảnh & Video',page:'custom-page',slug:'thu-vien-anh-video',description:'Ảnh, video và tư liệu truyền thông được phép công khai.'}
     ]}
   ],
-  footerQuickLinks:[{label:'Giới thiệu Sky First Network',url:'/sky-first-network-la-gi'},{label:'Tầm nhìn & Sứ mệnh',url:'/tam-nhin-su-menh'},{label:'Giá trị cốt lõi',url:'/gia-tri-cot-loi'},{label:'Cơ cấu tổ chức',url:'/co-cau-to-chuc'},{label:'Lĩnh vực hoạt động',url:'/linh-vuc-hoat-dong'},{label:'Hợp tác & Đồng hành',url:'/sponsor'},{label:'Đơn vị trực thuộc',url:'/units'},{label:'Tin tức & Hoạt động',url:'/news'},{label:'Xác thực GCN',url:'/certificate'},{label:'Tham gia Sky First Network',url:'/join'}],
+  footerQuickLinks:[{label:'Giới thiệu Sky First Network',url:'/sky-first-network-la-gi'},{label:'Tầm nhìn & Sứ mệnh',url:'/tam-nhin-su-menh'},{label:'Giá trị cốt lõi',url:'/gia-tri-cot-loi'},{label:'Cơ cấu tổ chức',url:'/co-cau-to-chuc'},{label:'Lĩnh vực hoạt động',url:'/linh-vuc-hoat-dong'},{label:'Hợp tác & Đồng hành',url:'/hop-tac-dong-hanh'},{label:'Đơn vị trực thuộc',url:'/units'},{label:'Tin tức & Hoạt động',url:'/news'},{label:'Tham gia Sky First Network',url:'/join'}],
   footerContacts:[
     {label:'Liên hệ chung',value:'lienhe@skyfirst.io.vn',url:'mailto:lienhe@skyfirst.io.vn',icon:'mail'},
     {label:'Hợp tác & Đồng hành',value:'hoptac@skyfirst.io.vn',url:'mailto:hoptac@skyfirst.io.vn',icon:'mail'},
@@ -188,9 +185,52 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   unitsBannerHeading:'Đơn vị trực thuộc Sky First Network', unitsBannerSubtext:'Các đơn vị trực thuộc có nhận diện và phạm vi hoạt động riêng trong hệ sinh thái Sky First Network.',
   ctaHeading:'Kết nối cùng Sky First Network', ctaSubtext:'Tìm hiểu các hình thức tham gia, tình nguyện, hợp tác và đồng hành cùng các hoạt động phù hợp.', ctaButtonText:'Tham gia',ctaButtonUrl:'/join',ctaSecondaryButtonText:'Liên hệ hợp tác',ctaSecondaryButtonUrl:'/contact',
   heroButton1Text:'Khám phá mạng lưới',heroButton1Url:'/about',heroButton2Text:'Tham gia cùng chúng tôi',heroButton2Url:'/join',heroButton3Text:'',heroButton3Url:'',
-  homeSections:{hero:true,direction:true,pillars:true,programs:true,units:true,certificate:true,values:true,news:true,transparency:true,cta:true},
+  homeSections:{hero:true,direction:true,pillars:true,programs:true,units:true,certificate:false,values:true,news:true,transparency:true,cta:true},
   homeSectionOrder:['hero','pillars','news','programs','values','certificate','transparency','units','cta'],
-  footerSlogan:'', footerAboutText:'', footerCopyright:'© 2026. Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First.', footerCertBadgeText:'Xác thực GCN',footerUnitsBadgeText:'Đơn vị trực thuộc',footerSocialFacebook:'',footerSocialInstagram:'',footerSocialTiktok:'',footerSocialLinkedin:'',footerSocialYoutube:'',footerSocialZalo:''
+  footerSlogan:'', footerAboutText:'', footerCopyright:'© 2026. Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First.', footerCertBadgeText:'Xác thực GCN',footerUnitsBadgeText:'Đơn vị trực thuộc',footerSocialFacebook:'',footerSocialInstagram:'',footerSocialTiktok:'',footerSocialLinkedin:'',footerSocialYoutube:'',footerSocialZalo:'',
+  intro: {
+    enabled: true,
+    videoUrl: '/brand/sky-first-intro.mp4',
+    posterUrl: '/brand/sky-first-network-logo.png',
+    logoUrl: '/brand/sky-first-network-web.png',
+    logoRevealDurationMs: 1400,
+    maxWaitDurationMs: 8000,
+    allowSkip: true,
+    skipLabel: 'Bỏ qua Intro',
+    playMode: 'every_home_load',
+    respectReducedMotion: true,
+    fallbackMode: 'logo_fade'
+  },
+  emailSettings: {
+    enabled: false,
+    provider: 'none',
+    senderName: 'Sky First Network',
+    senderEmail: 'lienhe@skyfirst.io.vn',
+    replyToEmail: 'lienhe@skyfirst.io.vn',
+    adminRecipientEmails: 'lienhe@skyfirst.io.vn',
+    apiKeyMasked: '',
+    sendOnProgramRegistration: true,
+    sendAdminAlertOnRegistration: true,
+    sendOnContactSubmission: true,
+    sendOnStatusChange: false,
+    retryMaxAttempts: 3
+  },
+  automationSettings: {
+    enableScheduledPublishing: true,
+    enableAutoCloseExpiredForms: true,
+    enableAutoRedirectOnSlugChange: true,
+    enableAutoSitemapUpdate: true,
+    enableAutoEndedProgramBadge: true,
+    autoArchiveOldDraftDays: 0
+  },
+  seoSettings: {
+    titleTemplate: '%s | Sky First Network',
+    defaultTitle: 'Sky First Network — Mạng lưới Giáo dục & Phát triển Cộng đồng',
+    defaultDescription: 'Sky First Network được xây dựng như một không gian kết nối các hoạt động giáo dục, phát triển người trẻ, tình nguyện, hợp tác và truyền thông cộng đồng.',
+    defaultOgImage: '/brand/sky-first-network-logo.png',
+    canonicalDomain: 'https://skyfirst.io.vn',
+    allowIndexing: true
+  }
 };
 
 const LEGACY_HOME_ORDER = ['hero','direction','pillars','programs','units','certificate','values','news','transparency'];

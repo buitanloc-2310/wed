@@ -25,11 +25,12 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Program, PageRoute, AdminManagerActionRef } from '../../types';
-import { ImageUrlInput } from '../MediaInputs';
-import { EntityBadge } from '../EntityColorSystem';
-import { EntityColorPicker } from '../EntityColorSystem';
+import { ImageUrlInput } from '../../components/UIPrimitives';
+import { adminApi } from '../../lib/firebase';
+import { EntityBadge } from '../../components/UIPrimitives';
+import { EntityColorPicker } from '../../components/UIPrimitives';
 import { createUniqueSlug, generateSlug, getProgramSlug } from '../../utils/contentUtils';
-import { getSemanticStatusColor } from '../EntityColorSystem';
+import { getSemanticStatusColor } from '../../components/UIPrimitives';
 
 interface AdminProgramsManagerProps {
   programs: Program[];
@@ -59,6 +60,8 @@ export const AdminProgramsManager: React.FC<AdminProgramsManagerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [programToDelete, setProgramToDelete] = useState<Program | null>(null);
+  const [availableForms, setAvailableForms] = useState<any[]>([]);
+  React.useEffect(() => { adminApi('/api/forms?admin=1').then(d => setAvailableForms(d.items || [])).catch(() => {}); }, [viewMode]);
 
   // States for repeatable arrays in editor
   const [newTimelineItem, setNewTimelineItem] = useState('');
@@ -860,6 +863,88 @@ export const AdminProgramsManager: React.FC<AdminProgramsManagerProps> = ({
 
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3"><div><h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Đăng ký & Email của chương trình</h2><p className="mt-1 text-[11px] text-slate-500">Cấu hình riêng cho chương trình này; không dùng một mẫu chung cho mọi chương trình.</p></div><label className="flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={activeProg.registrationEnabled !== false} onChange={e=>onUpdateProgram(activeProg.id,{registrationEnabled:e.target.checked})}/> Nhận đăng ký</label></div>
+          <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div className="text-xs font-black text-slate-900">Biểu mẫu đăng ký độc lập của Chương trình (Form Builder)</div>
+                <div className="text-[11px] text-slate-600">Chọn biểu mẫu riêng hoặc khởi tạo/nhân bản một biểu mẫu độc lập chỉ dành cho chương trình này.</div>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  const newFormId = `form-${activeProg.id}-${Date.now().toString().slice(-4)}`;
+                  const newSlug = `dang-ky-${activeProg.slug || activeProg.id}`;
+                  const defaultFields = [
+                    { id: "full_name", type: "text", label: "Họ và tên", required: true, placeholder: "Nhập họ và tên" },
+                    { id: "email", type: "email", label: "Email liên hệ", required: true, placeholder: "example@email.com" },
+                    { id: "phone", type: "phone", label: "Số điện thoại / Zalo", required: true, placeholder: "09xx xxx xxx" },
+                    { id: "organization", type: "text", label: "Trường học / Đơn vị", required: true },
+                    { id: "birth_year", type: "birth_year", label: "Năm sinh", required: false, placeholder: "2004" },
+                    { id: "portfolio_url", type: "url", label: "Liên kết CV / Hồ sơ", required: false, placeholder: "https://..." },
+                    { id: "motivation", type: "textarea", label: "Lý do tham gia & Mong muốn đóng góp", required: true },
+                    { id: "consent", type: "consent", label: "Tôi cam kết thông tin cung cấp là chính xác.", required: true }
+                  ];
+                  try {
+                    await adminApi("/api/forms?admin=1", {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify({
+                        id: newFormId,
+                        slug: newSlug,
+                        title: `Biểu mẫu: ${activeProg.title}`,
+                        description: `Biểu mẫu đăng ký độc lập dành riêng cho chương trình ${activeProg.title}.`,
+                        programId: activeProg.id,
+                        status: "open",
+                        fields: defaultFields,
+                        settings: { confirmationMessage: `Đã tiếp nhận hồ sơ cho chương trình ${activeProg.title}.` }
+                      })
+                    });
+                    await onUpdateProgram(activeProg.id, { formId: newFormId, formSlug: newSlug });
+                    const d = await adminApi("/api/forms?admin=1");
+                    setAvailableForms(d.items || []);
+                    onShowToast("Đã tạo và gắn Biểu mẫu độc lập riêng cho chương trình này!");
+                  } catch (e: any) {
+                    onShowToast(e.message || "Không thể tạo biểu mẫu riêng.");
+                  }
+                }}
+                className="rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white px-3.5 py-2 text-xs font-bold"
+              >
+                + Tạo Biểu mẫu riêng cho chương trình này
+              </button>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <label className="text-xs font-bold text-slate-700">
+                Biểu mẫu Form Builder đang gắn (ID ổn định)
+                <select
+                  value={activeProg.formId || ""}
+                  onChange={(e) => {
+                    const f = availableForms.find((x: any) => x.id === e.target.value);
+                    onUpdateProgram(activeProg.id, { formId: e.target.value, formSlug: f?.slug || "" });
+                  }}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold"
+                >
+                  <option value="">-- Tự động theo program_id hoặc mẫu mặc định --</option>
+                  {availableForms.map((f: any) => (
+                    <option key={f.id} value={f.id}>
+                      {f.title} ({f.id} · {f.status})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-bold text-slate-700">
+                Chế độ hiển thị ảnh đại diện dự án
+                <select
+                  value={activeProg.imageFit || "original"}
+                  onChange={(e) => onUpdateProgram(activeProg.id, { imageFit: e.target.value as any })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold"
+                >
+                  <option value="original">Original — Hiển thị toàn bộ ảnh gốc</option>
+                  <option value="contain">Contain — Vừa khung, không cắt</option>
+                  <option value="cover">Cover — Phủ khung 16:9</option>
+                </select>
+              </label>
+            </div>
+          </div>
           <div className="grid gap-4 md:grid-cols-2"><label className="text-xs font-bold text-slate-700">Mở đăng ký từ<input type="datetime-local" value={activeProg.registrationOpenAt||''} onChange={e=>onUpdateProgram(activeProg.id,{registrationOpenAt:e.target.value})} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2"/></label><label className="text-xs font-bold text-slate-700">Đóng đăng ký lúc<input type="datetime-local" value={activeProg.registrationCloseAt||''} onChange={e=>onUpdateProgram(activeProg.id,{registrationCloseAt:e.target.value})} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2"/></label></div>
           <label className="flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-900"><input type="checkbox" checked={Boolean(activeProg.registrationAutoAccept)} onChange={e=>onUpdateProgram(activeProg.id,{registrationAutoAccept:e.target.checked})}/> Tự động tiếp nhận hồ sơ hợp lệ. Khi bật, hồ sơ được chuyển thẳng thành Người tham gia; chỉ bật khi chương trình không cần vòng xét duyệt.</label>
           <div className="grid gap-5 lg:grid-cols-2">

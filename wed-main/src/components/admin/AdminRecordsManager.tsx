@@ -1,6 +1,6 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {Plus,Trash2,Save,Search,Loader2,X,Upload,ShieldCheck,QrCode,ExternalLink,History,Copy} from 'lucide-react';
-import {adminApi} from '../../lib/adminApi';
+import {adminApi} from '../../lib/firebase';
 import {useDataContext} from '../../context/DataContext';
 
 type Row={id:string;kind:string;title:string;subtitle?:string;status?:string;note?:string;public?:boolean;[key:string]:any};

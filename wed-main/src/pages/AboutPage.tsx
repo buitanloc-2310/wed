@@ -18,7 +18,7 @@ import { motion } from 'motion/react';
 import { CORE_VALUES } from '../data/baselineData';
 import { useDataContext } from '../context/DataContext';
 import { ImagePlaceholder } from '../components/UIPrimitives';
-import { EntityBadge } from '../components/EntityColorSystem';
+import { EntityBadge } from '../components/UIPrimitives';
 import { PageRoute } from '../types';
 
 interface AboutPageProps {

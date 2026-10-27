@@ -330,7 +330,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     input.accept = 'image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml';
     input.multiple = true;
     input.onchange = async () => {
-      const files = Array.from(input.files || []);
+      const files = Array.from(input.files || []) as File[];
       if (!files.length) return;
       try {
         setIsUploadingDrop(true);
@@ -350,7 +350,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   // Kéo thả ảnh trực tiếp từ máy tính vào vùng soạn thảo (Mục 7)
   const handleDropFiles = async (e: React.DragEvent<HTMLDivElement>) => {
-    const files = Array.from(e.dataTransfer?.files || []).filter((f) => f.type.startsWith('image/'));
+    const files = (Array.from(e.dataTransfer?.files || []) as File[]).filter((f) => f.type.startsWith('image/'));
     if (!files.length) return;
     e.preventDefault();
     e.stopPropagation();
@@ -384,7 +384,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    const files = Array.from(e.clipboardData?.files || []).filter((f) => f.type.startsWith('image/'));
+    const files = (Array.from(e.clipboardData?.files || []) as File[]).filter((f) => f.type.startsWith('image/'));
     if (files.length > 0) {
       e.preventDefault();
       rememberMediaSelection();

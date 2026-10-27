@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, ArrowUpRight, BookOpen, CalendarDays, ChevronDown, Clock, Edit3, Facebook, FileText, FlaskConical, FolderKanban, Globe2, GraduationCap, Handshake, HeartHandshake, Home, Info, Instagram, Leaf, Link as LinkIcon, Mail, Megaphone, Menu, MessageCircle, Newspaper, Phone, RefreshCw, ScanSearch, Search, ShieldCheck, Sparkles, UserRoundPlus, Users, Wrench, X } from 'lucide-react';
 import { useDataContext } from '../context/DataContext';
-import { PageRoute } from '../types';
+import { PageRoute, SiteConfig } from '../types';
 import { getArticleSlug, getProgramSlug } from '../utils/contentUtils';
 
 

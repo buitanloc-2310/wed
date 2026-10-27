@@ -62,8 +62,17 @@ export interface EmailConfig {
   fromAddress?: string;
   replyToAddress?: string;
   adminNotifyAddress?: string;
-  provider?: 'resend' | 'custom_webhook';
+  provider?: 'none' | 'resend' | 'custom_webhook' | 'cloudflare_email' | 'webhook';
   mode?: 'live' | 'test';
+  enabled?: boolean;
+  senderEmail?: string;
+  replyToEmail?: string;
+  adminRecipientEmails?: string;
+  apiKeyMasked?: string;
+  sendOnProgramRegistration?: boolean;
+  sendAdminAlertOnRegistration?: boolean;
+  sendOnContactSubmission?: boolean;
+  sendOnStatusChange?: boolean;
   retryMaxAttempts?: number;
   rateLimitPerHour?: number;
   brandColor?: string;
@@ -112,10 +121,10 @@ export interface SiteConfig {
   closedMessage?: string;
   closedEstimatedReopen?: string;
   closedNoticeType?: 'banner' | 'lockscreen';
-  intro?: IntroConfig;
-  emailSettings?: EmailConfig;
-  automationSettings?: AutomationConfig;
-  seoSettings?: SeoGlobalConfig;
+  intro?: IntroSettings;
+  emailSettings?: EmailSystemSettings;
+  automationSettings?: AutomationSystemSettings;
+  seoSettings?: SeoSystemSettings;
   stats: {
     membersCount: string;
     membersSubtext: string;

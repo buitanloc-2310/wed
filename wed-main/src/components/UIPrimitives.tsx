@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode, useEffect, useState, useRef } from 'react';
+import React, { CSSProperties, ErrorInfo, ReactNode, useEffect, useId, useState, useRef } from 'react';
 import { AlertCircle, AlertTriangle, CheckCircle2, ExternalLink, Home, Image as ImageIcon, Images, Loader2, RotateCcw, Search, SkipForward, Sparkles, UploadCloud, X, ZoomIn } from 'lucide-react';
 import { IntroConfig } from '../types';
 import { sanitizeHtml } from '../utils/contentUtils';

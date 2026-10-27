@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, ArrowDown, ArrowLeft, ArrowUp, BarChart3, BellRing, Building2, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronUp, Clock, Cloud, Columns3, Edit2, ExternalLink, Eye, EyeOff, FileText, Gem, Globe, Handshake, History, Image, Layers, Layout, Lock, LogOut, Mail, Menu, MessageSquare, PanelBottom, PanelLeftClose, PanelLeftOpen, PenTool, Plus, RefreshCw, Save, Settings, ShieldCheck, Sparkles, Trash2, UserCheck, Users, X } from 'lucide-react';
 import { useDataContext } from '../context/DataContext';
-import { AdminManagerActionRef, AdminUser, CustomPage, PageRoute } from '../types';
+import { AdminManagerActionRef, AdminUser, CustomPage, PageRoute, SiteConfig } from '../types';
 import { StandalonePageEditor } from '../components/admin/StandalonePageEditor';
 import { AdminSettings } from '../components/admin/AdminSettings';
 import { AdminProgramsManager } from '../components/admin/AdminProgramsManager';

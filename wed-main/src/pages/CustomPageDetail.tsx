@@ -2,10 +2,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { sanitizeHtml } from '../utils/contentUtils';
 import { useDataContext } from '../context/DataContext';
-import { CustomPage, PageBlock, PageRoute } from '../types';
+import { Certificate, CustomPage, PageBlock, PageRoute } from '../types';
 import { AlertCircle, ArrowLeft, ArrowRight, Award, Building, Building2, Calendar, Camera, CheckCircle2, Clock, Copy, ExternalLink, FileCheck, FileText, HeartHandshake, Loader2, Mail, PenLine, Phone, Play, QrCode, Quote, RotateCcw, Search, Send, ShieldCheck, Sparkles, UploadCloud, UserRoundPlus, Users, X } from 'lucide-react';
 import { adminApi, subscribeToAuthChanges } from '../lib/firebase';
-import { EntityBadge } from '../components/UIPrimitives';
+import { EntityBadge, RichTextRenderer } from '../components/UIPrimitives';
 
 
 

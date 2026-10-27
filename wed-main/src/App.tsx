@@ -190,10 +190,18 @@ function AppMainContent() {
   });
 
   useEffect(() => {
-    if (siteConfig.intro?.enabled === false) {
+    if (siteConfig.intro?.enabled === false || siteConfig.intro?.playMode === 'disabled') {
       setShowIntro(false);
+      return;
     }
-  }, [siteConfig.intro?.enabled]);
+    if (siteConfig.intro?.playMode === 'once_per_session' && typeof window !== 'undefined') {
+      try {
+        if (window.sessionStorage.getItem('sfn_intro_seen') === '1') {
+          setShowIntro(false);
+        }
+      } catch {}
+    }
+  }, [siteConfig.intro?.enabled, siteConfig.intro?.playMode]);
 
   // Normalize old /page/:slug and /trang/:slug links without adding a second history entry.
   useEffect(() => {
@@ -358,7 +366,7 @@ function AppMainContent() {
           config={siteConfig.intro}
           siteName={siteConfig.siteName}
           defaultLogoUrl={siteConfig.logoUrl || '/brand/sky-first-network-web.png'}
-          onFinish={() => setShowIntro(false)}
+          onFinish={() => { try { window.sessionStorage.setItem('sfn_intro_seen', '1'); } catch {} setShowIntro(false); }}
         />
       )}
 

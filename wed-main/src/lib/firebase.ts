@@ -177,3 +177,23 @@ export const canOpenAdminTab = (roleOrUser: AdminUserRole | AdminUser, tab: stri
   if (tab === 'media') return can(roleOrUser, 'media.manage');
   return can(roleOrUser, 'content.edit');
 };
+
+
+export const ALL_CAPABILITIES: { id: AdminCapability; label: string; desc: string }[] = [
+  { id: 'content.edit', label: 'Soạn thảo nội dung', desc: 'Tạo và chỉnh sửa bài viết, trang, chương trình ở trạng thái nháp' },
+  { id: 'content.publish', label: 'Xuất bản & Gỡ xuất bản', desc: 'Đưa nội dung ra công khai, hẹn giờ xuất bản và khôi phục phiên bản' },
+  { id: 'forms.manage', label: 'Quản lý Form Builder', desc: 'Tạo, sửa cấu trúc trường và đóng/mở biểu mẫu chương trình' },
+  { id: 'submissions.view', label: 'Xem & Duyệt hồ sơ đăng ký', desc: 'Xem, lọc, cập nhật trạng thái và xuất CSV danh sách đăng ký' },
+  { id: 'records.manage', label: 'Quản lý dữ liệu danh mục', desc: 'Quản lý sự kiện, cơ hội, tài liệu công khai, nhân sự, đối tác, redirect' },
+  { id: 'media.manage', label: 'Quản lý Thư viện Media', desc: 'Tải lên, chỉnh sửa metadata/tỷ lệ hiển thị và xóa tệp R2' },
+  { id: 'website.visualEdit', label: 'Thiết kế giao diện Website', desc: 'Sử dụng Visual Builder chỉnh sửa Trang chủ, Header, Footer, Menu' },
+  { id: 'settings.manage', label: 'Cấu hình hệ thống & Email', desc: 'Quản lý 18 nhóm cấu hình, Email Outbox, SEO, Thống kê và Sao lưu' },
+  { id: 'users.manage', label: 'Quản lý tài khoản & Phân quyền', desc: 'Tạo tài khoản quản trị, cấp quyền chi tiết và đặt lại mật khẩu' },
+  { id: 'system.manage', label: 'Kiểm tra sức khỏe & Tự động hóa', desc: 'Xem chẩn đoán hệ thống, nhật ký audit và chạy tác vụ tự động' },
+];
+
+export const ROLE_CAPABILITIES: Record<AdminUserRole, AdminCapability[]> = {
+  developer: Array.from(matrix.developer),
+  admin: Array.from(matrix.admin),
+  editor: Array.from(matrix.editor),
+};

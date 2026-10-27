@@ -683,6 +683,46 @@ export const HomePage: React.FC<HomePageProps> = ({
             {section[k]}
           </div>
         ))}
+      {Array.isArray((siteConfig as any).customHomeBlocks) &&
+        ((siteConfig as any).customHomeBlocks as any[]).map((b: any) => (
+          <section
+            key={b.id}
+            className={`px-4 py-12 sm:px-6 lg:px-8 ${
+              b.background === 'navy'
+                ? 'bg-[#071B3A] text-white'
+                : b.background === 'soft'
+                ? 'bg-[#F4F8FC] text-slate-900'
+                : 'bg-white text-slate-900'
+            }`}
+          >
+            <div className="mx-auto max-w-[1380px]">
+              {b.subtitle && (
+                <div className="text-[11px] font-black uppercase tracking-[.16em] text-[#0B66C3]">
+                  {b.subtitle}
+                </div>
+              )}
+              {b.title && <h2 className="mt-2 text-2xl sm:text-3xl font-black">{b.title}</h2>}
+              {b.body && <p className="mt-3 text-sm sm:text-base leading-7 opacity-90 whitespace-pre-line">{b.body}</p>}
+              {b.imageUrl && (
+                <div className="mt-5 overflow-hidden rounded-2xl">
+                  <img src={b.imageUrl} alt={b.imageAlt || b.title || ''} className="w-full h-auto object-contain max-h-[540px]" />
+                </div>
+              )}
+              {b.buttonLabel && (
+                <div className="mt-5">
+                  <button
+                    type="button"
+                    onClick={() => navigateUrl(b.buttonUrl || '/contact', onNavigate)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#0B66C3] px-5 py-2.5 text-xs sm:text-sm font-black text-white"
+                  >
+                    <span>{b.buttonLabel}</span>
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+        ))}
     </main>
   );
 };

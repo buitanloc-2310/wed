@@ -16,6 +16,13 @@ export const ALLOWED_EMAIL_VARS = new Set([
   'duong_dan',
   'tieu_de_bai_viet',
   'ghi_chu',
+  'site_name',
+  'program_title',
+  'applicant_name',
+  'applicant_email',
+  'submission_id',
+  'submitted_at',
+  'contact_email',
 ]);
 
 export function renderSafeEmailTemplate(template = '', vars = {}) {
@@ -68,6 +75,10 @@ async function ensure(c) {
   if (!subCols.has('applicant_phone')) await c.env.DB.prepare('ALTER TABLE website_form_submissions ADD COLUMN applicant_phone TEXT').run();
   if (!subCols.has('field_snapshot_json')) await c.env.DB.prepare("ALTER TABLE website_form_submissions ADD COLUMN field_snapshot_json TEXT NOT NULL DEFAULT '[]'").run();
   if (!subCols.has('form_version')) await c.env.DB.prepare('ALTER TABLE website_form_submissions ADD COLUMN form_version INTEGER NOT NULL DEFAULT 1').run();
+  await c.env.DB.batch([
+    c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_website_forms_program ON website_forms(program_id, status)'),
+    c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_website_form_submissions_program ON website_form_submissions(program_id, created_at DESC)'),
+  ]);
 
   const common = [
     { id: 'full_name', type: 'text', label: 'Họ và tên', required: true, placeholder: 'Nhập họ và tên' },

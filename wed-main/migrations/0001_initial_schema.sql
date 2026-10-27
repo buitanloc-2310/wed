@@ -137,7 +137,6 @@ CREATE TABLE IF NOT EXISTS website_forms (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_website_forms_status ON website_forms(status, updated_at DESC);
-CREATE INDEX IF NOT EXISTS idx_website_forms_program ON website_forms(program_id, status);
 
 CREATE TABLE IF NOT EXISTS website_form_submissions (
   id TEXT PRIMARY KEY,
@@ -157,7 +156,6 @@ CREATE TABLE IF NOT EXISTS website_form_submissions (
   FOREIGN KEY(form_id) REFERENCES website_forms(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_website_form_submissions_form ON website_form_submissions(form_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_website_form_submissions_program ON website_form_submissions(program_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_website_form_submissions_code ON website_form_submissions(application_code);
 
 CREATE TABLE IF NOT EXISTS website_form_rate (

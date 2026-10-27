@@ -751,3 +751,58 @@ export interface CustomPage {
 export interface AdminManagerActionRef {
   handleCreateNew: () => void;
 }
+
+
+export type AdminCapability =
+  | 'content.edit'
+  | 'content.publish'
+  | 'forms.manage'
+  | 'submissions.view'
+  | 'records.manage'
+  | 'media.manage'
+  | 'website.visualEdit'
+  | 'settings.manage'
+  | 'users.manage'
+  | 'system.manage';
+
+export interface IntroSettings extends IntroConfig {
+  posterUrl?: string;
+  logoRevealDurationMs?: number;
+  maxWaitDurationMs?: number;
+  allowSkip?: boolean;
+  playMode?: 'every_home_load' | 'once_per_session' | 'disabled';
+  respectReducedMotion?: boolean;
+  fallbackMode?: 'logo_fade' | 'skip_immediately';
+}
+
+export interface EmailSystemSettings extends EmailConfig {
+  provider?: 'none' | 'resend' | 'cloudflare_email' | 'webhook';
+  senderName?: string;
+  senderEmail?: string;
+  replyToEmail?: string;
+  adminRecipientEmails?: string;
+  apiKeyMasked?: string;
+  sendOnProgramRegistration?: boolean;
+  sendAdminAlertOnRegistration?: boolean;
+  sendOnContactSubmission?: boolean;
+  sendOnStatusChange?: boolean;
+  retryMaxAttempts?: number;
+}
+
+export interface AutomationSystemSettings extends AutomationConfig {
+  enableScheduledPublishing?: boolean;
+  enableAutoCloseExpiredForms?: boolean;
+  enableAutoRedirectOnSlugChange?: boolean;
+  enableAutoSitemapUpdate?: boolean;
+  enableAutoEndedProgramBadge?: boolean;
+  autoArchiveOldDraftDays?: number;
+}
+
+export interface SeoSystemSettings extends SeoGlobalConfig {
+  titleTemplate?: string;
+  defaultTitle?: string;
+  defaultDescription?: string;
+  defaultOgImage?: string;
+  canonicalDomain?: string;
+  allowIndexing?: boolean;
+}

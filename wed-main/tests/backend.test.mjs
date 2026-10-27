@@ -622,4 +622,76 @@ test('Sky First Network — Comprehensive Backend, CMS, Forms, Email, Automation
     const adminHealth = await call(system, 'GET', '/api/system?action=health', undefined, admin);
     assert.equal(adminHealth.status, 200);
   });
+
+  await t.test('16. Legacy D1 Schema (0010-0014) upgrade compatibility: preserves historical data and adds new columns/indexes without error', async () => {
+    const legacyBridge = new PythonSqliteBridge();
+    // 1. Initialize ONLY with the exact legacy 0010-0014 schema (before program_id, version, field_snapshot_json, permissions_json, display_mode, assigned_to existed)
+    await legacyBridge.exec(`
+      CREATE TABLE website_contacts (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL,
+        topic TEXT NOT NULL DEFAULT 'Liên hệ chung', message TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'new', created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE TABLE website_admin_users (
+        uid TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'editor', status TEXT NOT NULL DEFAULT 'active',
+        is_root_owner INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, last_login TEXT
+      );
+      CREATE TABLE website_media_metadata (
+        key TEXT PRIMARY KEY, alt TEXT NOT NULL DEFAULT '', caption TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL
+      );
+      CREATE TABLE website_forms (
+        id TEXT PRIMARY KEY, slug TEXT NOT NULL UNIQUE, title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'draft',
+        fields_json TEXT NOT NULL DEFAULT '[]', settings_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE website_form_submissions (
+        id TEXT PRIMARY KEY, form_id TEXT NOT NULL, application_code TEXT NOT NULL UNIQUE,
+        applicant_name TEXT, applicant_email TEXT, answers_json TEXT NOT NULL DEFAULT '{}',
+        status TEXT NOT NULL DEFAULT 'received', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT INTO website_forms(id, slug, title, status, fields_json) VALUES('legacy-form-1', 'form-cu-2025', 'Biểu mẫu Cũ 2025', 'open', '[{"id":"full_name","type":"text","label":"Họ tên"}]');
+      INSERT INTO website_form_submissions(id, form_id, application_code, applicant_name, applicant_email, answers_json)
+        VALUES('legacy-sub-1', 'legacy-form-1', 'SFN-2025-OLD001', 'Lê Văn Cũ', 'cu@example.com', '{"full_name":"Lê Văn Cũ"}');
+    `);
+
+    // 2. Apply current 0001_initial_schema.sql and 0002_system_automation_analytics.sql on top of the legacy DB
+    const sql0001 = await readFile(new URL('../migrations/0001_initial_schema.sql', import.meta.url), 'utf8');
+    const sql0002 = await readFile(new URL('../migrations/0002_system_automation_analytics.sql', import.meta.url), 'utf8');
+    await legacyBridge.exec(sql0001);
+    await legacyBridge.exec(sql0002);
+
+    try {
+      const legacyDB = {
+        prepare(sql) { return legacyBridge.prepare(sql); },
+        async batch(qs) {
+          await legacyBridge.prepare('BEGIN').run();
+          try {
+            const out = [];
+            for (const q of qs) out.push(await q.run());
+            await legacyBridge.prepare('COMMIT').run();
+            return out;
+          } catch (e) {
+            try { await legacyBridge.prepare('ROLLBACK').run(); } catch {}
+            throw e;
+          }
+        },
+      };
+      const legacyEnv = { ...f.env, DB: legacyDB };
+      const res = await forms.onRequestGet({
+        env: legacyEnv,
+        request: new Request('https://test.invalid/api/forms?lookup=SFN-2025-OLD001'),
+        data: {},
+      });
+      assert.equal(res.status, 200);
+      const body = await res.json();
+      assert.equal(body.ok, true);
+      assert.equal(body.item.application_code, 'SFN-2025-OLD001');
+    } finally {
+      legacyBridge.close();
+    }
+  });
 });

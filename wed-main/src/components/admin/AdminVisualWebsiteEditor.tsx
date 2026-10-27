@@ -1,4 +1,3 @@
-import { fieldLabel } from './AdminLayoutManager';
 import { ImageUrlInput } from '../../components/UIPrimitives';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -30,7 +29,7 @@ import { HomePage } from '../../pages/HomePage';
 import { useDataContext } from '../../context/DataContext';
 import { CustomPage, PageBlock, PageBlockType, PageRoute, SiteConfig } from '../../types';
 import { adminApi } from '../../lib/firebase';
-import { generateSlug } from '../../utils/contentUtils';
+import { fieldLabel, generateSlug } from '../../utils/contentUtils';
 
 type SectionKey =
   | 'hero'

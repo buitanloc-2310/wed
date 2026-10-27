@@ -349,13 +349,30 @@ export const HomepageIntroOverlay: React.FC<{
   const logoSrc = config?.logoUrl || defaultLogoUrl || '/brand/sky-first-network-web.png';
   const videoUrl = String(config?.videoUrl || '').trim();
   const skipLabel = config?.skipLabel || 'Bỏ qua Intro';
+  const allowSkip = config?.allowSkip !== false;
+  const respectReducedMotion = config?.respectReducedMotion !== false;
   const tagline = config?.tagline || 'Kết nối tri thức · Phát triển người trẻ · Lan tỏa giá trị cộng đồng';
-  const logoRevealMs = Math.max(600, Math.min(4000, Number(config?.logoRevealSeconds ?? 1.4) * 1000));
-  const maxDurationMs = Math.max(1500, Math.min(20000, Number(config?.durationSeconds ?? 4.5) * 1000));
+  const logoRevealMs = Math.max(
+    500,
+    Math.min(
+      5000,
+      config?.logoRevealDurationMs != null
+        ? Number(config.logoRevealDurationMs)
+        : Number(config?.logoRevealSeconds ?? 1.4) * 1000
+    )
+  );
+  const maxDurationMs = Math.max(
+    1500,
+    Math.min(
+      20000,
+      config?.maxWaitDurationMs != null
+        ? Number(config.maxWaitDurationMs)
+        : Number(config?.durationSeconds ?? 4.5) * 1000
+    )
+  );
 
   useEffect(() => {
-    // Tôn trọng prefers-reduced-motion
-    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    if (respectReducedMotion && typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       onFinish();
       return;
     }
@@ -428,7 +445,8 @@ export const HomepageIntroOverlay: React.FC<{
         <div className="absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl" />
       </div>
 
-      {/* Nút Bỏ qua Intro luôn hiển thị và phản hồi tức thì */}
+      {/* Nút Bỏ qua Intro luôn hiển thị (khi allowSkip=true) và phản hồi tức thì */}
+      {allowSkip && (
       <div className="absolute top-5 right-5 z-30">
         <button
           type="button"
@@ -439,6 +457,7 @@ export const HomepageIntroOverlay: React.FC<{
           <SkipForward size={15} />
         </button>
       </div>
+      )}
 
       {/* Pha 1: Video Intro (nếu được cấu hình URL video hợp lệ) */}
       {phase === 'video' && videoUrl && !videoFailed && (

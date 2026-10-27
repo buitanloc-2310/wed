@@ -169,10 +169,22 @@ export async function onRequestGet(context) {
     const autoTotalViews = (dailyRows.results || []).reduce((s, r) => s + Number(r.total_views || 0), 0);
     const autoTotalSessions = (dailyRows.results || []).reduce((s, r) => s + Number(r.total_sessions || 0), 0);
     const manualTotalViews = (manualRows.results || []).reduce((s, r) => s + Number(r.pageviews || 0), 0);
+    const mappedManual = (manualRows.results || []).map(r => ({
+      ...r,
+      metric_label: r.period_label || r.path_or_scope || r.metric_date,
+      metric_value: Number(r.pageviews || 0),
+      source: r.source_name,
+      recorded_date: r.metric_date,
+      created_by: r.recorded_by,
+    }));
     return json({
       ok: true,
       days,
       since,
+      totalAutoViews: autoTotalViews,
+      byPage: topPaths.results || [],
+      byDay: dailyRows.results || [],
+      manualEntries: mappedManual,
       automatic: {
         totalViews: autoTotalViews,
         estimatedSessions: autoTotalSessions,
@@ -183,7 +195,7 @@ export async function onRequestGet(context) {
       manual: {
         totalViews: manualTotalViews,
         note: 'Số liệu nhập thủ công từ báo cáo đối chiếu bên ngoài, có ghi rõ nguồn, người nhập và thời điểm.',
-        entries: manualRows.results || [],
+        entries: mappedManual,
       },
     });
   }
@@ -211,7 +223,11 @@ export async function onRequestGet(context) {
       },
       allowedVariables: [...ALLOWED_EMAIL_VARS],
       summary: Object.fromEntries((counts.results || []).map(r => [r.status, Number(r.count || 0)])),
-      items: rows.results || [],
+      items: (rows.results || []).map(r => ({
+        ...r,
+        recipient_email: r.recipient,
+        last_error: r.error_text,
+      })),
     });
   }
 
@@ -237,7 +253,10 @@ export async function onRequestGet(context) {
     ).all();
     return json({
       ok: true,
-      items: (rows.results || []).map(r => ({ ...r, stats: parse(r.stats_json, {}) })),
+      items: (rows.results || []).map(r => {
+        const st = parse(r.stats_json, {});
+        return { ...r, stats: st, sha256: r.checksum, size_bytes: Number(st.bytes || 0) };
+      }),
     });
   }
 
@@ -396,6 +415,13 @@ export async function onRequestPost(context) {
       duong_dan: 'https://skyfirst.io.vn/join',
       tieu_de_bai_viet: 'Thông báo tuyển Thành viên & Tình nguyện viên 2026',
       ghi_chu: 'Bản xem trước mẫu thư bằng dữ liệu giả lập an toàn.',
+      site_name: 'Sky First Network',
+      program_title: 'Chương trình Tình nguyện & Giáo dục Sky First 2026',
+      applicant_name: 'Nguyễn Minh Anh',
+      applicant_email: 'minhanh@example.com',
+      submission_id: 'SFN-20261026-DEMO01',
+      submitted_at: new Date().toLocaleString('vi-VN'),
+      contact_email: 'lienhe@skyfirst.io.vn',
       ...(body.sampleVars && typeof body.sampleVars === 'object' ? body.sampleVars : {}),
     };
     return json({
@@ -404,6 +430,7 @@ export async function onRequestPost(context) {
       renderedSubject: renderSafeEmailTemplate(body.subject || body.subjectTemplate || '', sampleVars),
       renderedBody: renderSafeEmailTemplate(body.body || body.bodyTemplate || '', sampleVars),
       sampleVarsUsed: sampleVars,
+      allowedVariables: [...ALLOWED_EMAIL_VARS],
     });
   }
 
@@ -582,7 +609,7 @@ export async function onRequestPost(context) {
     ).bind(id, label, checksum, JSON.stringify(stats), snapshotText, adminUser.email || adminUser.uid).run();
     await context.env.DB.prepare('INSERT INTO website_admin_audit(actor_uid,target_uid,action,detail) VALUES(?,?,?,?)')
       .bind(adminUser.uid, id, 'system.backup.create', JSON.stringify({ id, label, checksum, stats })).run();
-    return json({ ok: true, id, label, checksum, stats });
+    return json({ ok: true, id, label, checksum, sha256: checksum, size_bytes: stats.bytes, stats });
   }
 
   // 9. Verify or Restore Backup with integrity verification & explicit confirmation
@@ -619,6 +646,26 @@ export async function onRequestPost(context) {
         },
       });
     }
+    // Create automatic pre-restore safety snapshot before overwriting
+    const [curCms, curForms, curRecs] = await Promise.all([
+      context.env.DB.prepare('SELECT collection_name,doc_id,data_json,is_published,updated_at FROM website_cms_documents').all(),
+      context.env.DB.prepare('SELECT id,slug,title,description,program_id,status,version,fields_json,settings_json,updated_at FROM website_forms').all(),
+      context.env.DB.prepare('SELECT id,kind,title,payload,updated_at FROM website_admin_records').all(),
+    ]);
+    const preSnapText = JSON.stringify({
+      schemaVersion: '2026.2',
+      exportedAt: new Date().toISOString(),
+      cmsDocuments: curCms.results || [],
+      forms: curForms.results || [],
+      adminRecords: curRecs.results || [],
+    });
+    const preHash = await computeChecksum(preSnapText);
+    const preId = `bk-pre-restore-${Date.now()}`;
+    await context.env.DB.prepare(
+      `INSERT INTO website_backups(id,label,scope,status,checksum,stats_json,snapshot_json,created_by,created_at)
+       VALUES(?,?,'pre_restore_auto','completed',?,?,?,?,datetime('now'))`
+    ).bind(preId, `Tự động lưu trước khi khôi phục về ${backupId}`, preHash, JSON.stringify({ bytes: preSnapText.length }), preSnapText, adminUser.email || adminUser.uid).run();
+
     const statements = [];
     for (const doc of parsed.cmsDocuments) {
       statements.push(
@@ -658,9 +705,13 @@ export async function onRequestDelete(context) {
   await ensureSystemSchema(context);
   const denied = await requireAdminToken(context, 'settings.manage');
   if (denied) return denied;
+  const u = new URL(context.request.url);
+  const action = clean(u.searchParams.get('action'), 60);
+  const queryId = clean(u.searchParams.get('id'), 100);
   const body = await context.request.json().catch(() => ({}));
-  if (body.manualAnalyticsId) {
-    await context.env.DB.prepare('DELETE FROM website_analytics_manual WHERE id=?').bind(clean(body.manualAnalyticsId, 100)).run();
+  const manualId = clean(body.manualAnalyticsId || (action === 'analytics-manual' ? queryId : ''), 100);
+  if (manualId) {
+    await context.env.DB.prepare('DELETE FROM website_analytics_manual WHERE id=?').bind(manualId).run();
     return json({ ok: true });
   }
   if (body.outboxId) {

@@ -100,3 +100,49 @@ export function sanitizeHtml(input: string): string {
   return root.innerHTML;
 }
 
+
+
+export function fieldLabel(k: string): string {
+  const m: Record<string, string> = {
+    heroBadge: 'Nhãn đầu trang',
+    heroHeading: 'Tiêu đề chính',
+    heroSubtext: 'Mô tả',
+    heroButton1Text: 'Nút 1',
+    heroButton1Url: 'Liên kết nút 1',
+    heroButton2Text: 'Nút 2',
+    heroButton2Url: 'Liên kết nút 2',
+    directionLabel: 'Nhãn định hướng',
+    directionText: 'Nội dung định hướng',
+    directionPillarsCount: 'Số trụ cột',
+    directionPillarsLabel: 'Nhãn số trụ cột',
+    directionValuesCount: 'Số giá trị',
+    directionValuesLabel: 'Nhãn số giá trị',
+    pillarsHeading: 'Nhãn trụ cột',
+    pillarsSubtext: 'Tiêu đề khối',
+    programsLabel: 'Nhãn chương trình',
+    programsHeading: 'Tiêu đề chương trình',
+    unitsLabel: 'Nhãn đơn vị',
+    unitsHeading: 'Tiêu đề đơn vị',
+    unitsIntro: 'Mô tả đơn vị',
+    certificateLabel: 'Nhãn tra cứu',
+    certificateHeading: 'Tiêu đề tra cứu',
+    certificateText: 'Mô tả tra cứu',
+    certificateButtonText: 'Chữ trên nút',
+    certificateButtonUrl: 'Liên kết nút',
+    valuesLabel: 'Nhãn giá trị cốt lõi',
+    valuesHeading: 'Tiêu đề giá trị cốt lõi',
+    newsLabel: 'Nhãn tin tức',
+    newsHeading: 'Tiêu đề tin tức',
+    transparencyHeading: 'Tiêu đề minh bạch',
+    transparencyText: 'Nội dung minh bạch',
+    transparencyButtonText: 'Chữ trên nút',
+    transparencyButtonUrl: 'Liên kết nút',
+    ctaHeading: 'Tiêu đề kêu gọi (CTA)',
+    ctaSubtext: 'Mô tả kêu gọi (CTA)',
+    ctaButtonText: 'Nút chính CTA',
+    ctaButtonUrl: 'Liên kết nút chính CTA',
+    ctaSecondaryButtonText: 'Nút phụ CTA',
+    ctaSecondaryButtonUrl: 'Liên kết nút phụ CTA',
+  };
+  return m[k] || k;
+}

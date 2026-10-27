@@ -12,7 +12,7 @@
    - **Nâng cấp Trình soạn thảo bài viết kiểu Gutenberg & Trình thiết kế Website trực quan**: Đã bổ sung đầy đủ các khối nội dung (H2/H3/H4, đoạn văn, danh sách, trích dẫn, bảng, đường phân cách, ảnh + chú thích, thư viện ảnh, video, hộp callout), kéo thả ảnh trực tiếp từ máy tính vào bài viết, chèn ảnh tại vị trí con trỏ, lưu mẫu khối dùng lại, hoàn tác/làm lại và khôi phục phiên bản.
    - **Trung tâm Cấu hình 18 Nhóm & Tự động hóa (Phụ lục VIII)**: Đã triển khai `functions/api/system.js`, migration `0002_system_automation_analytics.sql`, `AdminSettings.tsx` và `AdminSystemHealth.tsx` đáp ứng đầy đủ 18 nhóm cấu hình, hàng đợi `website_email_outbox` (9 trạng thái minh bạch, whitelist biến mẫu `ALLOWED_EMAIL_VARS`, xem trước không gửi thật, gửi email thử, thử lại có backoff), tự động hóa hẹn giờ xuất bản & đóng form quá hạn, thống kê pageview tự động tách biệt số liệu thủ công, phân quyền chi tiết (`ROLE_CAPABILITIES` + `permissions_json`), và sao lưu/khôi phục toàn vẹn SHA-256.
 
-## II. Danh sách 67 tệp trong gói bàn giao chuẩn hóa (`50 ≤ 67 ≤ 70`)
+## II. Danh sách 68 tệp trong gói bàn giao chuẩn hóa (`50 ≤ 67 ≤ 70`)
 - **Cấu hình gốc & Tài liệu (9 tệp)**: `package.json`, `index.html`, `vite.config.ts`, `tsconfig.json`, `wrangler.jsonc`, `README.md`, `CLOUDFLARE_DEPLOY.md`, `FINAL_RELEASE_AUDIT.md`, `scripts/verify_release.py`
 - **Tài sản tĩnh `public/` (7 tệp)**: `public/_headers`, `public/_redirects`, `public/favicon.svg`, `public/release.json`, `public/robots.txt`, `public/brand/sky-first-network-web.png`, `public/brand/the-sky-first-english-club-web.png`, `public/brand/nha-han-ngu-web.jpg` *(8 tệp trong `public/`)*
 - **Migrations D1 `migrations/` (2 tệp)**: `migrations/0001_initial_schema.sql`, `migrations/0002_system_automation_analytics.sql`
@@ -20,6 +20,6 @@
 - **Mã nguồn Frontend & CMS `src/` (30 tệp)**: `main.tsx`, `App.tsx`, `types.ts`, `index.css`, `context/DataContext.tsx`, `data/baselineData.ts`, `lib/firebase.ts`, `utils/contentUtils.ts`, `components/SiteChrome.tsx`, `components/UIPrimitives.tsx`, `pages/HomePage.tsx`, `pages/AboutPage.tsx`, `pages/NewsPage.tsx`, `pages/NewsDetailPage.tsx`, `pages/ProgramsPage.tsx`, `pages/ProgramDetailPage.tsx`, `pages/CustomPageDetail.tsx`, `pages/AdminPage.tsx`, và 12 tệp quản trị chuyên sâu trong `src/components/admin/`.
 - **Kiểm thử tự động `tests/` (1 tệp)**: `tests/backend.test.mjs` (15 kịch bản kiểm thử toàn diện).
 
-## III. Kết quả Kiểm thử Tự động (15/15 Kịch bản PASS)
-- `node --test tests/backend.test.mjs`: **15/15 nhóm kịch bản PASS (0 lỗi)**.
-- `python3 scripts/verify_release.py`: **PASS (67 tệp, 17 Functions hợp lệ, 29 tệp TS/TSX biên dịch sạch, 28 slug điều hướng khớp hoàn toàn)**.
+## III. Kết quả Kiểm thử Tự động (16/16 Kịch bản PASS)
+- `node --test tests/backend.test.mjs`: **16/16 nhóm kịch bản PASS (0 lỗi)**.
+- `python3 scripts/verify_release.py`: **PASS (68 tệp, 17 Functions hợp lệ, 29 tệp TS/TSX biên dịch sạch, 28 slug điều hướng khớp hoàn toàn)**.

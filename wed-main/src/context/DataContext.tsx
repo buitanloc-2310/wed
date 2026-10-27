@@ -190,7 +190,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   footerSlogan:'', footerAboutText:'', footerCopyright:'© 2026. Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First.', footerCertBadgeText:'Xác thực GCN',footerUnitsBadgeText:'Đơn vị trực thuộc',footerSocialFacebook:'',footerSocialInstagram:'',footerSocialTiktok:'',footerSocialLinkedin:'',footerSocialYoutube:'',footerSocialZalo:'',
   intro: {
     enabled: true,
-    videoUrl: '/brand/sky-first-intro.mp4',
+    videoUrl: '',
     posterUrl: '/brand/sky-first-network-logo.png',
     logoUrl: '/brand/sky-first-network-web.png',
     logoRevealDurationMs: 1400,

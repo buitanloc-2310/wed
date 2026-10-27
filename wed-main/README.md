@@ -2,8 +2,8 @@
 
 Gói dự án hoàn chỉnh, đã kiểm toán, nâng cấp và tối ưu của **Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First (Sky First Network)**, vận hành trên nền tảng **Cloudflare Pages + Cloudflare D1 (SQLite) + Cloudflare R2 (Media) + Firebase Authentication (Xác thực Quản trị)**.
 
-## 1. Kiến trúc & Số lượng tệp bàn giao (67 tệp chuẩn hóa)
-- **Tổng số tệp bàn giao**: **67 tệp** (nằm chính xác trong ngưỡng yêu cầu `50 ≤ tổng số tệp ≤ 70`, không tính `node_modules`).
+## 1. Kiến trúc & Số lượng tệp bàn giao (68 tệp chuẩn hóa)
+- **Tổng số tệp bàn giao**: **68 tệp** (nằm chính xác trong ngưỡng yêu cầu `50 ≤ tổng số tệp ≤ 70`, không tính `node_modules`).
 - **Đã loại bỏ**: Thư mục lồng trùng lặp `wed-main/wed-main/` (99 tệp thừa), 23 tệp component cũ không còn được import và 8 tệp cấu hình dư thừa.
 - **Bảo toàn dữ liệu & tương thích**: Tất cả các bảng D1 (`website_cms_documents`, `website_forms`, `website_form_submissions`, `website_registrations`, `website_participants`, `website_media_metadata`, `website_admin_users`, `website_admin_audit`, `website_admin_records`, `website_comments`, `website_contacts`) được giữ nguyên tương thích ngược 100%, bổ sung thêm các bảng vận hành mới bằng `CREATE TABLE IF NOT EXISTS` và `ALTER TABLE ADD COLUMN` an toàn.
 

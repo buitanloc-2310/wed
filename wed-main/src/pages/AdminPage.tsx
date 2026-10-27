@@ -14,7 +14,7 @@ import { AdminVisualWebsiteEditor } from '../components/admin/AdminVisualWebsite
 import { AdminSystemHealth } from '../components/admin/AdminSystemHealth';
 import { AdminFormsManager } from '../components/admin/AdminFormsManager';
 import { canOpenAdminTab, getAdminProfile, logoutFirebase, signInWithEmailPasswordReal, subscribeToAuthChanges } from '../lib/firebase';
-import { ImageUrlInput } from '../../components/UIPrimitives';
+import { ImageUrlInput } from '../components/UIPrimitives';
 
 
 
@@ -412,7 +412,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {MENU_ITEMS.filter((item) =>
-            canOpenAdminTab(currentAdminUser.role, item.id, currentAdminUser.permissions)
+            canOpenAdminTab(currentAdminUser, item.id)
           ).map((item) => {
             const isActive = activeTab === item.id;
             return (
@@ -734,12 +734,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           )}
 
           {activeTab === 'visual-editor' &&
-            canOpenAdminTab(currentAdminUser.role, 'visual-editor', currentAdminUser.permissions) && (
+            canOpenAdminTab(currentAdminUser, 'visual-editor') && (
               <AdminVisualWebsiteEditor onShowToast={onShowToast} onNavigate={onNavigate} />
             )}
 
           {activeTab === 'system-health' &&
-            canOpenAdminTab(currentAdminUser.role, 'system-health', currentAdminUser.permissions) && (
+            canOpenAdminTab(currentAdminUser, 'system-health') && (
               <AdminSystemHealth />
             )}
 

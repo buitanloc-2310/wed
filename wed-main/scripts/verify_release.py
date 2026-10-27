@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Production Release Verifier — Sky First Network Official Website
+Production Release Verifier — Trang Thông Tin Điện Tử Sky First (Sky First Network)
 Verifies:
-1. Total file count is strictly between 60 and 70 files (satisfying both 50-70 and 60-70 rules, excluding node_modules, dist, .git, __pycache__).
+1. Total file count is strictly <= 69 files (between 60 and 69 files, excluding node_modules, dist, .git, __pycache__).
 2. All required directories, migrations (0001, 0002), Cloudflare Pages Functions, lockfile, and brand assets exist.
 3. Static Module & Symbol Linker Check: every relative `import` in `src/` and `functions/` resolves to an existing file on Linux (case-sensitive), and every named `import { ... }` resolves to an exported symbol in the target file.
 4. Every TypeScript/React file in `src/` transpiles cleanly via Babel (@babel/core) with zero syntax/type errors.
 5. Every Cloudflare Pages Function in `functions/` passes `node --check`.
 6. All public navigation slugs in `DEFAULT_SITE_CONFIG` resolve to configured pages or routes.
+7. Website Rename ("Trang Thông Tin Điện Tử Sky First"), 6-Stage Brand Intro, 12 Editorial Article Templates, Editorial QA Checklist, and Vietnamese Text-to-Speech Reader are present and verified.
 """
 import os
 import re
@@ -74,8 +75,8 @@ def collect_project_files() -> list[Path]:
 def verify_file_count(files: list[Path]) -> None:
     count = len(files)
     print(f'[INFO] Total deliverable files (excluding node_modules/dist/.git): {count}')
-    if not (60 <= count <= 70):
-        fail(f'Deliverable file count must be between 60 and 70 files, found {count}')
+    if not (60 <= count <= 69):
+        fail(f'Deliverable file count must be between 60 and 69 files (hard limit <= 69), found {count}')
 
 
 def verify_required_paths() -> None:
@@ -130,7 +131,6 @@ def verify_relative_imports_and_exports() -> None:
     checked_imports = 0
     for p in code_files:
         text = p.read_text(encoding='utf-8')
-        # 1. Check all relative module paths (static & dynamic)
         for m in re.finditer(r'(?:from\s+[\'"]([^\'"]+)[\'"]|import\(\s*[\'"]([^\'"]+)[\'"]\s*\))', text):
             imp = m.group(1) or m.group(2)
             if not imp.startswith('.'):
@@ -146,7 +146,6 @@ def verify_relative_imports_and_exports() -> None:
             if not target:
                 fail(f'Broken relative import in {p.relative_to(ROOT)} -> "{imp}"')
 
-        # 2. Check all named imports against target exports
         for m in re.finditer(r'import\s+\{([^}]+)\}\s+from\s+[\'"]([^\'"]+)[\'"]', text):
             names = [n.strip().split(' as ')[0].strip() for n in m.group(1).split(',') if n.strip()]
             names = [re.sub(r'^type\s+', '', n).strip() for n in names]
@@ -230,6 +229,49 @@ def verify_navigation_slugs() -> None:
     print(f'[INFO] Verified {len(nav_slugs)} custom-page navigation slugs.')
 
 
+def verify_upgraded_specifications() -> None:
+    # 1. Website Rename ("Trang Thông Tin Điện Tử Sky First")
+    for rel in (
+        'index.html',
+        'src/App.tsx',
+        'src/context/DataContext.tsx',
+        'src/components/SiteChrome.tsx',
+        'src/pages/NewsDetailPage.tsx',
+        'src/pages/AdminPage.tsx',
+        'src/components/admin/AdminSettings.tsx',
+        'functions/api/system.js',
+    ):
+        txt = (ROOT / rel).read_text(encoding='utf-8')
+        if 'Trang Thông Tin Điện Tử Sky First' not in txt:
+            fail(f'Missing official website name "Trang Thông Tin Điện Tử Sky First" in {rel}')
+
+    # 2. 6-Stage Brand Intro in UIPrimitives.tsx
+    uip = (ROOT / 'src/components/UIPrimitives.tsx').read_text(encoding='utf-8')
+    for required_phrase in (
+        'MẠNG LƯỚI GIÁO DỤC VÀ PHÁT TRIỂN CỘNG ĐỒNG SKY FIRST',
+        'TIÊN PHONG SÁNG TẠO',
+        'KẾT NỐI TRI THỨC',
+        'KIẾN TẠO TƯƠNG LAI',
+        'VÌ MỘT CỘNG ĐỒNG BỀN VỮNG',
+        'speechSynthesis',
+    ):
+        if required_phrase not in uip:
+            fail(f'Missing 6-stage Brand Intro requirement "{required_phrase}" in src/components/UIPrimitives.tsx')
+
+    # 3. 12 Editorial Article Templates & QA Checklist in AdminNewsManager.tsx
+    anm = (ROOT / 'src/components/admin/AdminNewsManager.tsx').read_text(encoding='utf-8')
+    if 'EDITORIAL_ARTICLE_TEMPLATES' not in anm or '12. Bài dài đặc biệt (Longform / e-Magazine)' not in anm:
+        fail('Missing 12 Editorial Article Templates in src/components/admin/AdminNewsManager.tsx')
+
+    # 4. Vietnamese TTS Reader, Auto TOC, Reading Progress & NewsArticle JSON-LD in NewsDetailPage.tsx
+    ndp = (ROOT / 'src/pages/NewsDetailPage.tsx').read_text(encoding='utf-8')
+    for feature_token in ('speechSynthesis', 'tocItems', 'readingProgress', 'NewsArticle'):
+        if feature_token not in ndp:
+            fail(f'Missing reader feature "{feature_token}" in src/pages/NewsDetailPage.tsx')
+
+    print('[INFO] Verified Website Rename, 6-Stage Brand Intro, 12 Editorial Templates, Editorial QA, and Vietnamese TTS Reader.')
+
+
 def main() -> None:
     files = collect_project_files()
     verify_file_count(files)
@@ -239,7 +281,8 @@ def main() -> None:
     verify_functions_syntax()
     verify_typescript_and_imports()
     verify_navigation_slugs()
-    print('[PASS] Sky First Network release verification succeeded.')
+    verify_upgraded_specifications()
+    print('[PASS] Trang Thông Tin Điện Tử Sky First — Release verification succeeded.')
 
 
 if __name__ == '__main__':

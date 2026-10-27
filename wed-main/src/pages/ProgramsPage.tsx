@@ -35,12 +35,24 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({
     { id: 'workshop', label: 'Workshop & Tọa đàm', count: publishedPrograms.filter(p => p.category === 'workshop').length },
   ];
 
+  const foldVi = (v: unknown) =>
+    String(v || '')
+      .toLocaleLowerCase('vi')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .trim();
+
   const filteredPrograms = publishedPrograms.filter((prog) => {
     const matchesCat = selectedCategory === 'all' || prog.category === selectedCategory;
+    const qRaw = searchQuery.trim().toLocaleLowerCase('vi');
+    const qFolded = foldVi(searchQuery);
     const matchesQuery =
-      prog.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prog.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prog.location.toLowerCase().includes(searchQuery.toLowerCase());
+      !qRaw ||
+      [prog.title, prog.summary, prog.location, prog.categoryLabel, prog.leadUnit].some((v) => {
+        const s = String(v || '').toLocaleLowerCase('vi');
+        return s.includes(qRaw) || foldVi(v).includes(qFolded);
+      });
     return matchesCat && matchesQuery;
   });
 

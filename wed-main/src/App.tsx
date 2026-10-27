@@ -35,18 +35,20 @@ const VALID_ROUTES: PageRoute[] = [
   'custom-page',
 ];
 
+const DEFAULT_WEBSITE_NAME = 'Trang Thông Tin Điện Tử Sky First';
+
 const PAGE_TITLES: Partial<Record<PageRoute, string>> = {
-  home: 'Trang Chủ | Sky First Network',
-  about: 'Giới Thiệu | Sky First Network',
-  programs: 'Chương Trình & Dự Án | Sky First Network',
-  units: 'Đơn Vị Trực Thuộc | Sky First Network',
-  news: 'Tin Tức & Hoạt Động | Sky First Network',
-  certificate: 'Trung tâm Xác thực Sky First | Sky First Network',
-  sponsor: 'Tài Trợ & Đồng Hành | Sky First Network',
-  join: 'Tham Gia Sky First Network | Sky First Network',
-  contact: 'Liên Hệ & Hợp Tác | Sky First Network',
-  admin: 'Quản trị website | Sky First Network',
-  'custom-page': 'Trang Thông Tin | Sky First Network',
+  home: 'Trang Chủ | Trang Thông Tin Điện Tử Sky First',
+  about: 'Giới Thiệu | Trang Thông Tin Điện Tử Sky First',
+  programs: 'Chương Trình & Dự Án | Trang Thông Tin Điện Tử Sky First',
+  units: 'Đơn Vị Trực Thuộc | Trang Thông Tin Điện Tử Sky First',
+  news: 'Tin Tức & Hoạt Động | Trang Thông Tin Điện Tử Sky First',
+  certificate: 'Trung tâm Xác thực Sky First | Trang Thông Tin Điện Tử Sky First',
+  sponsor: 'Tài Trợ & Đồng Hành | Trang Thông Tin Điện Tử Sky First',
+  join: 'Tham Gia Sky First Network | Trang Thông Tin Điện Tử Sky First',
+  contact: 'Liên Hệ & Hợp Tác | Trang Thông Tin Điện Tử Sky First',
+  admin: 'Quản trị website | Trang Thông Tin Điện Tử Sky First',
+  'custom-page': 'Trang Thông Tin | Trang Thông Tin Điện Tử Sky First',
 };
 
 interface ParsedRoute {
@@ -178,6 +180,11 @@ function AppMainContent() {
   const toastGuardRef = useRef<{ message: string; at: number }>({ message: '', at: 0 });
   const toastTimerRef = useRef<number | null>(null);
 
+  const effectiveSiteName =
+    siteConfig.siteName && siteConfig.siteName !== 'Sky First Network'
+      ? siteConfig.siteName
+      : DEFAULT_WEBSITE_NAME;
+
   // Video Intro state: chỉ kích hoạt khi mở hoặc tải lại trực tiếp Trang chủ (/ hoặc /home)
   // Không phát lại khi chuyển giữa các trang con SPA, không chặn URL trực tiếp của bài viết/trang con
   const [showIntro, setShowIntro] = useState<boolean>(() => {
@@ -213,11 +220,15 @@ function AppMainContent() {
     }
   }, []);
 
-  // SEO metadata & privacy-safe Pageview tracking
+  // SEO metadata, Structured Data (BreadcrumbList) & privacy-safe Pageview tracking
   useEffect(() => {
-    const title = PAGE_TITLES[currentPage] || siteConfig.siteName || 'Sky First Network';
+    const rawTitle = PAGE_TITLES[currentPage] || effectiveSiteName;
+    const title = rawTitle.replace(DEFAULT_WEBSITE_NAME, effectiveSiteName);
     document.title = title;
-    const description = siteConfig.siteDescription || siteConfig.tagline || 'Sky First Network';
+    const description =
+      siteConfig.siteDescription ||
+      siteConfig.tagline ||
+      'Trang Thông Tin Điện Tử Sky First — Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First.';
     const upsert = (selector: string, attr: string, value: string) => {
       let el = document.head.querySelector(selector) as HTMLMetaElement | HTMLLinkElement | null;
       if (!el) {
@@ -229,6 +240,7 @@ function AppMainContent() {
     upsert('meta[name="description"]', 'content', description);
     upsert('meta[property="og:title"]', 'content', title);
     upsert('meta[property="og:description"]', 'content', description);
+    upsert('meta[property="og:site_name"]', 'content', effectiveSiteName);
     let canonical = document.head.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!canonical) {
       canonical = document.createElement('link');
@@ -236,6 +248,35 @@ function AppMainContent() {
       document.head.appendChild(canonical);
     }
     canonical.href = window.location.origin + window.location.pathname;
+
+    // Cập nhật JSON-LD BreadcrumbList cho trang hiện tại
+    if (typeof document !== 'undefined' && currentPage !== 'admin') {
+      let breadcrumbEl = document.head.querySelector('#sfn-jsonld-breadcrumb') as HTMLScriptElement | null;
+      if (!breadcrumbEl) {
+        breadcrumbEl = document.createElement('script');
+        breadcrumbEl.id = 'sfn-jsonld-breadcrumb';
+        breadcrumbEl.type = 'application/ld+json';
+        document.head.appendChild(breadcrumbEl);
+      }
+      const origin = window.location.origin || 'https://skyfirst.io.vn';
+      const items: { '@type': string; position: number; name: string; item: string }[] = [
+        { '@type': 'ListItem', position: 1, name: effectiveSiteName, item: `${origin}/home` },
+      ];
+      if (currentPage !== 'home') {
+        const cleanLabel = title.split('|')[0]?.trim() || currentPage;
+        items.push({
+          '@type': 'ListItem',
+          position: 2,
+          name: cleanLabel,
+          item: `${origin}${window.location.pathname}`,
+        });
+      }
+      breadcrumbEl.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: items,
+      });
+    }
 
     // Ghi nhận pageview tự động (không theo dõi trang quản trị /admin)
     if (currentPage !== 'admin' && typeof window !== 'undefined') {
@@ -259,7 +300,7 @@ function AppMainContent() {
         }),
       }).catch(() => {});
     }
-  }, [currentPage, currentSlug, siteConfig.siteName, siteConfig.siteDescription, siteConfig.tagline]);
+  }, [currentPage, currentSlug, effectiveSiteName, siteConfig.siteDescription, siteConfig.tagline]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -300,8 +341,8 @@ function AppMainContent() {
       setCurrentSlug(slug);
 
       let targetPath = `/${page}`;
-      const brandName = siteConfig.siteName || 'Sky First Network';
-      let pageTitle = (PAGE_TITLES[page] || 'Sky First Network').replace('Sky First Network', brandName);
+      const brandName = effectiveSiteName;
+      let pageTitle = (PAGE_TITLES[page] || DEFAULT_WEBSITE_NAME).replace(DEFAULT_WEBSITE_NAME, brandName);
 
       if (page === 'program-detail' && slug) {
         const cleanSlug = normalizeStoredSlug(slug);
@@ -327,7 +368,7 @@ function AppMainContent() {
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
-    [siteConfig.siteName]
+    [effectiveSiteName]
   );
 
   useEffect(() => {
@@ -338,7 +379,10 @@ function AppMainContent() {
       setCurrentSlug(route.slug);
       setAdminTab(route.adminTab);
       setAdminSlug(route.adminSlug);
-      document.title = (PAGE_TITLES[route.page] || 'Sky First Network').replace('Sky First Network', siteConfig.siteName || 'Sky First Network');
+      document.title = (PAGE_TITLES[route.page] || DEFAULT_WEBSITE_NAME).replace(
+        DEFAULT_WEBSITE_NAME,
+        effectiveSiteName
+      );
     };
 
     window.addEventListener('popstate', handleLocationChange);
@@ -353,20 +397,25 @@ function AppMainContent() {
       window.removeEventListener('popstate', handleLocationChange);
       window.removeEventListener('hashchange', handleLocationChange);
     };
-  }, [siteConfig.siteName]);
+  }, [effectiveSiteName]);
 
   const isSiteClosed = siteConfig.siteStatus === 'closed';
   const showLockscreen = isSiteClosed && currentPage !== 'admin' && siteConfig.closedNoticeType !== 'banner';
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans selection:bg-[#0284C7] selection:text-white">
-      {/* Luồng Video Intro khi mở hoặc tải lại Trang chủ */}
+      {/* Luồng Intro thương hiệu 6 giai đoạn khi mở hoặc tải lại Trang chủ */}
       {showIntro && currentPage === 'home' && siteConfig.intro?.enabled !== false && (
         <HomepageIntroOverlay
           config={siteConfig.intro}
-          siteName={siteConfig.siteName}
+          siteName={effectiveSiteName}
           defaultLogoUrl={siteConfig.logoUrl || '/brand/sky-first-network-web.png'}
-          onFinish={() => { try { window.sessionStorage.setItem('sfn_intro_seen', '1'); } catch {} setShowIntro(false); }}
+          onFinish={() => {
+            try {
+              window.sessionStorage.setItem('sfn_intro_seen', '1');
+            } catch {}
+            setShowIntro(false);
+          }}
         />
       )}
 

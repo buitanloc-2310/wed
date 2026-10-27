@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Calendar,
   Clock,
@@ -8,11 +8,11 @@ import {
   Tag,
   ChevronLeft,
   ChevronRight,
+  Bookmark,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useDataContext } from '../context/DataContext';
-import { ImagePlaceholder } from '../components/UIPrimitives';
-import { EntityBadge } from '../components/UIPrimitives';
+import { ImagePlaceholder, EntityBadge } from '../components/UIPrimitives';
 import { NewsArticle, PageRoute } from '../types';
 
 interface NewsPageProps {
@@ -21,6 +21,15 @@ interface NewsPageProps {
 }
 
 const PAGE_SIZE = 9;
+const SAVED_ARTICLES_KEY = 'sfn_saved_articles';
+
+const foldVietnamese = (value: unknown): string =>
+  String(value || '')
+    .toLocaleLowerCase('vi')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .trim();
 
 export const NewsPage: React.FC<NewsPageProps> = ({
   onSelectArticle,
@@ -30,6 +39,15 @@ export const NewsPage: React.FC<NewsPageProps> = ({
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [pageIndex, setPageIndex] = useState<number>(1);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const list = JSON.parse(window.localStorage.getItem(SAVED_ARTICLES_KEY) || '[]');
+      if (Array.isArray(list)) setSavedIds(list);
+    } catch {}
+  }, []);
 
   const publicArticles = useMemo(
     () =>
@@ -48,8 +66,13 @@ export const NewsPage: React.FC<NewsPageProps> = ({
       cur.count += 1;
       map.set(id, cur);
     }
-    return [{ id: 'all', label: 'Tất cả chuyên mục', count: publicArticles.length }, ...map.values()];
-  }, [publicArticles]);
+    const base = [{ id: 'all', label: 'Tất cả chuyên mục', count: publicArticles.length }, ...map.values()];
+    const savedCount = publicArticles.filter((a) => savedIds.includes(a.id)).length;
+    if (savedCount > 0) {
+      base.push({ id: '__saved__', label: 'Bài đã lưu', count: savedCount });
+    }
+    return base;
+  }, [publicArticles, savedIds]);
 
   const allTags = useMemo(() => {
     const s = new Set<string>();
@@ -62,17 +85,25 @@ export const NewsPage: React.FC<NewsPageProps> = ({
   }, [publicArticles]);
 
   const filteredArticles = useMemo(() => {
-    const q = searchQuery.trim().toLocaleLowerCase('vi');
+    const qRaw = searchQuery.trim().toLocaleLowerCase('vi');
+    const qFolded = foldVietnamese(searchQuery);
     return publicArticles.filter((a) => {
-      const catOk = selectedCategory === 'all' || a.category === selectedCategory;
+      const catOk =
+        selectedCategory === 'all'
+          ? true
+          : selectedCategory === '__saved__'
+          ? savedIds.includes(a.id)
+          : a.category === selectedCategory;
       const tagOk = !selectedTag || (a.tags || []).includes(selectedTag);
       const qOk =
-        !q ||
-        [a.title, a.summary, a.categoryLabel, ...(a.tags || [])]
-          .some((v) => String(v || '').toLocaleLowerCase('vi').includes(q));
+        !qRaw ||
+        [a.title, a.summary, a.categoryLabel, a.author, ...(a.tags || [])].some((v) => {
+          const s = String(v || '').toLocaleLowerCase('vi');
+          return s.includes(qRaw) || foldVietnamese(v).includes(qFolded);
+        });
       return catOk && tagOk && qOk;
     });
-  }, [publicArticles, selectedCategory, selectedTag, searchQuery]);
+  }, [publicArticles, selectedCategory, selectedTag, searchQuery, savedIds]);
 
   const featuredArticle =
     selectedCategory === 'all' && !selectedTag && !searchQuery.trim()
@@ -100,7 +131,7 @@ export const NewsPage: React.FC<NewsPageProps> = ({
             {siteConfig.newsHeading || 'Tin tức & hoạt động'}
           </h1>
           <p className="text-slate-600 text-sm sm:text-base leading-relaxed font-normal">
-            {siteConfig.siteDescription || 'Cập nhật tin tức, bản tin và thông báo chính thức từ Mạng lưới Sky First.'}
+            {siteConfig.siteDescription || 'Cập nhật tin tức, bản tin và thông báo chính thức trên Trang Thông Tin Điện Tử Sky First.'}
           </p>
         </div>
 
@@ -122,6 +153,7 @@ export const NewsPage: React.FC<NewsPageProps> = ({
                       : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
                   }`}
                 >
+                  {cat.id === '__saved__' && <Bookmark size={12} />}
                   <span>{cat.label}</span>
                   <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${selectedCategory === cat.id ? 'bg-white/20 text-white' : 'bg-white text-slate-500'}`}>
                     {cat.count}
@@ -139,7 +171,7 @@ export const NewsPage: React.FC<NewsPageProps> = ({
                   setSearchQuery(e.target.value);
                   setPageIndex(1);
                 }}
-                placeholder="Tìm kiếm bài viết, chủ đề..."
+                placeholder="Tìm bài viết (có dấu hoặc không dấu)..."
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-4 py-2 text-xs sm:text-sm outline-none focus:bg-white focus:border-[#0284C7]"
               />
             </div>
@@ -318,20 +350,22 @@ export const NewsPage: React.FC<NewsPageProps> = ({
               type="button"
               disabled={currentPage <= 1}
               onClick={() => setPageIndex((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 disabled:opacity-40"
+              className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 disabled:opacity-40"
+              aria-label="Trang trước"
             >
-              <ChevronLeft size={14} /> Trước
+              <ChevronLeft size={16} />
             </button>
-            <span className="text-xs font-bold text-slate-600 px-3">
+            <span className="px-4 py-2 text-xs font-bold text-slate-700">
               Trang {currentPage} / {totalPages}
             </span>
             <button
               type="button"
               disabled={currentPage >= totalPages}
               onClick={() => setPageIndex((p) => Math.min(totalPages, p + 1))}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 disabled:opacity-40"
+              className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 disabled:opacity-40"
+              aria-label="Trang tiếp"
             >
-              Tiếp <ChevronRight size={14} />
+              <ChevronRight size={16} />
             </button>
           </div>
         )}

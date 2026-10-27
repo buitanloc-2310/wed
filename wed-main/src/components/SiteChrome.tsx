@@ -4,9 +4,6 @@ import { useDataContext } from '../context/DataContext';
 import { PageRoute, SiteConfig } from '../types';
 import { getArticleSlug, getProgramSlug } from '../utils/contentUtils';
 
-
-
-
 interface NavbarProps {
   currentPage: PageRoute;
   onNavigate: (page: PageRoute, slug?: string) => void;
@@ -14,6 +11,16 @@ interface NavbarProps {
 
 type MenuItem = { label: string; page: PageRoute; slug?: string; description?: string };
 type MenuGroup = { label: string; items: MenuItem[] };
+
+const DEFAULT_WEBSITE_TITLE = 'Trang Thông Tin Điện Tử Sky First';
+
+const foldVietnamese = (value: unknown): string =>
+  String(value || '')
+    .toLocaleLowerCase('vi')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .trim();
 
 const activityIcons = [GraduationCap, Users, HeartHandshake, Leaf, FlaskConical, FolderKanban, CalendarDays, Handshake, Megaphone];
 const menuIcon = (label: string) => {
@@ -41,6 +48,11 @@ const filterPublicMenuItems = (items: MenuItem[] = []) =>
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
   const { siteConfig, programs, newsArticles, customPages } = useDataContext();
+  const displaySiteName =
+    siteConfig.siteName && siteConfig.siteName !== 'Sky First Network'
+      ? siteConfig.siteName
+      : DEFAULT_WEBSITE_TITLE;
+
   const rawGroups: MenuGroup[] = (siteConfig.navigationGroups || []) as MenuGroup[];
   const groups: MenuGroup[] = useMemo(
     () =>
@@ -87,20 +99,24 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
 
   const activityGroup = useMemo(() => groups.find((g) => g.label === 'Hoạt động'), [groups]);
   const searchResults = useMemo(() => {
-    const q = searchQuery.trim().toLocaleLowerCase('vi');
-    if (q.length < 2) return [] as { label: string; meta: string; page: PageRoute; slug?: string }[];
-    const normalize = (v: unknown) => String(v || '').toLocaleLowerCase('vi');
-    const rows: [string, string, PageRoute, string?][] = [];
+    const qRaw = searchQuery.trim().toLocaleLowerCase('vi');
+    const qFolded = foldVietnamese(searchQuery);
+    if (qRaw.length < 2) return [] as { label: string; meta: string; snippet?: string; page: PageRoute; slug?: string }[];
+    const matches = (v: unknown) => {
+      const raw = String(v || '').toLocaleLowerCase('vi');
+      return raw.includes(qRaw) || foldVietnamese(v).includes(qFolded);
+    };
+    const rows: [string, string, string, PageRoute, string?][] = [];
     for (const p of programs.filter((x) => x.isPublished !== false))
-      if ([p.title, p.summary, p.categoryLabel].some((v) => normalize(v).includes(q)))
-        rows.push([p.title, p.categoryLabel || 'Chương trình', 'program-detail', getProgramSlug(p)]);
+      if ([p.title, p.summary, p.categoryLabel, p.leadUnit].some(matches))
+        rows.push([p.title, p.categoryLabel || 'Chương trình', p.summary || '', 'program-detail', getProgramSlug(p)]);
     for (const n of newsArticles.filter((x) => x.isPublished !== false))
-      if ([n.title, n.summary, n.categoryLabel].some((v) => normalize(v).includes(q)))
-        rows.push([n.title, n.categoryLabel || 'Tin tức', 'news-detail', getArticleSlug(n)]);
+      if ([n.title, n.summary, n.categoryLabel, ...(n.tags || [])].some(matches))
+        rows.push([n.title, n.categoryLabel || 'Tin tức', n.summary || '', 'news-detail', getArticleSlug(n)]);
     for (const p of customPages.filter((x) => x.isPublished !== false && x.slug !== 'certificate' && x.slug !== 'sponsor'))
-      if ([p.title, p.summary, p.badge].some((v) => normalize(v).includes(q)))
-        rows.push([p.title, p.badge || 'Trang thông tin', 'custom-page', p.slug]);
-    return rows.slice(0, 10).map(([label, meta, page, slug]) => ({ label, meta, page, slug }));
+      if ([p.title, p.summary, p.badge].some(matches))
+        rows.push([p.title, p.badge || 'Trang thông tin', p.summary || '', 'custom-page', p.slug]);
+    return rows.slice(0, 12).map(([label, meta, snippet, page, slug]) => ({ label, meta, snippet, page, slug }));
   }, [searchQuery, programs, newsArticles, customPages]);
 
   const go = (page: PageRoute, slug?: string) => {
@@ -137,7 +153,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
         <button
           onClick={() => setOpenDesktopGroup(open ? null : group.label)}
           aria-expanded={open}
-          className="px-4 py-2.5 rounded-2xl text-[15px] font-semibold text-slate-700 hover:text-[#0B66C3] hover:bg-sky-50 transition flex items-center gap-1.5"
+          className="px-3.5 py-2.5 rounded-2xl text-[15px] font-semibold text-slate-700 hover:text-[#0B66C3] hover:bg-sky-50 transition flex items-center gap-1.5"
         >
           <HeaderIcon size={16} />
           {group.label}
@@ -189,32 +205,40 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/80">
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="h-[76px] flex items-center justify-between gap-5">
+        <div className="h-[76px] flex items-center justify-between gap-4">
           <button
             onClick={() => go('home')}
-            className="flex items-center min-w-0 text-left"
-            aria-label={`${siteConfig.siteName || 'Sky First Network'} - Trang chủ`}
+            className="flex items-center gap-3 min-w-0 text-left group"
+            aria-label={`${displaySiteName} - Trang chủ`}
           >
             {siteConfig.logoUrl ? (
               <img
                 src={siteConfig.logoUrl}
-                alt={siteConfig.siteName || 'Sky First Network'}
-                className="h-10 sm:h-[50px] w-auto object-contain"
+                alt={displaySiteName}
+                className="h-10 sm:h-[46px] w-auto object-contain shrink-0"
               />
             ) : (
-              <span className="font-black text-slate-900">{siteConfig.siteName || 'Sky First Network'}</span>
+              <span className="font-black text-slate-900">{displaySiteName}</span>
             )}
+            <span className="hidden 2xl:block min-w-0 border-l border-slate-200 pl-3">
+              <span className="block text-[12px] font-black uppercase tracking-tight text-[#071B3A] group-hover:text-[#0B66C3] transition leading-tight">
+                {displaySiteName}
+              </span>
+              <span className="block text-[10px] font-semibold text-slate-500 leading-tight mt-0.5">
+                Mạng lưới Giáo dục &amp; Phát triển Cộng đồng Sky First
+              </span>
+            </span>
           </button>
 
           <nav
-            className="hidden lg:flex flex-1 items-center justify-center gap-4 xl:gap-7 px-4"
+            className="hidden lg:flex flex-1 items-center justify-center gap-3 xl:gap-5 px-2"
             data-sf-menu-root
             onMouseEnter={cancelClose}
             onMouseLeave={scheduleClose}
           >
             <button
               onClick={() => go('home')}
-              className={`px-4 py-2.5 rounded-2xl text-[15px] font-semibold transition flex items-center gap-1.5 ${
+              className={`px-3.5 py-2.5 rounded-2xl text-[15px] font-semibold transition flex items-center gap-1.5 ${
                 currentPage === 'home' ? 'text-[#0B66C3] bg-sky-50' : 'text-slate-700 hover:text-[#0B66C3] hover:bg-sky-50'
               }`}
             >
@@ -243,7 +267,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
                     <button
                       onClick={() => setOpenDesktopGroup(open ? null : group.label)}
                       aria-expanded={open}
-                      className="px-4 py-2.5 rounded-2xl text-[15px] font-semibold text-slate-700 hover:text-[#0B66C3] hover:bg-sky-50 transition flex items-center gap-1.5"
+                      className="px-3.5 py-2.5 rounded-2xl text-[15px] font-semibold text-slate-700 hover:text-[#0B66C3] hover:bg-sky-50 transition flex items-center gap-1.5"
                     >
                       {group.label}
                       <ChevronDown size={15} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -375,19 +399,35 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
             </button>
           </div>
 
-          <button
-            onClick={() => setMobileOpen((v) => !v)}
-            className="lg:hidden p-2.5 rounded-xl border border-slate-200 text-slate-700"
-            aria-label="Mở menu"
-          >
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
+          <div className="flex lg:hidden items-center gap-2">
+            <button
+              onClick={() => {
+                setSearchOpen(true);
+                setMobileOpen(false);
+              }}
+              className="p-2.5 rounded-xl border border-slate-200 text-slate-700"
+              aria-label="Tìm kiếm"
+            >
+              <Search size={20} />
+            </button>
+            <button
+              onClick={() => setMobileOpen((v) => !v)}
+              className="p-2.5 rounded-xl border border-slate-200 text-slate-700"
+              aria-label="Mở menu"
+            >
+              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </div>
       </div>
 
       {mobileOpen && (
         <div className="lg:hidden border-t border-slate-200 bg-white max-h-[calc(100vh-76px)] overflow-y-auto">
           <div className="px-4 py-4 space-y-2">
+            <div className="rounded-2xl bg-sky-50/70 border border-sky-100 px-4 py-3 mb-2">
+              <div className="text-xs font-black uppercase tracking-wider text-[#0B66C3]">{displaySiteName}</div>
+              <div className="text-[11px] text-slate-600 mt-0.5">Mạng lưới Giáo dục &amp; Phát triển Cộng đồng Sky First</div>
+            </div>
             <button onClick={() => go('home')} className="w-full text-left px-4 py-3 rounded-xl font-bold bg-slate-50">
               Trang chủ
             </button>
@@ -442,7 +482,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
                 autoFocus
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm bài viết, dự án, trang thông tin..."
+                placeholder="Tìm bài viết, dự án, trang thông tin (hỗ trợ cả có dấu & không dấu)..."
                 className="min-w-0 flex-1 bg-transparent text-base font-semibold outline-none placeholder:text-slate-400"
               />
               <button onClick={() => setSearchOpen(false)} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100">
@@ -452,10 +492,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
             <div className="max-h-[58vh] overflow-y-auto p-3">
               {searchQuery.trim().length < 2 ? (
                 <div className="p-8 text-center text-sm text-slate-500">
-                  Nhập ít nhất 2 ký tự để tìm nhanh trong bài viết, chương trình và trang công khai.
+                  Nhập ít nhất 2 ký tự để tìm nhanh trong bài viết, chương trình và trang công khai trên {displaySiteName}.
                 </div>
               ) : searchResults.length === 0 ? (
-                <div className="p-8 text-center text-sm text-slate-500">Chưa tìm thấy nội dung phù hợp.</div>
+                <div className="p-8 text-center text-sm text-slate-500">Chưa tìm thấy nội dung phù hợp với từ khóa "{searchQuery}".</div>
               ) : (
                 searchResults.map((r, i) => (
                   <button
@@ -469,12 +509,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
                   >
                     <span className="block text-[11px] font-black uppercase tracking-wider text-[#0B66C3]">{r.meta}</span>
                     <span className="mt-1 block font-extrabold text-slate-900">{r.label}</span>
+                    {r.snippet && <span className="mt-1 block text-xs text-slate-500 line-clamp-2">{r.snippet}</span>}
                   </button>
                 ))
               )}
             </div>
             <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-[11px] text-slate-500">
-              Tìm kiếm trong nội dung đang được công khai trên website.
+              Tìm kiếm trên {displaySiteName} — hỗ trợ tiếng Việt có dấu và không dấu.
             </div>
           </div>
         </div>
@@ -523,6 +564,10 @@ function resolveInternal(url: string): { page: PageRoute; slug?: string } | null
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const { siteConfig } = useDataContext();
+  const displaySiteName =
+    siteConfig.siteName && siteConfig.siteName !== 'Sky First Network'
+      ? siteConfig.siteName
+      : DEFAULT_WEBSITE_TITLE;
   const contacts = siteConfig.footerContacts || [];
   const portals = (siteConfig.footerPortals || []).filter((p: any) => !String(p.domain || '').includes('ctt.'));
   const legal = siteConfig.footerLegalLinks || [];
@@ -555,7 +600,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <section className="mb-8 rounded-[22px] border border-white/10 bg-white/[.035] p-5">
             <div className="mb-4 flex items-center gap-2 text-[11px] font-black uppercase tracking-[.16em] text-sky-300">
               <ShieldCheck size={14} />
-              Thông tin Mạng lưới
+              Thông tin Mạng lưới &amp; {displaySiteName}
             </div>
             <div className="grid gap-x-8 gap-y-3 sm:grid-cols-2 xl:grid-cols-4">
               {org.map((x: any, i: number) => (
@@ -577,10 +622,13 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div>
             <img
               src={siteConfig.logoUrl || '/brand/sky-first-network-web.png'}
-              alt={siteConfig.siteName || 'Sky First Network'}
+              alt={displaySiteName}
               className="h-12 w-auto max-w-[190px] object-contain object-left"
             />
-            <p className="mt-3 max-w-sm text-[13px] leading-6 text-slate-400">
+            <div className="mt-3 text-xs font-black uppercase tracking-wider text-sky-300">
+              {displaySiteName}
+            </div>
+            <p className="mt-2 max-w-sm text-[13px] leading-6 text-slate-400">
               {siteConfig.footerAboutText || siteConfig.siteDescription}
             </p>
           </div>
@@ -593,7 +641,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </div>
           </div>
           <div>
-            <h4 className="mb-3 text-xs font-black uppercase tracking-[.12em] text-white">Hoạt động & Tham gia</h4>
+            <h4 className="mb-3 text-xs font-black uppercase tracking-[.12em] text-white">Hoạt động &amp; Tham gia</h4>
             <div className="grid gap-2">
               {join.map((x: any) => (
                 <LinkRow key={x.label} label={x.label} url={x.slug ? `/${x.slug}` : `/${x.page}`} />
@@ -631,6 +679,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {portals.map((x: any) => {
                 const Icon = iconMap[x.icon || 'link'] || LinkIcon;
+                const portalLabel = x.label === 'Website Sky First Network' ? DEFAULT_WEBSITE_TITLE : x.label;
                 return (
                   <a
                     key={x.label + x.url}
@@ -643,7 +692,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                       <Icon size={16} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <b className="block text-[12px] leading-5 text-white">{x.label}</b>
+                      <b className="block text-[12px] leading-5 text-white">{portalLabel}</b>
                       <span className="mt-1 block text-[10px] leading-4 text-slate-500">
                         {x.description || 'Truy cập nền tảng Sky First'}
                       </span>
@@ -670,10 +719,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
 // --- Consolidated from SiteStatusNotices.tsx ---
 
-// -----------------------------------------------------------------------------
-// Preserved component source: SiteClosedNotice.tsx
-// -----------------------------------------------------------------------------
-
 interface SiteClosedNoticeProps {
   siteConfig: SiteConfig;
   onNavigateToAdmin?: () => void;
@@ -683,6 +728,11 @@ interface SiteClosedNoticeProps {
 export const SiteClosedNotice: React.FC<SiteClosedNoticeProps> = ({
   siteConfig,
 }) => {
+  const displaySiteName =
+    siteConfig.siteName && siteConfig.siteName !== 'Sky First Network'
+      ? siteConfig.siteName
+      : DEFAULT_WEBSITE_TITLE;
+
   const reasonText =
     siteConfig.closedReasonText ||
     (siteConfig.closedReason === 'editing'
@@ -715,18 +765,16 @@ export const SiteClosedNotice: React.FC<SiteClosedNoticeProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between relative overflow-hidden font-sans selection:bg-sky-500 selection:text-white">
-      {/* Background radial glow */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-sky-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Top Header Bar */}
       <header className="relative z-10 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md px-4 sm:px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#00A3FF] to-[#2563EB] flex items-center justify-center font-black text-white text-lg shadow-md shadow-sky-500/20 overflow-hidden">
             {siteConfig.logoUrl ? (
               <img
                 src={siteConfig.logoUrl}
-                alt={siteConfig.siteName}
+                alt={displaySiteName}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -735,22 +783,19 @@ export const SiteClosedNotice: React.FC<SiteClosedNoticeProps> = ({
           </div>
           <div>
             <h1 className="text-sm sm:text-base font-black tracking-tight text-white">
-              {siteConfig.siteName || 'Sky First Network'}
+              {displaySiteName}
             </h1>
             <p className="text-[11px] text-slate-400 font-medium -mt-0.5">
-              {siteConfig.siteDescription || siteConfig.tagline || 'Mạng lưới Giáo dục & Phát triển Cộng đồng'}
+              {siteConfig.siteDescription || siteConfig.tagline || 'Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First'}
             </p>
           </div>
         </div>
       </header>
 
-      {/* Main Center Announcement Card */}
       <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 my-6">
         <div className="max-w-2xl w-full bg-slate-800/90 backdrop-blur-xl border border-slate-700/80 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
-          {/* Subtle top indicator */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-rose-500 to-sky-500" />
 
-          {/* Status Icon & Badge */}
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900/80 border border-slate-700/80 shadow-inner mb-5">
             {getReasonIcon()}
           </div>
@@ -767,18 +812,15 @@ export const SiteClosedNotice: React.FC<SiteClosedNoticeProps> = ({
             </span>
           </div>
 
-          {/* Main Title */}
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-snug mb-3">
             {reasonText}
           </h2>
 
-          {/* Description Message */}
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal mb-8 max-w-lg mx-auto">
             {siteConfig.closedMessage ||
-              'Website hiện đang tạm thời đóng để đội ngũ kỹ thuật và ban biên tập chuẩn hóa dữ liệu mới. Mọi dịch vụ và tiện ích sẽ sớm trở lại hoạt động bình thường.'}
+              'Trang Thông Tin Điện Tử Sky First hiện đang tạm thời đóng để đội ngũ kỹ thuật và ban biên tập chuẩn hóa dữ liệu mới. Mọi dịch vụ và tiện ích sẽ sớm trở lại hoạt động bình thường.'}
           </p>
 
-          {/* Key Details Grid: Estimated reopen & Hotline */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-8 text-left max-w-lg mx-auto">
             <div className="bg-slate-900/70 border border-slate-700/70 rounded-2xl p-3.5 flex items-start gap-3">
               <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 shrink-0">
@@ -809,7 +851,6 @@ export const SiteClosedNotice: React.FC<SiteClosedNoticeProps> = ({
             </div>
           </div>
 
-          {/* Action Row */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             {siteConfig.email && (
               <a
@@ -834,20 +875,14 @@ export const SiteClosedNotice: React.FC<SiteClosedNoticeProps> = ({
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="relative z-10 border-t border-slate-800/80 bg-slate-900/60 backdrop-blur-md px-4 py-3 text-center text-xs text-slate-500">
         <p>
-          {siteConfig.siteName || 'Sky First Network'} • Thông báo tạm dừng hoạt động
+          {displaySiteName} • Thông báo tạm dừng hoạt động
         </p>
       </footer>
     </div>
   );
 };
-
-
-// -----------------------------------------------------------------------------
-// Preserved component source: SiteClosedTopBanner.tsx
-// -----------------------------------------------------------------------------
 
 interface SiteClosedTopBannerProps {
   siteConfig: SiteConfig;
@@ -869,7 +904,7 @@ export const SiteClosedTopBanner: React.FC<SiteClosedTopBannerProps> = ({
   const reasonDetail =
     siteConfig.closedReasonText ||
     siteConfig.closedMessage ||
-    'Website hiện đang tạm đóng một số tính năng để cập nhật dữ liệu mới.';
+    'Trang Thông Tin Điện Tử Sky First hiện đang tạm đóng một số tính năng để cập nhật dữ liệu mới.';
 
   return (
     <aside aria-label="Thông báo trạng thái hệ thống" className="bg-gradient-to-r from-amber-600 via-rose-600 to-amber-700 text-white text-xs py-2.5 px-4 shadow-md sticky top-0 z-50 transition-all border-b border-white/15">

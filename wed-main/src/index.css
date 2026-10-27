@@ -26,14 +26,14 @@
 }
 
 /* Typography & Rich Text Formatting for Custom Pages & Editors */
-.formatted-content h1, .prose h1 { font-size: 1.875rem; font-weight: 800; margin-top: 1.5rem; margin-bottom: 0.75rem; line-height: 1.25; color: #0f172a; }
-.formatted-content h2, .prose h2 { font-size: 1.5rem; font-weight: 800; margin-top: 1.25rem; margin-bottom: 0.625rem; line-height: 1.3; color: #0f172a; }
-.formatted-content h3, .prose h3 { font-size: 1.25rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; line-height: 1.4; color: #1e293b; }
-.formatted-content h4, .prose h4 { font-size: 1.125rem; font-weight: 700; margin-top: 0.875rem; margin-bottom: 0.5rem; color: #334155; }
-.formatted-content p, .prose p { margin-top: 0.625rem; margin-bottom: 0.625rem; line-height: 1.7; }
+.formatted-content h1, .prose h1 { font-size: 1.875rem; font-weight: 800; margin-top: 1.5rem; margin-bottom: 0.75rem; line-height: 1.32; color: #0f172a; }
+.formatted-content h2, .prose h2 { font-size: 1.5rem; font-weight: 800; margin-top: 1.25rem; margin-bottom: 0.625rem; line-height: 1.35; color: #0f172a; scroll-margin-top: 6rem; }
+.formatted-content h3, .prose h3 { font-size: 1.25rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; line-height: 1.42; color: #1e293b; scroll-margin-top: 6rem; }
+.formatted-content h4, .prose h4 { font-size: 1.125rem; font-weight: 700; margin-top: 0.875rem; margin-bottom: 0.5rem; line-height: 1.45; color: #334155; }
+.formatted-content p, .prose p { margin-top: 0.625rem; margin-bottom: 0.625rem; line-height: 1.75; }
 .formatted-content ul, .prose ul { list-style-type: disc; margin-left: 1.5rem; margin-top: 0.75rem; margin-bottom: 0.75rem; }
 .formatted-content ol, .prose ol { list-style-type: decimal; margin-left: 1.5rem; margin-top: 0.75rem; margin-bottom: 0.75rem; }
-.formatted-content li, .prose li { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+.formatted-content li, .prose li { margin-top: 0.25rem; margin-bottom: 0.25rem; line-height: 1.7; }
 .formatted-content blockquote, .prose blockquote { border-left: 4px solid #0284c7; padding-left: 1rem; font-style: italic; color: #475569; margin: 1rem 0; background-color: #f8fafc; padding-top: 0.5rem; padding-bottom: 0.5rem; border-radius: 0 0.5rem 0.5rem 0; }
 .formatted-content a, .prose a { color: #0284c7; text-decoration: underline; font-weight: 600; }
 .formatted-content strong, .formatted-content b, .prose strong, .prose b { font-weight: 700; color: #0f172a; }
@@ -62,14 +62,21 @@
   }
 }
 
-
-/* 2026 UI polish: stable Vietnamese typography + consistent rendering */
+/* 2026 UI polish: stable Vietnamese typography + anti-clipping diacritics */
 html { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 body, button, input, textarea, select { letter-spacing: normal; word-spacing: normal; font-kerning: normal; }
-h1, h2, h3, h4, h5, h6, p, span, a, button, label { word-break: normal; overflow-wrap: break-word; }
+h1, h2, h3, h4, h5, h6, p, span, a, button, label, li, td, th, figcaption {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+h1, h2, h3, h4 {
+  line-height: 1.28;
+  padding-top: 0.04em;
+  padding-bottom: 0.04em;
+}
 .sf-surface { background: linear-gradient(180deg, rgba(240,249,255,.72), rgba(255,255,255,1) 22rem); }
 
-/* Responsive hardening 2026: không để chữ/ảnh/khối bị khuất hoặc tràn ngang. */
+/* Responsive hardening 2026: không để chữ/ảnh/khối bị khuất hoặc tràn ngang từ 320px đến 1920px */
 html, body, #root { width: 100%; min-width: 0; max-width: 100%; overflow-x: clip; }
 * { box-sizing: border-box; min-width: 0; }
 img, video, iframe, svg, canvas { max-width: 100%; }
@@ -79,9 +86,9 @@ button, a, input, textarea, select { max-width: 100%; }
 .formatted-content pre, .prose pre { max-width: 100%; overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .formatted-content img, .prose img { margin-inline: auto; object-fit: contain; }
 @media (max-width: 640px) {
-  .formatted-content h1, .prose h1 { font-size: 1.625rem; }
-  .formatted-content h2, .prose h2 { font-size: 1.35rem; }
-  .formatted-content h3, .prose h3 { font-size: 1.15rem; }
+  .formatted-content h1, .prose h1 { font-size: 1.625rem; line-height: 1.32; }
+  .formatted-content h2, .prose h2 { font-size: 1.35rem; line-height: 1.36; }
+  .formatted-content h3, .prose h3 { font-size: 1.15rem; line-height: 1.4; }
   .formatted-content p, .prose p, .formatted-content li, .prose li { line-height: 1.75; }
   .formatted-content th, .formatted-content td, .prose th, .prose td { padding: .55rem .65rem; font-size: .85rem; }
 }
@@ -95,11 +102,11 @@ img, video, canvas, svg { max-width: 100%; }
 
 /* Shared publishing design system */
 :root{--sf-navy:#071b3a;--sf-blue:#0b5fb4;--sf-border:#dce5ef;--sf-radius:16px;--sf-shadow:0 12px 35px rgba(7,27,58,.07)}
-body{background:#fff;color:#142b47}h1,h2,h3{font-kerning:normal}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #0b5fb4;outline-offset:3px}button:disabled{cursor:wait}button, a{touch-action:manipulation}
+body{background:#fff;color:#142b47}h1,h2,h3{font-kerning:normal}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #0b5fb4;outline-offset:2px}button:disabled{cursor:wait}button, a{touch-action:manipulation}
 .sf-home-hero{background-image:radial-gradient(ellipse at 85% 15%,rgba(28,102,175,.38),transparent 65%)}.sf-image-fallback{background-image:radial-gradient(circle at 20% 15%,rgba(67,160,225,.12),transparent 60%)}
 .formatted-content figure,.prose figure{margin:1.5rem 0}.formatted-content figcaption,.prose figcaption{font-size:.8rem;text-align:center;color:#64748b;margin-top:.6rem}.formatted-content img,.prose img{max-width:100%;height:auto;border-radius:14px}
 .formatted-content video,.prose video{display:block;width:100%;border-radius:14px}.sf-hero-visual img{min-height:0}
-@media(max-width:640px){h1{line-height:1.2!important;letter-spacing:-.025em!important}.sf-home-hero h1{font-size:34px!important}.sf-home-hero .sf-hero-visual{width:100%}input,textarea,select{font-size:16px}}
+@media(max-width:640px){h1{line-height:1.26!important;letter-spacing:-.02em!important}.sf-home-hero h1{font-size:32px!important}.sf-home-hero .sf-hero-visual{width:100%}input,textarea,select{font-size:16px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{animation:none!important;transition:none!important}}
 
 /* Article media inserted from CMS: natural ratio inside articles, editorial caption + source. */
@@ -113,7 +120,28 @@ body{background:#fff;color:#142b47}h1,h2,h3{font-kerning:normal}button:focus-vis
 .cms-anim{animation-duration:.55s;animation-fill-mode:both;animation-timing-function:cubic-bezier(.22,.61,.36,1)}
 .cms-anim-fade{animation-name:sfnFade}.cms-anim-slide{animation-name:sfnSlide}.cms-anim-zoom{animation-name:sfnZoom}.cms-anim-reveal{animation-name:sfnReveal}
 @keyframes sfnFade{from{opacity:0}to{opacity:1}}@keyframes sfnSlide{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}@keyframes sfnZoom{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}@keyframes sfnReveal{from{opacity:0;clip-path:inset(0 0 25% 0)}to{opacity:1;clip-path:inset(0)}}
-html[data-motion="reduced"] .cms-anim{animation:none!important}
+
+/* 6-Stage Brand Intro Choreography Keyframes (Phần VII, Mục 31–36) */
+@keyframes sfnIntroSpinStop {
+  0% { transform: scale(0.86) rotate(0deg); opacity: 0.4; }
+  25% { transform: scale(0.96) rotate(90deg); opacity: 1; }
+  75% { transform: scale(1.03) rotate(330deg); opacity: 1; }
+  100% { transform: scale(1) rotate(360deg); opacity: 1; }
+}
+@keyframes sfnAuraBreath {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.12); opacity: 0.65; }
+}
+.sfn-intro-spin {
+  animation: sfnIntroSpinStop 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+.sfn-intro-aura {
+  animation: sfnAuraBreath 3.5s ease-in-out infinite;
+}
+
+html[data-motion="reduced"] .cms-anim,
+html[data-motion="reduced"] .sfn-intro-spin,
+html[data-motion="reduced"] .sfn-intro-aura { animation:none!important }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 .article-media img{display:block;max-width:100%;height:auto;margin-inline:auto}.article-media figcaption{font-size:.78rem;line-height:1.45;color:#64748b;text-align:center;margin-top:.65rem}.article-media .media-credit{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
 

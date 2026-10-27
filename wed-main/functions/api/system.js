@@ -415,7 +415,7 @@ export async function onRequestPost(context) {
       duong_dan: 'https://skyfirst.io.vn/join',
       tieu_de_bai_viet: 'Thông báo tuyển Thành viên & Tình nguyện viên 2026',
       ghi_chu: 'Bản xem trước mẫu thư bằng dữ liệu giả lập an toàn.',
-      site_name: 'Sky First Network',
+      site_name: 'Trang Thông Tin Điện Tử Sky First',
       program_title: 'Chương trình Tình nguyện & Giáo dục Sky First 2026',
       applicant_name: 'Nguyễn Minh Anh',
       applicant_email: 'minhanh@example.com',
@@ -444,15 +444,15 @@ export async function onRequestPost(context) {
       return json({ ok: false, status: 'invalid_config', error: 'Địa chỉ email nhận thử nghiệm không hợp lệ.' }, { status: 400 });
     }
     const id = crypto.randomUUID();
-    const subject = clean(body.subject || '[Sky First Network] Kiểm tra cấu hình gửi email hệ thống', 200);
+    const subject = clean(body.subject || '[Trang Thông Tin Điện Tử Sky First] Kiểm tra cấu hình gửi email hệ thống', 200);
     const textBody = clean(
-      body.body || `Xin chào,\n\nĐây là thư kiểm tra kết nối từ Trung tâm Cấu hình Sky First Network.\nNgười thực hiện: ${adminUser.email}\nThời gian: ${new Date().toISOString()}\n\nLưu ý: Thư thử nghiệm không bao giờ đính kèm khóa bí mật hay mật khẩu hệ thống.`,
+      body.body || `Xin chào,\n\nĐây là thư kiểm tra kết nối từ Trung tâm Cấu hình Trang Thông Tin Điện Tử Sky First.\nNgười thực hiện: ${adminUser.email}\nThời gian: ${new Date().toISOString()}\n\nLưu ý: Thư thử nghiệm không bao giờ đính kèm khóa bí mật hay mật khẩu hệ thống.`,
       3000
     );
     await context.env.DB.prepare(
       `INSERT INTO website_email_outbox(id,idempotency_key,recipient,reply_to,from_name,subject,body,event_type,reference_id,status,attempts,max_attempts,created_at,updated_at)
        VALUES(?,?,?,?,?,?,?,'admin_email_test',?,'queued',0,3,datetime('now'),datetime('now'))`
-    ).bind(id, `test:${id}`, recipient, clean(body.replyTo, 180), clean(body.fromName || 'Sky First Network', 120), subject, textBody, adminUser.uid).run();
+    ).bind(id, `test:${id}`, recipient, clean(body.replyTo, 180), clean(body.fromName || 'Trang Thông Tin Điện Tử Sky First', 120), subject, textBody, adminUser.uid).run();
 
     const row = await context.env.DB.prepare('SELECT * FROM website_email_outbox WHERE id=?').bind(id).first();
     const dispatchResult = await dispatchSingleEmail(context, row);

@@ -141,7 +141,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   const [emailSettings, setEmailSettings] = useState<EmailSystemSettings>(() => ({
     enabled: Boolean(siteConfig.emailSettings?.enabled),
     provider: siteConfig.emailSettings?.provider || 'none',
-    senderName: siteConfig.emailSettings?.senderName || 'Sky First Network',
+    senderName: siteConfig.emailSettings?.senderName || 'Trang Thông Tin Điện Tử Sky First',
     senderEmail: siteConfig.emailSettings?.senderEmail || 'lienhe@skyfirst.io.vn',
     replyToEmail: siteConfig.emailSettings?.replyToEmail || 'lienhe@skyfirst.io.vn',
     adminRecipientEmails: siteConfig.emailSettings?.adminRecipientEmails || 'lienhe@skyfirst.io.vn',
@@ -175,8 +175,8 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   }));
 
   const [seoSettings, setSeoSettings] = useState<SeoSystemSettings>(() => ({
-    titleTemplate: siteConfig.seoSettings?.titleTemplate || '%s | Sky First Network',
-    defaultTitle: siteConfig.seoSettings?.defaultTitle || 'Sky First Network — Mạng lưới Giáo dục & Phát triển Cộng đồng',
+    titleTemplate: siteConfig.seoSettings?.titleTemplate || '%s | Trang Thông Tin Điện Tử Sky First',
+    defaultTitle: siteConfig.seoSettings?.defaultTitle || 'Trang Thông Tin Điện Tử Sky First — Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First',
     defaultDescription:
       siteConfig.seoSettings?.defaultDescription ||
       'Sky First Network kết nối các hoạt động giáo dục, phát triển người trẻ, tình nguyện và truyền thông cộng đồng.',
@@ -242,7 +242,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   );
   const [closedMessage, setClosedMessage] = useState(
     siteConfig.closedMessage ||
-      'Website Sky First Network đang tạm thời đóng để nâng cấp và biên tập nội dung mới. Chúng tôi sẽ sớm quay trở lại!'
+      'Trang Thông Tin Điện Tử Sky First đang tạm thời đóng để nâng cấp và biên tập nội dung mới. Chúng tôi sẽ sớm quay trở lại!'
   );
   const [closedEstimatedReopen, setClosedEstimatedReopen] = useState(
     siteConfig.closedEstimatedReopen || 'Dự kiến hoàn tất trong ngày'
@@ -1008,7 +1008,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                     className="h-11 w-auto object-contain"
                   />
                   <div>
-                    <div className="font-extrabold text-sm text-slate-900">{siteName || 'Sky First Network'}</div>
+                    <div className="font-extrabold text-sm text-slate-900">{siteName || 'Trang Thông Tin Điện Tử Sky First'}</div>
                     <div className="text-[11px] text-slate-500">{siteDescription}</div>
                   </div>
                 </div>

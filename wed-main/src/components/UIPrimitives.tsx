@@ -1,9 +1,8 @@
 import React, { CSSProperties, ErrorInfo, ReactNode, useEffect, useId, useState, useRef } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle2, ExternalLink, Home, Image as ImageIcon, Images, Loader2, RotateCcw, Search, SkipForward, Sparkles, UploadCloud, X, ZoomIn } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, ExternalLink, Home, Image as ImageIcon, Images, Loader2, RotateCcw, Search, SkipForward, Sparkles, UploadCloud, Volume2, VolumeX, X, ZoomIn } from 'lucide-react';
 import { IntroConfig } from '../types';
 import { sanitizeHtml } from '../utils/contentUtils';
 import { MEDIA_ACCEPT, MediaItem, listMedia, uploadMedia } from '../lib/firebase';
-
 
 // -----------------------------------------------------------------------------
 // ErrorBoundary
@@ -211,7 +210,6 @@ export const ImageLightboxModal: React.FC<{
 
 // -----------------------------------------------------------------------------
 // ImagePlaceholder — Mặc định hiển thị TOÀN BỘ ẢNH & GIỮ NGUYÊN TỶ LỆ GỐC (không tự cắt ảnh)
-// Chỉ dùng cover khi người biên tập chủ động truyền objectFit="cover"
 // -----------------------------------------------------------------------------
 
 interface ImagePlaceholderProps {
@@ -242,7 +240,6 @@ export const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({
 
   useEffect(() => setFailed(false), [imageUrl]);
 
-  // Mặc định: giữ nguyên tỷ lệ gốc (original / contain), không tự cắt nội dung ảnh (kể cả ảnh dọc A4, poster, infographic)
   const isExplicitCover = objectFit === 'cover';
   const aspectClass = isExplicitCover
     ? ({
@@ -328,183 +325,407 @@ export const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({
 };
 
 // -----------------------------------------------------------------------------
-// HomepageIntroOverlay — Luồng Video Intro khi mở/tải lại trang chủ (Mục 5)
-// - Mở/tải lại trang chủ: video intro bắt đầu từ đầu (muted để tuân thủ chính sách autoplay trình duyệt)
-// - Video kết thúc (hoặc fallback khi chưa có file video): logo Sky First Network xuất hiện tinh tế rồi chuyển mượt vào trang chủ
-// - Có nút "Bỏ qua Intro" hoạt động tức thì, không khóa thao tác người dùng
-// - Tôn trọng prefers-reduced-motion
-// - Chuyển trang con SPA không phát lại; mở trực tiếp URL bài viết/trang con không bị chặn
+// HomepageIntroOverlay — Kịch bản Intro thương hiệu 6 giai đoạn (Phần VII, Mục 31–36)
+// Giai đoạn 1 (appear): Logo xuất hiện trên nền thương hiệu xanh navy với ánh sáng nhẹ phía sau
+// Giai đoạn 2 (rotate): Logo xoay tròn mượt mà có gia tốc tăng/giảm tự nhiên và dừng ổn định ở chính giữa
+// Giai đoạn 3 (name): Tên đầy đủ "MẠNG LƯỚI GIÁO DỤC VÀ PHÁT TRIỂN CỘNG ĐỒNG SKY FIRST" xuất hiện rõ + giọng đọc tiếng Việt
+// Giai đoạn 4 (slogan): 4 vế khẩu hiệu xuất hiện tuần tự theo nhịp giọng đọc:
+//   "TIÊN PHONG SÁNG TẠO – KẾT NỐI TRI THỨC – KIẾN TẠO TƯƠNG LAI – VÌ MỘT CỘNG ĐỒNG BỀN VỮNG"
+// Giai đoạn 5 (hold): Giữ khung hình hoàn chỉnh (logo + tên đầy đủ + 4 vế khẩu hiệu)
+// Giai đoạn 6 (exiting): Chuyển cảnh mượt vào Trang chủ
 // -----------------------------------------------------------------------------
+
+const OFFICIAL_INTRO_NETWORK_NAME = 'MẠNG LƯỚI GIÁO DỤC VÀ PHÁT TRIỂN CỘNG ĐỒNG SKY FIRST';
+const OFFICIAL_INTRO_SLOGAN_CLAUSES = [
+  'TIÊN PHONG SÁNG TẠO',
+  'KẾT NỐI TRI THỨC',
+  'KIẾN TẠO TƯƠNG LAI',
+  'VÌ MỘT CỘNG ĐỒNG BỀN VỮNG',
+] as const;
+
+type IntroStage = 'video' | 'appear' | 'rotate' | 'name' | 'slogan' | 'hold' | 'exiting';
 
 export const HomepageIntroOverlay: React.FC<{
   config?: IntroConfig;
   siteName?: string;
   defaultLogoUrl?: string;
   onFinish: () => void;
-}> = ({ config, siteName = 'Sky First Network', defaultLogoUrl = '/brand/sky-first-network-web.png', onFinish }) => {
+}> = ({
+  config,
+  siteName = 'Trang Thông Tin Điện Tử Sky First',
+  defaultLogoUrl = '/brand/sky-first-network-web.png',
+  onFinish,
+}) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [phase, setPhase] = useState<'video' | 'logo' | 'exiting'>('video');
+  const videoUrl = String(config?.videoUrl || '').trim();
   const [videoFailed, setVideoFailed] = useState(false);
+  const [stage, setStage] = useState<IntroStage>(() => (videoUrl ? 'video' : 'appear'));
+  const [sloganBeat, setSloganBeat] = useState<number>(0);
+  const [voiceActive, setVoiceActive] = useState<boolean>(true);
+  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'speaking' | 'blocked' | 'unsupported'>('idle');
+  const spokenStagesRef = useRef<{ name: boolean; slogan: boolean }>({ name: false, slogan: false });
 
   const logoSrc = config?.logoUrl || defaultLogoUrl || '/brand/sky-first-network-web.png';
-  const videoUrl = String(config?.videoUrl || '').trim();
   const skipLabel = config?.skipLabel || 'Bỏ qua Intro';
   const allowSkip = config?.allowSkip !== false;
   const respectReducedMotion = config?.respectReducedMotion !== false;
-  const tagline = config?.tagline || 'Kết nối tri thức · Phát triển người trẻ · Lan tỏa giá trị cộng đồng';
-  const logoRevealMs = Math.max(
-    500,
-    Math.min(
-      5000,
-      config?.logoRevealDurationMs != null
-        ? Number(config.logoRevealDurationMs)
-        : Number(config?.logoRevealSeconds ?? 1.4) * 1000
-    )
-  );
-  const maxDurationMs = Math.max(
-    1500,
-    Math.min(
-      20000,
-      config?.maxWaitDurationMs != null
-        ? Number(config.maxWaitDurationMs)
-        : Number(config?.durationSeconds ?? 4.5) * 1000
-    )
-  );
+  const displayWebsiteTitle =
+    siteName && siteName !== 'Sky First Network' ? siteName : 'Trang Thông Tin Điện Tử Sky First';
 
+  const stopSpeech = () => {
+    try {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    } catch {}
+  };
+
+  const handleImmediateSkip = () => {
+    stopSpeech();
+    onFinish();
+  };
+
+  // Hỗ trợ phát âm báo nhẹ nhàng bằng Web Audio API khi mở đầu (không lấn át giọng đọc)
+  const playSubtleBrandChord = () => {
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        void ctx.resume().catch(() => {});
+      }
+      const now = ctx.currentTime;
+      const freqs = [261.63, 329.63, 392.0, 523.25]; // C4 - E4 - G4 - C5
+      freqs.forEach((f, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, now + idx * 0.08);
+        gain.gain.setValueAtTime(0.0001, now + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.018, now + idx * 0.08 + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 1.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 1.45);
+      });
+    } catch {
+      // Không bao giờ treo trang nếu trình duyệt chặn AudioContext
+    }
+  };
+
+  // Đọc lời thuyết minh tiếng Việt chuẩn mực qua Web Speech API (Mục 33)
+  const speakVietnamesePhrase = (text: string) => {
+    if (!voiceActive) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      setVoiceStatus('unsupported');
+      return;
+    }
+    try {
+      const synth = window.speechSynthesis;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'vi-VN';
+      utterance.rate = 0.96;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      const voices = synth.getVoices?.() || [];
+      const viVoice =
+        voices.find((v) => v.lang?.toLowerCase().startsWith('vi') && /google|microsoft|hoai|my|linh|nam|viet/i.test(v.name)) ||
+        voices.find((v) => v.lang?.toLowerCase().startsWith('vi'));
+      if (viVoice) utterance.voice = viVoice;
+
+      utterance.onstart = () => setVoiceStatus('speaking');
+      utterance.onend = () => setVoiceStatus((prev) => (prev === 'speaking' ? 'idle' : prev));
+      utterance.onerror = () => setVoiceStatus('blocked');
+
+      synth.speak(utterance);
+    } catch {
+      setVoiceStatus('blocked');
+    }
+  };
+
+  // Điều phối 6 giai đoạn chuyển động (Mục 32)
   useEffect(() => {
-    if (respectReducedMotion && typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    if (
+      respectReducedMotion &&
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ) {
       onFinish();
       return;
     }
 
-    // Nếu không có videoUrl hoặc video lỗi -> chuyển thẳng sang pha hiển thị logo thương hiệu tinh tế
-    if (!videoUrl || videoFailed) {
-      setPhase('logo');
-      const t1 = window.setTimeout(() => setPhase('exiting'), logoRevealMs);
-      const t2 = window.setTimeout(() => onFinish(), logoRevealMs + 450);
-      return () => {
-        window.clearTimeout(t1);
-        window.clearTimeout(t2);
-      };
-    }
-
-    // Có videoUrl: bắt đầu phát từ đầu (currentTime = 0)
-    const v = videoRef.current;
-    if (v) {
-      try {
-        v.currentTime = 0;
-        const playPromise = v.play();
-        if (playPromise && typeof playPromise.catch === 'function') {
-          playPromise.catch(() => {
-            // Trình duyệt chặn autoplay hoặc lỗi nguồn video -> chuyển sang pha logo dự phòng
-            setVideoFailed(true);
-          });
+    if (videoUrl && !videoFailed && stage === 'video') {
+      const v = videoRef.current;
+      if (v) {
+        try {
+          v.currentTime = 0;
+          const playPromise = v.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(() => setVideoFailed(true));
+          }
+        } catch {
+          setVideoFailed(true);
         }
-      } catch {
-        setVideoFailed(true);
       }
+      const maxWait = Math.max(2000, Math.min(12000, Number(config?.maxWaitDurationMs ?? 6000)));
+      const videoTimeout = window.setTimeout(() => setStage('appear'), maxWait);
+      return () => window.clearTimeout(videoTimeout);
     }
 
-    // Bảo vệ timeout tối đa nếu video tải chậm
-    const fallbackTimer = window.setTimeout(() => {
-      setPhase((current) => (current === 'video' ? 'logo' : current));
-    }, maxDurationMs);
+    if (stage === 'video' && (!videoUrl || videoFailed)) {
+      setStage('appear');
+      return;
+    }
 
-    return () => window.clearTimeout(fallbackTimer);
-  }, [videoUrl, videoFailed, logoRevealMs, maxDurationMs, onFinish]);
+    if (stage !== 'appear') return;
 
-  useEffect(() => {
-    if (phase !== 'logo') return;
-    const t1 = window.setTimeout(() => setPhase('exiting'), logoRevealMs);
-    const t2 = window.setTimeout(() => onFinish(), logoRevealMs + 450);
+    playSubtleBrandChord();
+
+    // Lịch trình 6 giai đoạn chuẩn:
+    // 0.0s - 0.6s: Giai đoạn 1 (appear) - Logo xuất hiện cùng ánh sáng nền
+    // 0.6s - 3.0s: Giai đoạn 2 (rotate) - Logo xoay tròn mượt 360 độ và dừng chính giữa
+    // 3.0s - 6.0s: Giai đoạn 3 (name) - Hiển thị & đọc tên đầy đủ Mạng lưới
+    // 6.0s - 12.0s: Giai đoạn 4 (slogan) - Hiển thị & đọc tuần tự 4 vế khẩu hiệu
+    // 12.0s - 14.2s: Giai đoạn 5 (hold) - Giữ khung hình hoàn chỉnh
+    // 14.2s - 14.8s: Giai đoạn 6 (exiting) - Chuyển mượt vào trang chủ
+    const timers: number[] = [];
+    timers.push(window.setTimeout(() => setStage('rotate'), 550));
+    timers.push(window.setTimeout(() => setStage('name'), 2950));
+    timers.push(
+      window.setTimeout(() => {
+        setStage('slogan');
+        setSloganBeat(1);
+      }, 5900)
+    );
+    timers.push(window.setTimeout(() => setSloganBeat(2), 7350));
+    timers.push(window.setTimeout(() => setSloganBeat(3), 8800));
+    timers.push(window.setTimeout(() => setSloganBeat(4), 10250));
+    timers.push(window.setTimeout(() => setStage('hold'), 11900));
+    timers.push(window.setTimeout(() => setStage('exiting'), 14100));
+    timers.push(
+      window.setTimeout(() => {
+        stopSpeech();
+        onFinish();
+      }, 14650)
+    );
+
     return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
+      timers.forEach((id) => window.clearTimeout(id));
     };
-  }, [phase, logoRevealMs, onFinish]);
+  }, [stage === 'video', videoUrl, videoFailed, respectReducedMotion]);
+
+  // Kích hoạt giọng đọc ở Giai đoạn 3 và Giai đoạn 4
+  useEffect(() => {
+    if (stage === 'name' && !spokenStagesRef.current.name) {
+      spokenStagesRef.current.name = true;
+      speakVietnamesePhrase('Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First.');
+    } else if (stage === 'slogan' && !spokenStagesRef.current.slogan) {
+      spokenStagesRef.current.slogan = true;
+      speakVietnamesePhrase(
+        'Tiên phong sáng tạo. Kết nối tri thức. Kiến tạo tương lai. Vì một cộng đồng bền vững.'
+      );
+    }
+  }, [stage, voiceActive]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onFinish();
+      if (e.key === 'Escape') handleImmediateSkip();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onFinish]);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      stopSpeech();
+    };
+  }, []);
+
+  const stageOrder: IntroStage[] = ['appear', 'rotate', 'name', 'slogan', 'hold', 'exiting'];
+  const currentStageIndex = Math.max(0, stageOrder.indexOf(stage));
+  const showName = currentStageIndex >= 2;
+  const showSlogan = currentStageIndex >= 3;
+  const isHoldComplete = currentStageIndex >= 4;
+
+  const handleReplayOrToggleVoice = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      setVoiceActive(true);
+      playSubtleBrandChord();
+      speakVietnamesePhrase(
+        'Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First. Tiên phong sáng tạo. Kết nối tri thức. Kiến tạo tương lai. Vì một cộng đồng bền vững.'
+      );
+    } catch {}
+  };
 
   return (
     <div
       role="region"
-      aria-label="Giới thiệu mở đầu Sky First Network"
-      className={`fixed inset-0 z-[180] flex flex-col items-center justify-center bg-[#061A3A] text-white transition-opacity duration-500 ${
-        phase === 'exiting' ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      aria-label="Giới thiệu mở đầu Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First"
+      className={`fixed inset-0 z-[180] flex flex-col items-center justify-between bg-[#061A3A] text-white transition-opacity duration-500 p-4 sm:p-8 overflow-y-auto ${
+        stage === 'exiting' ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
-      {/* Background subtle brand aura */}
+      {/* Nền thương hiệu xanh navy sâu với hiệu ứng quầng sáng mềm (Giai đoạn 1) */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[#0B66C3]/30 blur-3xl" />
-        <div className="absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl" />
+        <div className="sfn-intro-aura absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 h-[360px] w-[360px] sm:h-[520px] sm:w-[520px] rounded-full bg-gradient-to-tr from-[#0B66C3]/40 via-sky-400/25 to-cyan-300/20 blur-3xl" />
+        <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-[#0B66C3]/25 blur-3xl" />
+        <div className="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-cyan-400/15 blur-3xl" />
       </div>
 
-      {/* Nút Bỏ qua Intro luôn hiển thị (khi allowSkip=true) và phản hồi tức thì */}
-      {allowSkip && (
-      <div className="absolute top-5 right-5 z-30">
-        <button
-          type="button"
-          onClick={onFinish}
-          className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-slate-950/55 hover:bg-white hover:text-[#061A3A] px-4 py-2.5 text-xs sm:text-sm font-black tracking-wide backdrop-blur-md shadow-xl transition"
-        >
-          <span>{skipLabel}</span>
-          <SkipForward size={15} />
-        </button>
-      </div>
-      )}
+      {/* Thanh điều khiển phía trên: Nhãn trang thông tin + Nút thuyết minh + Nút Bỏ qua Intro */}
+      <div className="relative z-30 w-full max-w-5xl flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-white/10 px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-sky-200 backdrop-blur-md">
+          <Sparkles size={13} className="text-cyan-300 shrink-0" />
+          <span>{displayWebsiteTitle}</span>
+        </div>
 
-      {/* Pha 1: Video Intro (nếu được cấu hình URL video hợp lệ) */}
-      {phase === 'video' && videoUrl && !videoFailed && (
-        <div className="relative z-10 w-full h-full flex items-center justify-center p-4">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleReplayOrToggleVoice}
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-cyan-300/30 bg-slate-900/60 hover:bg-sky-500/20 px-3.5 py-2 text-xs font-bold text-cyan-100 backdrop-blur-md transition cursor-pointer"
+            title="Phát thuyết minh giọng đọc tiếng Việt"
+          >
+            {voiceStatus === 'speaking' ? <Volume2 size={14} className="text-cyan-300 animate-pulse" /> : <Volume2 size={14} />}
+            <span>{voiceStatus === 'speaking' ? 'Đang thuyết minh' : 'Nghe thuyết minh'}</span>
+          </button>
+
+          {allowSkip && (
+            <button
+              type="button"
+              onClick={handleImmediateSkip}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-slate-950/65 hover:bg-white hover:text-[#061A3A] px-4 py-2 text-xs sm:text-sm font-black tracking-wide backdrop-blur-md shadow-xl transition cursor-pointer"
+            >
+              <span>{skipLabel}</span>
+              <SkipForward size={15} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Pha Video tùy chọn (nếu quản trị viên cấu hình videoUrl hợp lệ) */}
+      {stage === 'video' && videoUrl && !videoFailed && (
+        <div className="relative z-20 my-auto w-full flex items-center justify-center p-4">
           <video
             ref={videoRef}
             src={videoUrl}
             muted
             playsInline
             preload="auto"
-            onEnded={() => setPhase('logo')}
+            onEnded={() => setStage('appear')}
             onError={() => setVideoFailed(true)}
-            className="max-h-[82vh] max-w-[92vw] w-auto h-auto rounded-3xl shadow-2xl object-contain"
+            className="max-h-[76vh] max-w-[92vw] w-auto h-auto rounded-3xl shadow-2xl object-contain"
           />
         </div>
       )}
 
-      {/* Pha 2: Logo Sky First Network xuất hiện tinh tế trước khi vào Trang chủ */}
-      {(phase === 'logo' || phase === 'exiting' || !videoUrl || videoFailed) && (
-        <div className="relative z-20 flex flex-col items-center text-center px-6 max-w-xl animate-in fade-in zoom-in-95 duration-500">
-          <div className="rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_28px_80px_rgba(0,0,0,0.4)] border border-sky-200/30">
-            <img
-              src={logoSrc}
-              alt={siteName}
-              className="h-16 sm:h-24 w-auto max-w-[280px] object-contain mx-auto"
-            />
+      {/* Khung chính của 6 giai đoạn Intro Thương hiệu */}
+      {stage !== 'video' && (
+        <div className="relative z-20 my-auto flex flex-col items-center text-center max-w-4xl w-full px-3 sm:px-6 py-4">
+          {/* Giai đoạn 1 & 2: Logo xuất hiện trên nền sáng sang trọng và xoay tròn mượt mà rồi dừng ổn định ở chính giữa */}
+          <div className="relative flex items-center justify-center">
+            <div
+              className={`rounded-full bg-white p-5 sm:p-7 shadow-[0_28px_80px_rgba(0,0,0,0.45)] border-2 border-cyan-300/40 transition-transform duration-700 ${
+                stage === 'rotate' ? 'sfn-intro-spin' : 'scale-100 rotate-0'
+              }`}
+            >
+              <img
+                src={logoSrc}
+                alt="Logo Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First"
+                className="h-20 w-20 sm:h-28 sm:w-28 object-contain mx-auto select-none"
+              />
+            </div>
           </div>
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-white/10 px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">
-            <Sparkles size={13} />
-            <span>{siteName}</span>
+
+          {/* Giai đoạn 3: Tên đầy đủ chính thức của Mạng lưới */}
+          <div
+            className={`mt-6 sm:mt-8 transition-all duration-700 ${
+              showName ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
+            }`}
+          >
+            <p className="text-[11px] sm:text-xs font-extrabold uppercase tracking-[0.22em] text-cyan-300 mb-2">
+              SKY FIRST NETWORK
+            </p>
+            <h1 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tight text-white leading-snug max-w-3xl mx-auto">
+              {OFFICIAL_INTRO_NETWORK_NAME}
+            </h1>
           </div>
-          <p className="mt-3 text-sm sm:text-base font-medium text-slate-200 leading-relaxed">
-            {tagline}
-          </p>
+
+          {/* Giai đoạn 4 & 5: Khẩu hiệu 4 vế xuất hiện tuần tự theo nhịp giọng đọc */}
+          <div
+            className={`mt-6 sm:mt-8 w-full max-w-4xl transition-all duration-700 ${
+              showSlogan ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
+            }`}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+              {OFFICIAL_INTRO_SLOGAN_CLAUSES.map((clause, idx) => {
+                const clauseIndex = idx + 1;
+                const isRevealed = sloganBeat >= clauseIndex || isHoldComplete;
+                const isCurrentBeat = stage === 'slogan' && sloganBeat === clauseIndex;
+                return (
+                  <div
+                    key={clause}
+                    className={`rounded-2xl border px-3.5 py-3 sm:py-3.5 transition-all duration-500 flex flex-col items-center justify-center min-h-[64px] ${
+                      isRevealed
+                        ? isCurrentBeat
+                          ? 'border-cyan-300 bg-sky-500/25 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]'
+                          : 'border-white/20 bg-white/10 text-sky-50'
+                        : 'border-white/5 bg-white/[0.02] text-white/20 scale-95 opacity-25'
+                    }`}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-300/90 mb-0.5">
+                      0{clauseIndex}
+                    </span>
+                    <span className="text-xs sm:text-[13px] font-black uppercase tracking-wide text-center leading-snug">
+                      {clause}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Dòng khẩu hiệu đầy đủ kết nối 4 vế ở Giai đoạn 5 */}
+            <p
+              className={`mt-4 text-xs sm:text-sm font-bold tracking-wide text-cyan-200 transition-opacity duration-500 ${
+                sloganBeat >= 4 || isHoldComplete ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              TIÊN PHONG SÁNG TẠO – KẾT NỐI TRI THỨC – KIẾN TẠO TƯƠNG LAI – VÌ MỘT CỘNG ĐỒNG BỀN VỮNG
+            </p>
+          </div>
         </div>
       )}
+
+      {/* Thanh tiến trình 6 giai đoạn ở chân màn hình */}
+      <div className="relative z-30 w-full max-w-md mx-auto flex flex-col items-center gap-2 pb-1">
+        <div className="flex items-center gap-1.5 w-full">
+          {(['appear', 'rotate', 'name', 'slogan', 'hold'] as const).map((st, i) => {
+            const active = currentStageIndex >= i;
+            return (
+              <div
+                key={st}
+                className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+                  active ? 'bg-cyan-300' : 'bg-white/15'
+                }`}
+              />
+            );
+          })}
+        </div>
+        <span className="text-[11px] text-slate-300/80 font-medium">
+          {stage === 'appear' && 'Giai đoạn 1/5: Khởi tạo nhận diện Sky First'}
+          {stage === 'rotate' && 'Giai đoạn 2/5: Chuyển động hội tụ biểu trưng'}
+          {stage === 'name' && 'Giai đoạn 3/5: Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First'}
+          {stage === 'slogan' && 'Giai đoạn 4/5: Khẩu hiệu định hướng 4 trụ cột'}
+          {(stage === 'hold' || stage === 'exiting') && 'Giai đoạn 5/5: Sẵn sàng vào Trang Thông Tin Điện Tử Sky First'}
+        </span>
+      </div>
     </div>
   );
 };
 
 // --- Consolidated from EntityColorSystem.tsx ---
 
-/**
- * Shared colour system for roles, titles, units, categories, tags and statuses.
- * It stays lightweight: colour metadata lives with the existing CMS document,
- * so rendering a badge never triggers a separate D1/Firestore query.
- */
 export const ENTITY_COLOR_PRESETS = [
   '#0284C7', '#2563EB', '#1D4ED8', '#4F46E5', '#7C3AED', '#9333EA',
   '#C026D3', '#DB2777', '#E11D48', '#DC2626', '#EA580C', '#D97706',
@@ -537,7 +758,6 @@ const normalizeLabel = (input?: string | null): string =>
     .toLocaleLowerCase('vi-VN');
 
 const hashString = (input: string): number => {
-  // FNV-1a 32-bit: deterministic and stable across refreshes/devices.
   let hash = 0x811c9dc5;
   for (let i = 0; i < input.length; i += 1) {
     hash ^= input.charCodeAt(i);
@@ -771,19 +991,42 @@ interface RichTextRendererProps {
   className?: string;
 }
 
+const makeHeadingAnchorId = (rawText: string, index: number): string => {
+  const slug = String(rawText || '')
+    .replace(/<[^>]+>/g, '')
+    .toLocaleLowerCase('vi')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 64);
+  return slug ? `muc-${slug}-${index}` : `muc-${index}`;
+};
+
 export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, className = '' }) => {
   const text = Array.isArray(content) ? content.join('\n\n') : content;
   if (!text) return null;
 
-  // The CMS rich editor stores HTML. Sanitize at the render boundary so pasted
-  // Word/Docs content can be displayed without exposing script/event injection.
   if (/<[a-z][\s\S]*>/i.test(text)) {
-    return <div className={`prose-slate max-w-none ${className}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />;
+    let headingCounter = 0;
+    const htmlWithHeadingIds = sanitizeHtml(text).replace(
+      /<(h[23])([^>]*)>([\s\S]*?)<\/\1>/gi,
+      (full, tag, attrs, inner) => {
+        if (/\bid\s*=/i.test(attrs)) return full;
+        headingCounter += 1;
+        const anchorId = makeHeadingAnchorId(inner, headingCounter);
+        return `<${tag}${attrs} id="${anchorId}">${inner}</${tag}>`;
+      }
+    );
+    return <div className={`prose-slate max-w-none ${className}`} dangerouslySetInnerHTML={{ __html: htmlWithHeadingIds }} />;
   }
 
   const lines = text.split('\n');
   const renderedElements: React.ReactNode[] = [];
   let listBuffer: { type: 'ul' | 'ol'; items: string[] } | null = null;
+  let mdHeadingCounter = 0;
 
   const flushList = (key: string) => {
     if (!listBuffer) return null;
@@ -816,7 +1059,6 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cla
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
 
-    // Check list item
     if (/^[-*•]\s+/.test(trimmed)) {
       const itemText = trimmed.replace(/^[-*•]\s+/, '');
       if (listBuffer && listBuffer.type === 'ul') {
@@ -839,23 +1081,19 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cla
       return;
     }
 
-    // Flush any pending list before rendering other block elements
     if (listBuffer) {
       renderedElements.push(flushList(`list-${idx}`));
     }
 
-    // Empty line
     if (!trimmed) {
       return;
     }
 
-    // Horizontal rule
     if (/^---|\*\*\*|___$/.test(trimmed)) {
       renderedElements.push(<hr key={idx} className="my-6 border-slate-200" />);
       return;
     }
 
-    // Headings
     if (trimmed.startsWith('#### ')) {
       renderedElements.push(
         <h4 key={idx} className="text-base sm:text-lg font-bold text-slate-900 mt-5 mb-2 tracking-tight">
@@ -866,18 +1104,24 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cla
     }
 
     if (trimmed.startsWith('### ')) {
+      mdHeadingCounter += 1;
+      const headingText = trimmed.slice(4);
+      const id = makeHeadingAnchorId(headingText, mdHeadingCounter);
       renderedElements.push(
-        <h3 key={idx} className="text-lg sm:text-xl font-bold text-slate-900 mt-6 mb-2.5 tracking-tight">
-          {renderInlineFormatted(trimmed.slice(4))}
+        <h3 id={id} key={idx} className="text-lg sm:text-xl font-bold text-slate-900 mt-6 mb-2.5 tracking-tight">
+          {renderInlineFormatted(headingText)}
         </h3>
       );
       return;
     }
 
     if (trimmed.startsWith('## ')) {
+      mdHeadingCounter += 1;
+      const headingText = trimmed.slice(3);
+      const id = makeHeadingAnchorId(headingText, mdHeadingCounter);
       renderedElements.push(
-        <h2 key={idx} className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-7 mb-3 tracking-tight border-b border-slate-100 pb-1.5">
-          {renderInlineFormatted(trimmed.slice(3))}
+        <h2 id={id} key={idx} className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-7 mb-3 tracking-tight border-b border-slate-100 pb-1.5">
+          {renderInlineFormatted(headingText)}
         </h2>
       );
       return;
@@ -892,7 +1136,6 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cla
       return;
     }
 
-    // Blockquote
     if (trimmed.startsWith('> ')) {
       renderedElements.push(
         <blockquote
@@ -905,7 +1148,6 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cla
       return;
     }
 
-    // Regular paragraph
     renderedElements.push(
       <p key={idx} className="my-3 text-slate-700 leading-relaxed text-sm sm:text-base">
         {renderInlineFormatted(trimmed)}
@@ -920,30 +1162,19 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({ content, cla
   return <div className={`prose-slate max-w-none ${className}`}>{renderedElements}</div>;
 };
 
-/**
- * Parses inline formatting:
- * **bold** or <b>bold</b>
- * *italic* or <i>italic</i>
- * <u>underline</u>
- * [text](url)
- */
 function renderInlineFormatted(str: string): React.ReactNode {
-  // Convert HTML <b>, <i>, <u> tags to normalized markdown tags first
   let text = str
     .replace(/<b>(.*?)<\/b>/gi, '**$1**')
     .replace(/<strong>(.*?)<\/strong>/gi, '**$1**')
     .replace(/<i>(.*?)<\/i>/gi, '*$1*')
     .replace(/<em>(.*?)<\/em>/gi, '*$1*');
 
-  // Regex tokenizer to split tokens
-  // Matches: **bold**, *italic*, <u>underline</u>, [label](url)
   const regex = /(\*\*.*?\*\*|\*.*?\*|<u>.*?<\/u>|\[.*?\]\(.*?\))/g;
   const parts = text.split(regex);
 
   return parts.map((part, index) => {
     if (!part) return null;
 
-    // Bold **text**
     if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
       return (
         <strong key={index} className="font-bold text-slate-900">
@@ -952,7 +1183,6 @@ function renderInlineFormatted(str: string): React.ReactNode {
       );
     }
 
-    // Italic *text*
     if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
       return (
         <em key={index} className="italic text-slate-800">
@@ -961,7 +1191,6 @@ function renderInlineFormatted(str: string): React.ReactNode {
       );
     }
 
-    // Underline <u>text</u>
     if (part.startsWith('<u>') && part.endsWith('</u>') && part.length >= 7) {
       return (
         <u key={index} className="underline decoration-[#0284C7] decoration-1 underline-offset-2">
@@ -970,7 +1199,6 @@ function renderInlineFormatted(str: string): React.ReactNode {
       );
     }
 
-    // Link [label](url)
     const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
     if (linkMatch) {
       return (
@@ -992,22 +1220,12 @@ function renderInlineFormatted(str: string): React.ReactNode {
 
 // --- Consolidated from MediaInputs.tsx ---
 
-
-// -----------------------------------------------------------------------------
-// Preserved component source: ImageUrlInput.tsx
-// -----------------------------------------------------------------------------
-
-interface Props{label?:string;value?:string;onChange:(url:string)=>void;helperText?:string;category?:string;placeholder?:string}
-export const ImageUrlInput:React.FC<Props>=({label='Ảnh',value='',onChange,helperText,placeholder})=>{
+interface PropsInput{label?:string;value?:string;onChange:(url:string)=>void;helperText?:string;category?:string;placeholder?:string}
+export const ImageUrlInput:React.FC<PropsInput>=({label='Ảnh',value='',onChange,helperText,placeholder})=>{
  const id=useId(),inputRef=useRef<HTMLInputElement|null>(null);const [uploading,setUploading]=useState(false),[error,setError]=useState(''),[picker,setPicker]=useState(false),[broken,setBroken]=useState(false);
  const upload=async(file:File)=>{setUploading(true);setError('');try{const d=await uploadMedia(file,true);onChange(d.url);setBroken(false)}catch(e){setError(e instanceof Error?e.message:'Không thể tải ảnh.')}finally{setUploading(false);if(inputRef.current)inputRef.current.value=''}};
  return <div className="space-y-3"><label htmlFor={id} className="text-xs font-bold text-slate-700">{label}</label><div className="flex gap-2 flex-wrap"><input ref={inputRef} type="file" accept={MEDIA_ACCEPT.replace(',application/pdf','')} className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f)}}/><button type="button" disabled={uploading} onClick={()=>inputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 disabled:opacity-60">{uploading?<Loader2 size={15} className="animate-spin"/>:<UploadCloud size={15}/>} {uploading?'Đang tải…':'Tải ảnh lên'}</button><button type="button" onClick={()=>setPicker(true)} className="inline-flex items-center gap-2 border rounded-lg px-3 py-2 text-xs font-semibold"><Images size={15}/>Chọn từ thư viện</button>{value&&<button type="button" onClick={()=>{onChange('');setBroken(false)}} className="border rounded-lg p-2 text-slate-500" aria-label="Gỡ ảnh"><X size={15}/></button>}</div><input id={id} type="text" inputMode="url" value={value} onChange={e=>{onChange(e.target.value);setBroken(false)}} placeholder={placeholder||'Liên kết ảnh hoặc /media/…'} className="w-full border rounded-xl px-3 py-2 text-xs"/>{error&&<p role="alert" className="flex gap-2 text-xs text-rose-700"><AlertCircle size={14}/>{error}</p>}{value&&<div className="bg-slate-50 border rounded-xl p-3">{!broken?<img src={value} alt={`Xem trước ${label.toLowerCase()}`} onError={()=>setBroken(true)} className="max-h-40 w-full object-contain"/>:<p className="text-xs text-amber-700">Ảnh không tải được. Kiểm tra liên kết hoặc chọn một ảnh khác.</p>}</div>}<p className="text-[11px] text-slate-500">{helperText||'Ảnh lưu trong thư viện để sử dụng lại. Tối đa 20 MB; giữ nguyên tệp và tỷ lệ ảnh gốc.'}</p>{picker&&<MediaPicker onClose={()=>setPicker(false)} onSelect={item=>{onChange(item.url);setBroken(false);setPicker(false)}}/>}</div>;
 };
-
-
-// -----------------------------------------------------------------------------
-// Preserved component source: MediaPicker.tsx
-// -----------------------------------------------------------------------------
 
 export const MediaPicker:React.FC<{onSelect:(item:MediaItem)=>void;onClose:()=>void;imageOnly?:boolean}>=({onSelect,onClose,imageOnly=true})=>{
  const [items,setItems]=useState<MediaItem[]>([]),[cursor,setCursor]=useState<string|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[query,setQuery]=useState('');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDataContext } from '../../context/DataContext';
 import {
   FileText,
@@ -17,14 +17,18 @@ import {
   Link as LinkIcon,
   Sparkles,
   Image as ImageIcon,
-  MessageSquare,
   Search,
   History,
   Globe,
+  LayoutTemplate,
+  ShieldCheck,
+  Monitor,
+  Smartphone,
+  Copy,
+  X,
 } from 'lucide-react';
-import { NewsArticle, PageRoute, AdminManagerActionRef } from '../../types';
-import { ImageUrlInput } from '../../components/UIPrimitives';
-import { EntityBadge, EntityColorPicker } from '../../components/UIPrimitives';
+import { NewsArticle, PageRoute, AdminManagerActionRef, PageBlock } from '../../types';
+import { ImageUrlInput, EntityBadge, EntityColorPicker, RichTextRenderer } from '../../components/UIPrimitives';
 import { createUniqueSlug, generateSlug, getArticleSlug } from '../../utils/contentUtils';
 import { RichTextEditor } from './RichTextEditor';
 import { adminApi } from '../../lib/firebase';
@@ -40,6 +44,173 @@ interface AdminNewsManagerProps {
   actionRef?: React.MutableRefObject<AdminManagerActionRef | null>;
   onViewModeChange?: (mode: 'list' | 'edit') => void;
 }
+
+// 12 Mẫu bài viết chuẩn báo chí & tổ chức theo mục đích (Phụ lục Nghiên cứu Chuyên sâu Mục III.2)
+interface ArticleEditorialTemplate {
+  id: string;
+  name: string;
+  category: string;
+  categoryLabel: string;
+  description: string;
+  summaryTemplate: string;
+  htmlTemplate: string;
+  suggestedTags: string[];
+  defaultBlocks?: PageBlock[];
+}
+
+export const EDITORIAL_ARTICLE_TEMPLATES: ArticleEditorialTemplate[] = [
+  {
+    id: 'activity_news',
+    name: '1. Tin tức hoạt động',
+    category: 'community',
+    categoryLabel: 'Tình nguyện & Cộng đồng',
+    description: 'Cập nhật hoạt động, lớp học, buổi sinh hoạt hoặc chiến dịch vừa triển khai của Mạng lưới.',
+    summaryTemplate:
+      'Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First vừa triển khai hoạt động [Tên hoạt động] với sự tham gia của đội ngũ tình nguyện viên và người học.',
+    htmlTemplate:
+      '<h2>Bối cảnh và mục tiêu hoạt động</h2><p>Giới thiệu thời gian, địa điểm/hình thức tổ chức và mục tiêu cụ thể của hoạt động trong khuôn khổ Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First.</p><h2>Nội dung triển khai trọng tâm</h2><p>Trình bày các phần việc chính đã thực hiện, phương pháp phối hợp giữa các ban/đơn vị trực thuộc và sự tham gia của người trẻ.</p><h2>Kết quả ghi nhận và bước tiếp theo</h2><p>Tổng hợp kết quả thực tế đạt được sau hoạt động và kế hoạch duy trì trong giai đoạn tới.</p>',
+    suggestedTags: ['Hoạt động Sky First', 'Cộng đồng', 'Người trẻ'],
+  },
+  {
+    id: 'official_announcement',
+    name: '2. Thông báo chính thức',
+    category: 'announcement',
+    categoryLabel: 'Thông báo',
+    description: 'Thông báo vận hành, quyết định nhân sự, lịch làm việc hoặc cập nhật quy định chính thức.',
+    summaryTemplate:
+      'Thông báo chính thức trên Trang Thông Tin Điện Tử Sky First về việc [Nội dung thông báo], áp dụng từ ngày [dd/mm/yyyy].',
+    htmlTemplate:
+      '<h2>Nội dung thông báo</h2><p>Căn cứ định hướng vận hành của Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First (Sky First Network), Ban Điều hành thông báo nội dung cụ thể như sau:</p><h2>Phạm vi và thời gian áp dụng</h2><ul><li><strong>Đối tượng áp dụng:</strong> Các ban chuyên môn, đơn vị trực thuộc và thành viên liên quan.</li><li><strong>Thời gian hiệu lực:</strong> Từ ngày công bố đến khi có thông báo cập nhật.</li></ul><h2>Đầu mối tiếp nhận và hỗ trợ</h2><p>Mọi thắc mắc vui lòng liên hệ Văn phòng Sky First Network qua email chính thức <strong>lienhe@skyfirst.io.vn</strong>.</p>',
+    suggestedTags: ['Thông báo chính thức', 'Vận hành', 'Sky First Network'],
+  },
+  {
+    id: 'recruitment',
+    name: '3. Bài tuyển thành viên / tình nguyện viên',
+    category: 'hr',
+    categoryLabel: 'Tuyển dụng & Nhân sự',
+    description: 'Thông báo mở đợt tuyển Core Team, Thành viên hoặc Tình nguyện viên theo chương trình.',
+    summaryTemplate:
+      'Sky First Network chính thức mở đơn tuyển [Vị trí / Đợt tuyển] dành cho người trẻ mong muốn rèn luyện kỹ năng, làm việc có quy trình và đóng góp cho cộng đồng.',
+    htmlTemplate:
+      '<h2>Giới thiệu đợt tuyển và vai trò</h2><p>Nêu rõ mục đích đợt tuyển, đơn vị tiếp nhận (Văn phòng, các Ban hoặc CLB Tiếng Anh The Sky First - SFEC) và giá trị thực tế đối với người tham gia.</p><h2>Các vị trí đang mở và yêu cầu</h2><ul><li><strong>Vị trí 1:</strong> Mô tả công việc cụ thể, yêu cầu kỹ năng và thời lượng cam kết.</li><li><strong>Vị trí 2:</strong> Mô tả công việc cụ thể, yêu cầu kỹ năng và thời lượng cam kết.</li></ul><h2>Quyền lợi phát triển và ghi nhận</h2><p>Cơ hội đào tạo nội bộ, thực hành điều phối thực tế và cấp Giấy chứng nhận khi hoàn thành nhiệm vụ theo quy định.</p><h2>Quy trình và thời hạn đăng ký</h2><p>Ứng viên gửi hồ sơ trực tuyến tại chuyên mục Tham gia trên Trang Thông Tin Điện Tử Sky First trước 23:59 ngày [dd/mm/yyyy].</p>',
+    suggestedTags: ['Tuyển thành viên', 'Tình nguyện viên', 'Core Team'],
+  },
+  {
+    id: 'program_intro',
+    name: '4. Bài giới thiệu chương trình / dự án',
+    category: 'project',
+    categoryLabel: 'Chương trình & Dự án',
+    description: 'Giới thiệu tổng quan mục tiêu, đối tượng và lộ trình của một chương trình hoặc dự án mới.',
+    summaryTemplate:
+      'Chương trình [Tên chương trình] do Sky First Network khởi xướng hướng đến việc tạo không gian học tập và rèn luyện thực tế cho [Đối tượng mục tiêu].',
+    htmlTemplate:
+      '<h2>Ý tưởng và mục tiêu chương trình</h2><p>Giải thích nhu cầu thực tế từ cộng đồng/người học và mục tiêu mà chương trình hướng tới.</p><h2>Đối tượng tham gia và cấu trúc hoạt động</h2><p>Mô tả lộ trình triển khai theo từng giai đoạn, hình thức tổ chức (trực tuyến / trực tiếp) và đơn vị phụ trách chuyên môn.</p><h2>Cách thức đăng ký hoặc đồng hành</h2><p>Hướng dẫn người học, tình nguyện viên hoặc đối tác đăng ký tham gia tại trang Chương trình & Dự án.</p>',
+    suggestedTags: ['Chương trình', 'Dự án giáo dục', 'Sky First'],
+  },
+  {
+    id: 'activity_recap',
+    name: '5. Bài tổng kết hoạt động',
+    category: 'report',
+    categoryLabel: 'Báo cáo & Công khai',
+    description: 'Nhìn lại toàn diện kết quả, bài học kinh nghiệm và dấu ấn sau khi kết thúc một chương trình/kỳ hoạt động.',
+    summaryTemplate:
+      'Tổng kết hành trình triển khai [Tên chương trình/kỳ hoạt động] với những kết quả được ghi nhận minh bạch và định hướng cải tiến cho giai đoạn tiếp theo.',
+    htmlTemplate:
+      '<h2>Tổng quan quá trình triển khai</h2><p>Tóm lược thời gian diễn ra, đơn vị chủ trì và các hạng mục công việc đã hoàn thành.</p><h2>Những kết quả và số liệu ghi nhận thực tế</h2><p>Trình bày số lượng buổi học/hoạt động, số người tham gia hoàn thành và sản phẩm đầu ra đã được kiểm chứng.</p><h2>Lời cảm ơn và định hướng tiếp theo</h2><p>Ghi nhận sự đóng góp của đội ngũ tình nguyện viên, người học và các đơn vị đồng hành.</p>',
+    suggestedTags: ['Tổng kết hoạt động', 'Báo cáo', 'Minh bạch'],
+  },
+  {
+    id: 'interview',
+    name: '6. Bài phỏng vấn',
+    category: 'youth',
+    categoryLabel: 'Phát triển Người trẻ',
+    description: 'Trò chuyện cùng thành viên, tình nguyện viên, người học hoặc cố vấn chuyên môn theo định dạng Hỏi - Đáp (Q&A).',
+    summaryTemplate:
+      'Cuộc trò chuyện cùng [Họ tên – Vai trò] về hành trình học hỏi, trưởng thành và tạo giá trị thực tế trong hệ sinh thái Sky First.',
+    htmlTemplate:
+      '<h2>Nhân vật và câu chuyện mở đầu</h2><p>Giới thiệu ngắn gọn về nhân vật, vai trò hiện tại và cơ duyên gắn bó cùng Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First.</p><blockquote><p>"Trích dẫn câu nói tâm đắc nhất của nhân vật trong buổi trò chuyện."</p></blockquote><h2>Đối thoại chi tiết</h2><p><strong>Phóng viên / Ban Truyền thông:</strong> Câu hỏi mở đầu về trải nghiệm thực tế khi tham gia hoạt động?</p><p><strong>Nhân vật chia sẻ:</strong> Nội dung câu trả lời chân thực, cụ thể của nhân vật.</p><h2>Thông điệp gửi đến người trẻ</h2><p>Lời nhắn nhủ dành cho các bạn học sinh, sinh viên đang tìm kiếm môi trường rèn luyện và cống hiến.</p>',
+    suggestedTags: ['Phỏng vấn', 'Con người Sky First', 'Góc nhìn người trẻ'],
+  },
+  {
+    id: 'expert_analysis',
+    name: '7. Bài phân tích / chia sẻ chuyên môn',
+    category: 'education',
+    categoryLabel: 'Giáo dục & Đào tạo',
+    description: 'Bài viết chuyên sâu về phương pháp học tập, ngoại ngữ, kỹ năng làm việc nhóm hoặc quản trị dự án cộng đồng.',
+    summaryTemplate:
+      'Bài viết phân tích các phương pháp thực tiễn giúp người trẻ nâng cao năng lực [Chủ đề chuyên môn] và ứng dụng hiệu quả vào học tập, công việc.',
+    htmlTemplate:
+      '<h2>Đặt vấn đề</h2><p>Xác định thách thức phổ biến mà người học hoặc người làm dự án cộng đồng thường gặp phải.</p><h2>Phân tích nguyên nhân và khung phương pháp</h2><p>Trình bày các luận điểm rõ ràng, có ví dụ thực tế từ hoạt động giáo dục và điều phối tại Sky First.</p><h2>Gợi ý áp dụng thực tế</h2><ol><li>Bước 1: Xác định mục tiêu và đầu ra cụ thể.</li><li>Bước 2: Lập kế hoạch thực hành theo tuần.</li><li>Bước 3: Tự đánh giá và cải tiến liên tục.</li></ol>',
+    suggestedTags: ['Chia sẻ chuyên môn', 'Giáo dục', 'Kỹ năng'],
+  },
+  {
+    id: 'community_story',
+    name: '8. Câu chuyện người trẻ & cộng đồng',
+    category: 'community',
+    categoryLabel: 'Tình nguyện & Cộng đồng',
+    description: 'Kể lại những khoảnh khắc, hành trình thay đổi tích cực từ các lớp học cộng đồng và hoạt động tình nguyện.',
+    summaryTemplate:
+      'Từ những buổi học trực tuyến miễn phí đến không gian gắn kết cộng đồng, hành trình tại Sky First được viết nên bởi sự kiên trì và tinh thần sẻ chia.',
+    htmlTemplate:
+      '<h2>Khởi đầu từ những điều giản dị</h2><p>Kể lại bối cảnh bắt đầu của lớp học hoặc sáng kiến cộng đồng một cách chân thực, gần gũi.</p><h2>Sự đồng hành giữa người dạy và người học</h2><p>Những câu chuyện cụ thể về sự nỗ lực vượt khó, tinh thần trách nhiệm của tình nguyện viên và sự tiến bộ của học viên.</p><h2>Giá trị đọng lại</h2><p>Khẳng định triết lý phát triển bền vững: người nhận cơ hội hôm nay trở thành người trao cơ hội cho cộng đồng ngày mai.</p>',
+    suggestedTags: ['Câu chuyện cộng đồng', 'Truyền cảm hứng', 'SFEC'],
+  },
+  {
+    id: 'event_report',
+    name: '9. Bài tường thuật sự kiện',
+    category: 'event',
+    categoryLabel: 'Sự kiện',
+    description: 'Tường thuật diễn biến hội thảo, buổi tập huấn, lễ ra mắt hoặc sự kiện giao lưu học thuật.',
+    summaryTemplate:
+      'Sự kiện [Tên sự kiện] diễn ra vào ngày [dd/mm/yyyy] đã mang đến nhiều góc nhìn thực tế cùng hoạt động thảo luận sôi nổi.',
+    htmlTemplate:
+      '<h2>Không khí mở màn và mục đích sự kiện</h2><p>Thông tin thời gian, hình thức tổ chức, thành phần tham dự và thông điệp mở đầu sự kiện.</p><h2>Các phiên nội dung và thảo luận nổi bật</h2><p>Tóm lược các phần trình bày chính, hoạt động tương tác và những câu hỏi thực tế từ người tham dự.</p><h2>Tổng kết và tài liệu sau sự kiện</h2><p>Thông tin về học liệu được phép chia sẻ công khai và các hoạt động tiếp nối sau sự kiện.</p>',
+    suggestedTags: ['Sự kiện', 'Hội thảo', 'Tường thuật'],
+  },
+  {
+    id: 'impact_report',
+    name: '10. Bài báo cáo kết quả / tác động',
+    category: 'report',
+    categoryLabel: 'Báo cáo & Công khai',
+    description: 'Công bố báo cáo tác động định kỳ kèm bảng số liệu minh bạch, phương pháp đo lường và nguồn đối chiếu.',
+    summaryTemplate:
+      'Báo cáo tổng hợp các chỉ số đầu ra và mức độ tác động thực tế của chương trình [Tên chương trình], cập nhật đến [Tháng/Năm].',
+    htmlTemplate:
+      '<h2>Phạm vi và phương pháp tổng hợp số liệu</h2><p>Giải thích rõ kỳ báo cáo, nguồn dữ liệu đối chiếu và quy tắc thống kê minh bạch của Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First.</p><h2>Bảng tổng hợp kết quả đầu ra</h2><table><thead><tr><th>Hạng mục chỉ số</th><th>Kết quả ghi nhận</th><th>Ghi chú xác minh</th></tr></thead><tbody><tr><td>Số lớp học / hoạt động</td><td>Cập nhật theo hồ sơ</td><td>Đối chiếu hệ thống quản trị</td></tr><tr><td>Số tình nguyện viên tham gia</td><td>Cập nhật theo hồ sơ</td><td>Danh sách xác nhận theo đợt</td></tr></tbody></table><h2>Đánh giá chất lượng và khuyến nghị</h2><p>Nhận định thẳng thắn về những điểm làm tốt và các hạng mục cần hoàn thiện trong kỳ tiếp theo.</p>',
+    suggestedTags: ['Báo cáo tác động', 'Công khai minh bạch', 'Dữ liệu'],
+  },
+  {
+    id: 'educational_guide',
+    name: '11. Bài hướng dẫn / giáo dục',
+    category: 'education',
+    categoryLabel: 'Giáo dục & Đào tạo',
+    description: 'Cẩm nang hướng dẫn từng bước dành cho học viên, tình nguyện viên hoặc người sử dụng hệ thống.',
+    summaryTemplate:
+      'Tài liệu hướng dẫn chi tiết từng bước giúp người học và tình nguyện viên nắm vững quy trình [Tên quy trình / kỹ năng] tại Sky First.',
+    htmlTemplate:
+      '<h2>Mục tiêu và đối tượng áp dụng</h2><p>Xác định rõ ai cần đọc hướng dẫn này và kết quả đạt được sau khi thực hiện đầy đủ các bước.</p><h2>Hướng dẫn thực hiện từng bước</h2><h3>Bước 1: Chuẩn bị thông tin và công cụ</h3><p>Mô tả chi tiết những nội dung cần chuẩn bị trước khi bắt đầu.</p><h3>Bước 2: Thao tác thực hiện chuẩn</h3><p>Hướng dẫn rõ ràng kèm lưu ý bảo mật thông tin cá nhân.</p><h2>Các câu hỏi thường gặp (FAQ)</h2><p>Giải đáp ngắn gọn những vướng mắc thường gặp và kênh liên hệ hỗ trợ kỹ thuật.</p>',
+    suggestedTags: ['Hướng dẫn', 'Học liệu', 'Cẩm nang'],
+  },
+  {
+    id: 'longform_emagazine',
+    name: '12. Bài dài đặc biệt (Longform / e-Magazine)',
+    category: 'media',
+    categoryLabel: 'Truyền thông & Lan tỏa',
+    description: 'Bài chuyên đề мульти-chương có chiều sâu báo chí, kết hợp trích dẫn lớn, hộp thông tin và thư viện ảnh.',
+    summaryTemplate:
+      'Chuyên đề đặc biệt khắc họa hành trình kiến tạo hệ sinh thái giáo dục và phát triển cộng đồng bền vững của Sky First Network.',
+    htmlTemplate:
+      '<h2>Chương I: Khởi nguồn từ khát vọng mở rộng cơ hội học tập</h2><p>Mở đầu chuyên đề với câu chuyện hình thành từ nhu cầu thực tiễn của người học và tinh thần tình nguyện có tổ chức.</p><blockquote><p>"Bầu trời không phải là giới hạn cuối cùng mà là điểm bắt đầu để mỗi người trẻ tiếp tục học hỏi, thử sức và tạo giá trị cho cộng đồng."</p></blockquote><h2>Chương II: Chuẩn hóa hệ thống để phát triển bền vững</h2><p>Phân tích bước chuyển mình từ các hoạt động đơn lẻ sang mô hình Mạng lưới có quy trình, có phân quyền và nền tảng số đồng bộ.</p><h2>Chương III: Hướng tới tương lai cộng đồng bền vững</h2><p>Tầm nhìn dài hạn kết nối người học, tình nguyện viên, đội ngũ chuyên môn và các nguồn lực xã hội.</p>',
+    suggestedTags: ['Longform', 'e-Magazine', 'Chuyên đề Sky First'],
+  },
+];
+
+const stripHtmlText = (html: string): string =>
+  String(html || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
   articles,
@@ -62,6 +233,9 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
   const [dirty, setDirty] = useState(false);
   const [revisions, setRevisions] = useState<any[]>([]);
   const [showRevisions, setShowRevisions] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('activity_news');
+  const [previewDevice, setPreviewDevice] = useState<'none' | 'desktop' | 'mobile'>('none');
+  const [socialDraft, setSocialDraft] = useState<string>('');
 
   useEffect(() => {
     if (initialSlug) {
@@ -75,7 +249,6 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
 
   const activeArticle = articles.find((a) => a.id === selectedArticleId) || articles[0];
 
-  // Cảnh báo khi rời trang có thay đổi chưa lưu
   useEffect(() => {
     if (viewMode !== 'edit' || !dirty) return;
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -129,7 +302,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
       contentFormatted:
         '<h2>Tiêu đề phần 1</h2><p>Nội dung chi tiết của bài viết được trình bày ở đây với đầy đủ thông tin, luận điểm và hình ảnh minh họa.</p><h2>Tiêu đề phần 2</h2><p>Tiếp tục triển khai các nội dung quan trọng tiếp theo.</p>',
       pageBlocks: [],
-      author: 'Sky First Network',
+      author: 'Ban Truyền thông Sky First Network',
       publishedAt: new Date().toISOString().split('T')[0],
       readTime: '3 phút đọc',
       imageUrl: '',
@@ -139,7 +312,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
       isPublished: false,
       editorialStatus: 'draft',
       allowComments: true,
-      source: '',
+      source: 'Trang Thông Tin Điện Tử Sky First',
     };
 
     const created = await onAddArticle(newArticle);
@@ -169,6 +342,8 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
   const handleEditClick = (article: NewsArticle) => {
     setSelectedArticleId(article.id);
     setDirty(false);
+    setSocialDraft('');
+    setPreviewDevice('none');
     setViewMode('edit');
   };
 
@@ -185,7 +360,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
     }
     onShowToast(
       nextState
-        ? `Đã xuất bản bài viết "${article.title}" lên website chính!`
+        ? `Đã xuất bản bài viết "${article.title}" lên Trang Thông Tin Điện Tử Sky First!`
         : `Đã chuyển bài viết "${article.title}" về Bản nháp!`
     );
   };
@@ -217,6 +392,84 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
     if (statusFilter === 'draft') return a.isPublished === false;
     return true;
   });
+
+  // Công cụ kiểm tra chất lượng biên tập (Editorial QA Checklist — Phụ lục Nghiên cứu III.3)
+  const editorialQa = useMemo(() => {
+    if (!activeArticle) return null;
+    const rawHtml =
+      activeArticle.contentFormatted ||
+      (Array.isArray(activeArticle.content) ? activeArticle.content.join('\n\n') : activeArticle.content || '');
+    const plainBody = stripHtmlText(rawHtml);
+    const words = plainBody ? plainBody.split(/\s+/).filter(Boolean).length : 0;
+    const estimatedMinutes = Math.max(1, Math.ceil(words / 210));
+    const titleLen = (activeArticle.title || '').trim().length;
+    const sapoLen = (activeArticle.summary || '').trim().length;
+
+    const duplicateTitle = articles.some(
+      (other) =>
+        other.id !== activeArticle.id &&
+        other.title.trim().toLocaleLowerCase('vi') === activeArticle.title.trim().toLocaleLowerCase('vi')
+    );
+
+    const combinedText = `${activeArticle.title} ${activeArticle.summary} ${plainBody}`;
+    const hasMisleadingLegalTerm = /\b(công ty cổ phần|công ty tnhh|cơ quan nhà nước|tập đoàn sky first)\b/i.test(
+      combinedText
+    );
+
+    const linkMatches = [...rawHtml.matchAll(/href=["']([^"']*)["']/gi)].map((m) => m[1]);
+    const invalidLinks = linkMatches.filter(
+      (href) => !href || href === '#' || (!href.startsWith('/') && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('mailto:') && !href.startsWith('tel:'))
+    );
+
+    const checks = [
+      {
+        id: 'title_len',
+        ok: titleLen >= 20 && titleLen <= 120 && !duplicateTitle,
+        label: duplicateTitle
+          ? 'Cảnh báo: Tiêu đề trùng với một bài viết khác trong hệ thống'
+          : `Độ dài tiêu đề (${titleLen} ký tự — khuyến nghị 25–110 ký tự)`,
+      },
+      {
+        id: 'sapo_len',
+        ok: sapoLen >= 50 && sapoLen <= 320,
+        label: `Đoạn Sapo mở đầu (${sapoLen} ký tự — khuyến nghị 60–280 ký tự)`,
+      },
+      {
+        id: 'cover_meta',
+        ok: Boolean(activeArticle.imageUrl && (activeArticle.imageAlt || activeArticle.imageDescription)),
+        label: 'Ảnh đại diện kèm chú thích (Caption) và văn bản thay thế (Alt text)',
+      },
+      {
+        id: 'author_date',
+        ok: Boolean(activeArticle.author?.trim() && (activeArticle.publishedAt || activeArticle.date) && (activeArticle.tags || []).length > 0),
+        label: 'Đầy đủ Tác giả, Ngày đăng và ít nhất 1 Thẻ (Tag)',
+      },
+      {
+        id: 'org_naming',
+        ok: !hasMisleadingLegalTerm,
+        label: hasMisleadingLegalTerm
+          ? 'Phát hiện cách gọi dễ gây hiểu nhầm về tư cách pháp nhân'
+          : 'Chuẩn quy tắc tên gọi Mạng lưới & Trang Thông Tin Điện Tử Sky First',
+      },
+      {
+        id: 'links_valid',
+        ok: invalidLinks.length === 0,
+        label:
+          invalidLinks.length === 0
+            ? 'Tất cả liên kết trong bài viết đều hợp lệ'
+            : `Phát hiện ${invalidLinks.length} liên kết rỗng hoặc sai định dạng`,
+      },
+    ];
+
+    const passedCount = checks.filter((c) => c.ok).length;
+    return {
+      words,
+      estimatedReadTime: `${estimatedMinutes} phút đọc`,
+      checks,
+      passedCount,
+      totalCount: checks.length,
+    };
+  }, [activeArticle, articles]);
 
   if (viewMode === 'list') {
     return (
@@ -252,7 +505,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
             <FileText size={40} className="mx-auto text-slate-300 mb-3" />
             <h3 className="text-base font-bold text-slate-800 mb-1">Chưa có bài đăng nào</h3>
             <p className="text-xs text-slate-500 mb-5">
-              Bắt đầu tạo bài viết tin tức hoặc thông báo đầu tiên cho website Sky First Network.
+              Bắt đầu tạo bài viết tin tức hoặc thông báo đầu tiên cho Trang Thông Tin Điện Tử Sky First.
             </p>
             <button
               type="button"
@@ -269,8 +522,8 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
             <div className="grid grid-cols-12 gap-4 px-5 py-3.5 bg-slate-50/80 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
               <div className="col-span-12 sm:col-span-5">Tiêu đề bài đăng</div>
               <div className="hidden sm:block sm:col-span-2">Nhãn</div>
-              <div className="hidden sm:block sm:col-span-2">Tác giả & Thời gian đọc</div>
-              <div className="hidden sm:block sm:col-span-3 text-right">Trạng thái & Hành động</div>
+              <div className="hidden sm:block sm:col-span-2">Tác giả &amp; Thời gian đọc</div>
+              <div className="hidden sm:block sm:col-span-3 text-right">Trạng thái &amp; Hành động</div>
             </div>
 
             <div className="divide-y divide-slate-100">
@@ -450,9 +703,33 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
     void onUpdateArticle(activeArticle.id, updates);
   };
 
+  const handleApplyEditorialTemplate = () => {
+    const tpl = EDITORIAL_ARTICLE_TEMPLATES.find((t) => t.id === selectedTemplateId);
+    if (!tpl) return;
+    patchArticle({
+      category: tpl.category,
+      categoryLabel: tpl.categoryLabel,
+      summary: tpl.summaryTemplate,
+      content: tpl.htmlTemplate,
+      contentFormatted: tpl.htmlTemplate,
+      tags: Array.from(new Set([...(activeArticle.tags || []), ...tpl.suggestedTags])),
+    });
+    onShowToast(`Đã áp dụng mẫu bài viết "${tpl.name}" vào trình soạn thảo!`);
+  };
+
+  const handleGenerateSocialSummary = () => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}${displayUrl}` : `https://skyfirst.io.vn${displayUrl}`;
+    const hashtags = (activeArticle.tags || []).map((t) => `#${t.replace(/\s+/g, '')}`).join(' ') || '#SkyFirstNetwork #TrangThongTinDienTuSkyFirst';
+    const text = `📢 [${(activeArticle.categoryLabel || 'TIN TỨC SKY FIRST').toUpperCase()}] ${activeArticle.title}\n\n${activeArticle.summary}\n\n👉 Đọc chi tiết trên Trang Thông Tin Điện Tử Sky First: ${url}\n\n${hashtags}`;
+    setSocialDraft(text);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+    onShowToast('Đã tạo và sao chép đoạn giới thiệu chia sẻ mạng xã hội!');
+  };
+
   const handleSave = async (publishState?: boolean) => {
     const finalPublishState = publishState !== undefined ? publishState : !isDraft;
-    // Cảnh báo trước khi xuất bản nếu thiếu tiêu đề, ảnh hoặc SEO
     if (finalPublishState && !activeArticle.title?.trim()) {
       onShowToast('Cảnh báo: Vui lòng nhập tiêu đề bài viết trước khi xuất bản.');
       return;
@@ -467,7 +744,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
     }
     setDirty(false);
     if (finalPublishState) {
-      onShowToast(`Đã lưu và xuất bản bài viết "${activeArticle.title}" lên website chính!`);
+      onShowToast(`Đã lưu và xuất bản bài viết "${activeArticle.title}" lên Trang Thông Tin Điện Tử Sky First!`);
     } else {
       onShowToast(`Đã lưu bản nháp bài viết "${activeArticle.title}"!`);
     }
@@ -522,7 +799,31 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <button
+            type="button"
+            onClick={() => setPreviewDevice((d) => (d === 'desktop' ? 'none' : 'desktop'))}
+            className={`px-3 py-2 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+              previewDevice === 'desktop' ? 'bg-[#071B3A] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+            title="Xem trước giao diện Máy tính"
+          >
+            <Monitor size={14} />
+            <span className="hidden lg:inline">Xem trước PC</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPreviewDevice((d) => (d === 'mobile' ? 'none' : 'mobile'))}
+            className={`px-3 py-2 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+              previewDevice === 'mobile' ? 'bg-[#071B3A] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+            title="Xem trước giao diện Điện thoại"
+          >
+            <Smartphone size={14} />
+            <span className="hidden lg:inline">Xem trước Mobile</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -545,7 +846,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
             className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer"
           >
             <Eye size={14} />
-            <span className="hidden sm:inline">Xem Trước</span>
+            <span className="hidden sm:inline">Mở trang thật</span>
           </button>
 
           {isDraft ? (
@@ -593,12 +894,82 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
       </header>
 
       <main className="max-w-4xl w-full mx-auto p-4 sm:p-8 space-y-6 flex-1">
+        {/* KHỐI 0: 12 MẪU BÀI VIẾT THEO MỤC ĐÍCH & TRỢ LÝ KIỂM TRA CHẤT LƯỢNG BÀI VIẾT (PHỤ LỤC NGHIÊN CỨU III.2 & III.3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-7 bg-white rounded-2xl border border-sky-200/80 p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-[#0B66C3] flex items-center gap-2">
+                <LayoutTemplate size={15} />
+                <span>Thư viện 12 Mẫu Bài Viết Theo Mục Đích</span>
+              </h2>
+              <span className="text-[11px] font-bold text-slate-400">Chuẩn báo chí &amp; tổ chức</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <select
+                aria-label="Chọn mẫu bài viết theo mục đích"
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900"
+              >
+                {EDITORIAL_ARTICLE_TEMPLATES.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {tpl.name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={handleApplyEditorialTemplate}
+                className="px-4 py-2 bg-[#0B66C3] hover:bg-[#084F99] text-white text-xs font-extrabold rounded-xl transition shrink-0 cursor-pointer"
+              >
+                Áp dụng mẫu
+              </button>
+            </div>
+
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              {EDITORIAL_ARTICLE_TEMPLATES.find((t) => t.id === selectedTemplateId)?.description}
+            </p>
+          </div>
+
+          {editorialQa && (
+            <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <ShieldCheck size={15} className="text-emerald-600" />
+                  <span>Kiểm Tra Chất Lượng ({editorialQa.passedCount}/{editorialQa.totalCount})</span>
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => patchArticle({ readTime: editorialQa.estimatedReadTime })}
+                  className="text-[11px] font-bold text-[#0284C7] hover:underline"
+                  title="Cập nhật thời gian đọc tự động"
+                >
+                  {editorialQa.words} từ • {editorialQa.estimatedReadTime}
+                </button>
+              </div>
+
+              <ul className="space-y-1.5 text-[11px]">
+                {editorialQa.checks.map((item) => (
+                  <li key={item.id} className="flex items-start gap-2">
+                    <span className={`mt-0.5 shrink-0 ${item.ok ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {item.ok ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                    </span>
+                    <span className={item.ok ? 'text-slate-600' : 'text-slate-900 font-semibold'}>{item.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
         {/* KHỐI 1: TIÊU ĐỀ, ĐƯỜNG DẪN & LỊCH XUẤT BẢN */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <LinkIcon size={15} className="text-[#0284C7]" />
-              Khối 1: Tiêu đề, Chuyên mục, Thẻ & Lịch xuất bản
+              Khối 1: Tiêu đề, Chuyên mục, Thẻ &amp; Lịch xuất bản
             </h2>
             <span className="text-[11px] text-slate-400 font-mono">/tin-tuc/:slug</span>
           </div>
@@ -767,16 +1138,16 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
               checked={Boolean(activeArticle.isFeatured)}
               onChange={(e) => patchArticle({ isFeatured: e.target.checked })}
             />
-            Ghim là bài đăng nổi bật trên Trang chủ & Trang Tin tức
+            Ghim là bài đăng nổi bật trên Trang chủ &amp; Trang Tin tức
           </label>
         </div>
 
-        {/* KHỐI 3: HÌNH ẢNH ĐẠI DIỆN (GIỮ NGUYÊN TỶ LỆ GỐC MẶC ĐỊNH) */}
+        {/* KHỐI 3: HÌNH ẢNH ĐẠI DIỆN */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <ImageIcon size={15} className="text-[#0284C7]" />
-              Khối 3: Hình Ảnh Đại Diện & Thư Viện Ảnh (Mặc định giữ nguyên tỷ lệ gốc)
+              Khối 3: Hình Ảnh Đại Diện &amp; Thư Viện Ảnh (Mặc định giữ nguyên tỷ lệ gốc)
             </h2>
           </div>
 
@@ -835,12 +1206,20 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
 
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-2">
-              Trình Soạn Thảo Nội Dung & Khối Kiểu WordPress Gutenberg
+              Trình Soạn Thảo Nội Dung &amp; Khối Kiểu WordPress Gutenberg
             </label>
             <RichTextEditor
               id="news-content-editor"
               value={rawContent}
-              onChange={(html) => patchArticle({ contentFormatted: html, content: html })}
+              onChange={(html) => {
+                const words = stripHtmlText(html).split(/\s+/).filter(Boolean).length;
+                const mins = Math.max(1, Math.ceil(words / 210));
+                patchArticle({
+                  contentFormatted: html,
+                  content: html,
+                  readTime: `${mins} phút đọc`,
+                });
+              }}
               blocks={activeArticle.pageBlocks || []}
               onBlocksChange={(pageBlocks) => patchArticle({ pageBlocks })}
               placeholder="Viết trực tiếp tại đây, kéo thả ảnh từ máy tính vào bài hoặc bấm (+ Thêm khối)..."
@@ -854,9 +1233,41 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <Globe size={15} className="text-[#0284C7]" />
-              Khối 5: SEO, Chia Sẻ Mạng Xã Hội & Bình Luận
+              Khối 5: SEO, Chia Sẻ Mạng Xã Hội &amp; Bình Luận
             </h2>
+            <button
+              type="button"
+              onClick={handleGenerateSocialSummary}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-sky-50 border border-sky-200 px-3 py-1.5 text-xs font-bold text-[#0B66C3] hover:bg-sky-100 transition cursor-pointer"
+            >
+              <Sparkles size={13} />
+              <span>Tạo bản tóm tắt chia sẻ MXH</span>
+            </button>
           </div>
+
+          {socialDraft && (
+            <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-3.5 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-sky-900">
+                <span>Bản nháp giới thiệu bài viết lên Fanpage / Mạng xã hội:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(socialDraft);
+                    onShowToast('Đã sao chép nội dung giới thiệu mạng xã hội!');
+                  }}
+                  className="inline-flex items-center gap-1 text-[#0B66C3] hover:underline"
+                >
+                  <Copy size={12} /> Sao chép
+                </button>
+              </div>
+              <textarea
+                rows={4}
+                value={socialDraft}
+                onChange={(e) => setSocialDraft(e.target.value)}
+                className="w-full rounded-lg border border-sky-200 bg-white p-2.5 text-xs text-slate-800"
+              />
+            </div>
+          )}
 
           <div className="grid sm:grid-cols-2 gap-4">
             <label className="block">
@@ -873,7 +1284,7 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
               <input
                 value={activeArticle.source || ''}
                 onChange={(e) => patchArticle({ source: e.target.value })}
-                placeholder="Sky First Network / Ban Truyền Thông"
+                placeholder="Trang Thông Tin Điện Tử Sky First / Ban Truyền Thông"
                 className="mt-1 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
               />
             </label>
@@ -907,11 +1318,83 @@ export const AdminNewsManager: React.FC<AdminNewsManagerProps> = ({
                 onChange={(e) => patchArticle({ noIndex: e.target.checked })}
                 className="w-4 h-4 rounded text-amber-600"
               />
-              <span>Ẩn khỏi công cụ tìm kiếm & Sitemap (noIndex)</span>
+              <span>Ẩn khỏi công cụ tìm kiếm &amp; Sitemap (noIndex)</span>
             </label>
           </div>
         </div>
       </main>
+
+      {/* Modal Xem trước Desktop / Mobile ngay trong trình biên tập */}
+      {previewDevice !== 'none' && (
+        <div className="fixed inset-0 z-[130] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div
+            className={`bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all ${
+              previewDevice === 'mobile' ? 'w-[390px]' : 'w-full max-w-4xl'
+            }`}
+          >
+            <header className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-[#0B66C3]">
+                  Xem trước ({previewDevice === 'mobile' ? 'Điện thoại 390px' : 'Máy tính'})
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('desktop')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                    previewDevice === 'desktop' ? 'bg-[#0B66C3] text-white' : 'bg-white border text-slate-600'
+                  }`}
+                >
+                  Máy tính
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('mobile')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                    previewDevice === 'mobile' ? 'bg-[#0B66C3] text-white' : 'bg-white border text-slate-600'
+                  }`}
+                >
+                  Điện thoại
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('none')}
+                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </header>
+            <div className="p-6 overflow-y-auto space-y-4">
+              <EntityBadge label={activeArticle.categoryLabel || 'Tin tức'} color={activeArticle.categoryColor} />
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">{activeArticle.title}</h1>
+              <div className="text-xs text-slate-500 flex flex-wrap gap-3">
+                <span>{activeArticle.author}</span>
+                <span>•</span>
+                <span>{activeArticle.date}</span>
+                <span>•</span>
+                <span>{activeArticle.readTime}</span>
+              </div>
+              {activeArticle.summary && (
+                <div className="p-4 rounded-2xl bg-sky-50/70 border-l-4 border-[#0284C7] text-sm font-semibold text-slate-800">
+                  {activeArticle.summary}
+                </div>
+              )}
+              {activeArticle.imageUrl && (
+                <img
+                  src={activeArticle.imageUrl}
+                  alt={activeArticle.imageAlt || activeArticle.title}
+                  className="w-auto max-w-full h-auto mx-auto rounded-2xl object-contain"
+                />
+              )}
+              <div className="pt-2">
+                <RichTextRenderer content={rawContent} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showRevisions && (
         <div className="fixed inset-0 z-[120] bg-slate-950/55 flex items-center justify-center p-4">

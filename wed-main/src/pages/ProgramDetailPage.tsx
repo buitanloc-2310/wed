@@ -577,7 +577,7 @@ export const ProgramDetailPage: React.FC<ProgramDetailPageProps> = ({
                     </div>
                   </motion.div>
                 ) : dynamicForm ? (
-                  <form onSubmit={handleDynamicFormSubmit} className="space-y-4">
+                  <form onSubmit={handleDynamicFormSubmit} className="sfn-dynamic-form space-y-4">
                     <div className="p-3.5 bg-sky-50/70 rounded-xl border border-sky-100 flex items-center justify-between text-xs">
                       <span className="text-slate-600 font-medium">Chương trình đăng ký:</span>
                       <span className="font-extrabold text-[#0284C7]">{program.title}</span>

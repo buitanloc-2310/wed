@@ -305,11 +305,33 @@ function AppMainContent() {
   useEffect(() => {
     const root = document.documentElement;
     const ds = siteConfig.designSystem || {};
-    if (ds.primary) root.style.setProperty('--sfn-primary', ds.primary);
-    if (ds.navy) root.style.setProperty('--sfn-navy', ds.navy);
-    if (ds.accent) root.style.setProperty('--sfn-accent', ds.accent);
-    if (ds.radius) root.style.setProperty('--sfn-radius', ds.radius);
-    if (ds.container) root.style.setProperty('--sfn-container', ds.container);
+    const clamp = (val: unknown, fb: number, min: number, max: number) => {
+      const n = Number(val);
+      return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fb;
+    };
+    root.style.setProperty('--sfn-primary', ds.primary || '#0B66C3');
+    root.style.setProperty('--sfn-navy', ds.navy || '#071B3A');
+    root.style.setProperty('--sfn-accent', ds.accent || '#22D3EE');
+    root.style.setProperty('--sfn-radius', ds.radius || '24px');
+    const maxW = clamp(ds.containerMaxWidthPx, 1280, 1024, 1440);
+    root.style.setProperty('--sfn-container', `${maxW}px`);
+    root.style.setProperty('--sfn-logo-h-desktop', `${clamp(ds.logoHeightDesktopPx, 48, 32, 84)}px`);
+    root.style.setProperty('--sfn-logo-h-mobile', `${clamp(ds.logoHeightMobilePx, 38, 28, 56)}px`);
+    root.style.setProperty('--sfn-header-h', `${clamp(ds.headerHeightPx, 80, 64, 112)}px`);
+    root.style.setProperty('--sfn-nav-gap', `${clamp(ds.navItemGapPx, 6, 2, 20)}px`);
+    root.style.setProperty('--sfn-grid-gap', `${clamp(ds.gridGapPx, 24, 12, 40)}px`);
+    root.style.setProperty('--sfn-heading-scale', String(clamp(ds.headingScale, 1.0, 0.85, 1.25)));
+    root.style.setProperty('--sfn-lead-font-size', `${clamp(ds.leadFontSizePx, 18, 15, 22)}px`);
+    root.style.setProperty('--sfn-body-font-size', `${clamp(ds.bodyFontSizePx, 16, 14, 19)}px`);
+    root.style.setProperty('--sfn-caption-font-size', `${clamp(ds.captionFontSizePx, 13, 11, 15)}px`);
+    root.style.setProperty('--sfn-line-height', String(clamp(ds.lineHeight, 1.65, 1.4, 1.95)));
+    root.style.setProperty('--sfn-paragraph-gap', `${clamp(ds.paragraphGapPx, 16, 8, 32)}px`);
+    root.style.setProperty('--sfn-section-gap', `${clamp(ds.sectionGapPx, 64, 32, 112)}px`);
+    root.style.setProperty('--sfn-image-radius', `${clamp(ds.imageBorderRadiusPx, 20, 8, 32)}px`);
+    root.style.setProperty('--sfn-form-max-w', `${clamp(ds.formMaxWidthPx, 768, 520, 980)}px`);
+    root.style.setProperty('--sfn-form-field-gap', `${clamp(ds.formFieldGapPx, 16, 10, 28)}px`);
+    root.style.setProperty('--sfn-form-input-h', `${clamp(ds.formInputHeightPx, 46, 40, 56)}px`);
+    root.style.setProperty('--sfn-form-label-size', `${clamp(ds.formLabelSizePx, 13, 11, 16)}px`);
     root.dataset.motion = ds.motion || 'balanced';
   }, [siteConfig.designSystem]);
 

@@ -202,10 +202,68 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
     );
   };
 
+  const todayLabel = useMemo(() => {
+    try {
+      return new Intl.DateTimeFormat('vi-VN', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(new Date());
+    } catch {
+      return 'Cổng thông tin chính thức';
+    }
+  }, []);
+  const showOfficialPortalBar = siteConfig.designSystem?.showOfficialPortalBar !== false;
+
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200/80">
+      {showOfficialPortalBar && (
+        <div className="bg-[#071B3A] text-slate-200 border-b border-slate-800/80 text-[11px]">
+          <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-1.5 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="inline-flex items-center gap-1 font-extrabold uppercase tracking-wider text-cyan-300">
+                <ShieldCheck size={12} className="shrink-0" />
+                <span className="truncate">Cổng Thông Tin Chính Thức • Sky First Network</span>
+              </span>
+              <span className="hidden md:inline text-slate-500">|</span>
+              <span className="hidden md:inline text-slate-300 font-medium capitalize">{todayLabel}</span>
+            </div>
+            <div className="flex items-center gap-3 sm:gap-4 text-[11px] font-semibold">
+              <button
+                type="button"
+                onClick={() => go('custom-page', 'tai-lieu-cong-khai')}
+                className="hover:text-cyan-300 transition cursor-pointer"
+              >
+                Hệ thống văn bản &amp; Tài liệu
+              </button>
+              <button
+                type="button"
+                onClick={() => go('custom-page', 'cong-khai')}
+                className="hidden sm:inline hover:text-cyan-300 transition cursor-pointer"
+              >
+                Công khai &amp; Minh bạch
+              </button>
+              <button
+                type="button"
+                onClick={() => go('join')}
+                className="hover:text-cyan-300 transition cursor-pointer"
+              >
+                Tra cứu hồ sơ
+              </button>
+              <button
+                type="button"
+                onClick={() => go('news')}
+                className="hidden sm:inline hover:text-cyan-300 transition cursor-pointer"
+              >
+                Thông báo chính thức
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="h-[76px] flex items-center justify-between gap-4">
+        <div className="sfn-header-bar min-h-[68px] sm:min-h-[76px] py-2 flex items-center justify-between gap-4">
           <button
             onClick={() => go('home')}
             className="flex items-center gap-3 min-w-0 text-left group"
@@ -215,7 +273,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
               <img
                 src={siteConfig.logoUrl}
                 alt={displaySiteName}
-                className="h-10 sm:h-[46px] w-auto object-contain shrink-0"
+                className="sfn-brand-logo w-auto object-contain shrink-0"
               />
             ) : (
               <span className="font-black text-slate-900">{displaySiteName}</span>

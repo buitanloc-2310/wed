@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged, User, Auth, deleteUser, Unsubscribe } from 'firebase/auth';
+import { AdminUser, AdminUserRole } from '../types';
 
 const firebaseConfig={
  apiKey:import.meta.env.VITE_FIREBASE_API_KEY||'AIzaSyCnsxTv6kDiIp_5KIUlnPcJznnZxYFvN9U',authDomain:import.meta.env.VITE_FIREBASE_AUTH_DOMAIN||'skyfirstnetwork.firebaseapp.com',projectId:import.meta.env.VITE_FIREBASE_PROJECT_ID||'skyfirstnetwork',storageBucket:import.meta.env.VITE_FIREBASE_STORAGE_BUCKET||'skyfirstnetwork.firebasestorage.app',messagingSenderId:import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID||'34327270246',appId:import.meta.env.VITE_FIREBASE_APP_ID||'1:34327270246:web:3fa54fbdb2a3d1bf326ea7'};
@@ -81,17 +82,74 @@ export async function adminApi(url:string, init:RequestInit={}) {
 }
 
 // --- Consolidated from mediaApi.ts ---
-export interface MediaItem {key:string;url:string;name:string;type:string;size:number;uploaded?:string;alt?:string;caption?:string;credit?:string;sourceUrl?:string;focalX?:number;focalY?:number;displayMode?:'original'|'contain'|'cover'}
-export const MEDIA_ACCEPT='image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,application/pdf';
-export function validateMediaFile(file:File,imageOnly=false){if(!MEDIA_ACCEPT.split(',').includes(file.type)||(imageOnly&&!file.type.startsWith('image/')))throw new Error('Chọn ảnh JPG, PNG, WebP, GIF, AVIF, SVG'+(imageOnly?'.':' hoặc PDF.'));if(!file.size)throw new Error('Tệp rỗng không thể tải lên.');if(file.size>20*1024*1024)throw new Error('Mỗi tệp tối đa 20 MB.');}
-export async function uploadMedia(file:File,imageOnly=false):Promise<MediaItem>{validateMediaFile(file,imageOnly);const form=new FormData();form.append('file',file);const d=await adminApi('/api/media/upload',{method:'POST',body:form});if(!d?.url||!d?.key)throw new Error('Máy chủ chưa trả về tệp đã lưu.');return d;}
+export interface MediaItem {
+  key:string;
+  url:string;
+  name:string;
+  type:string;
+  size:number;
+  uploaded?:string;
+  alt?:string;
+  caption?:string;
+  credit?:string;
+  sourceUrl?:string;
+  focalX?:number;
+  focalY?:number;
+  displayMode?:'original'|'contain'|'cover';
+  category?:string;
+  versionStatus?:'draft'|'active'|'archived';
+  durationSeconds?:number;
+  width?:number;
+  height?:number;
+  posterUrl?:string;
+}
+export const MEDIA_ACCEPT='image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,application/pdf,video/mp4,video/webm';
+export const VIDEO_ACCEPT='video/mp4,video/webm';
+export function validateMediaFile(file:File,imageOnly=false,videoOnly=false){
+  const allowed=MEDIA_ACCEPT.split(',');
+  if(!allowed.includes(file.type)||(imageOnly&&!file.type.startsWith('image/'))||(videoOnly&&!file.type.startsWith('video/'))){
+    throw new Error(videoOnly?'Chỉ hỗ trợ tệp video chuẩn web MP4 (H.264) hoặc WebM.':'Chọn ảnh JPG, PNG, WebP, GIF, AVIF, SVG'+(imageOnly?'.':', PDF hoặc Video MP4/WebM.'));
+  }
+  if(!file.size)throw new Error('Tệp rỗng không thể tải lên.');
+  const maxBytes=file.type.startsWith('video/')?50*1024*1024:20*1024*1024;
+  if(file.size>maxBytes)throw new Error(file.type.startsWith('video/')?'Tệp video tối đa 50 MB.':'Mỗi tệp tối đa 20 MB.');
+}
+export async function uploadMedia(
+  file:File,
+  imageOnly=false,
+  extraMeta?:{category?:string;versionStatus?:'draft'|'active'|'archived';durationSeconds?:number;width?:number;height?:number;posterUrl?:string;caption?:string}
+):Promise<MediaItem>{
+  validateMediaFile(file,imageOnly,extraMeta?.category==='intro_video');
+  const form=new FormData();
+  form.append('file',file);
+  if(extraMeta?.category)form.append('category',extraMeta.category);
+  if(extraMeta?.versionStatus)form.append('versionStatus',extraMeta.versionStatus);
+  if(extraMeta?.durationSeconds!=null)form.append('durationSeconds',String(extraMeta.durationSeconds));
+  if(extraMeta?.width!=null)form.append('width',String(extraMeta.width));
+  if(extraMeta?.height!=null)form.append('height',String(extraMeta.height));
+  if(extraMeta?.posterUrl)form.append('posterUrl',extraMeta.posterUrl);
+  if(extraMeta?.caption)form.append('caption',extraMeta.caption);
+  const d=await adminApi('/api/media/upload',{method:'POST',body:form});
+  if(!d?.url||!d?.key)throw new Error('Máy chủ chưa trả về tệp đã lưu.');
+  return d;
+}
 export async function uploadMediaBatch(files:File[],onProgress?:(done:number,total:number)=>void){if(files.length>50)throw new Error('Chọn tối đa 50 tệp mỗi lượt.');const results:{file:File;item?:MediaItem;error?:string}[]=new Array(files.length);let next=0,done=0;await Promise.all(Array.from({length:Math.min(3,files.length)},async()=>{while(next<files.length){const index=next++;const file=files[index];try{results[index]={file,item:await uploadMedia(file)}}catch(e){results[index]={file,error:e instanceof Error?e.message:'Không thể tải tệp.'}}onProgress?.(++done,files.length);}}));return results;}
-export async function listMedia(cursor?:string){return adminApi('/api/media'+(cursor?'?cursor='+encodeURIComponent(cursor):'')) as Promise<{items:MediaItem[];cursor:string|null}>;}
+export async function listMedia(cursor?:string,category?:string){
+  const qs=new URLSearchParams();
+  if(cursor)qs.set('cursor',cursor);
+  if(category)qs.set('category',category);
+  const query=qs.toString()?`?${qs.toString()}`:'';
+  return adminApi('/api/media'+query) as Promise<{items:MediaItem[];cursor:string|null}>;
+}
+export async function updateMediaMetadata(payload:Partial<MediaItem>&{key:string}){
+  return adminApi('/api/media',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+}
+export async function deleteMediaItem(key:string){
+  return adminApi('/api/media',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify({key})});
+}
 export async function copyMediaUrl(url:string){await navigator.clipboard.writeText(new URL(url,location.origin).href);}
 
 // --- Consolidated from adminPermissions.ts ---
-import { AdminUser, AdminUserRole } from '../types';
-
 export type AdminCapability =
   | 'content.edit'
   | 'content.publish'
@@ -177,7 +235,6 @@ export const canOpenAdminTab = (roleOrUser: AdminUserRole | AdminUser, tab: stri
   if (tab === 'media') return can(roleOrUser, 'media.manage');
   return can(roleOrUser, 'content.edit');
 };
-
 
 export const ALL_CAPABILITIES: { id: AdminCapability; label: string; desc: string }[] = [
   { id: 'content.edit', label: 'Soạn thảo nội dung', desc: 'Tạo và chỉnh sửa bài viết, trang, chương trình ở trạng thái nháp' },

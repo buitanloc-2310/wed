@@ -1,5 +1,5 @@
 import React, { CSSProperties, ErrorInfo, ReactNode, useEffect, useId, useState, useRef } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle2, ExternalLink, Home, Image as ImageIcon, Images, Loader2, RotateCcw, Search, SkipForward, Sparkles, UploadCloud, Volume2, VolumeX, X, ZoomIn } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, ExternalLink, Home, Image as ImageIcon, Images, Loader2, RotateCcw, Search, SkipForward, Sparkles, UploadCloud, X, ZoomIn } from 'lucide-react';
 import { IntroConfig } from '../types';
 import { sanitizeHtml } from '../utils/contentUtils';
 import { MEDIA_ACCEPT, MediaItem, listMedia, uploadMedia } from '../lib/firebase';
@@ -325,400 +325,366 @@ export const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({
 };
 
 // -----------------------------------------------------------------------------
-// HomepageIntroOverlay — Kịch bản Intro thương hiệu 6 giai đoạn (Phần VII, Mục 31–36)
-// Giai đoạn 1 (appear): Logo xuất hiện trên nền thương hiệu xanh navy với ánh sáng nhẹ phía sau
-// Giai đoạn 2 (rotate): Logo xoay tròn mượt mà có gia tốc tăng/giảm tự nhiên và dừng ổn định ở chính giữa
-// Giai đoạn 3 (name): Tên đầy đủ "MẠNG LƯỚI GIÁO DỤC VÀ PHÁT TRIỂN CỘNG ĐỒNG SKY FIRST" xuất hiện rõ + giọng đọc tiếng Việt
-// Giai đoạn 4 (slogan): 4 vế khẩu hiệu xuất hiện tuần tự theo nhịp giọng đọc:
-//   "TIÊN PHONG SÁNG TẠO – KẾT NỐI TRI THỨC – KIẾN TẠO TƯƠNG LAI – VÌ MỘT CỘNG ĐỒNG BỀN VỮNG"
-// Giai đoạn 5 (hold): Giữ khung hình hoàn chỉnh (logo + tên đầy đủ + 4 vế khẩu hiệu)
-// Giai đoạn 6 (exiting): Chuyển cảnh mượt vào Trang chủ
+// HomepageIntroOverlay — Video Logo Cao Cấp 10 Giây & Phương Án Dự Phòng Tức Thì
+// - Loại bỏ hoàn toàn giọng đọc AI tự động ở màn hình mở đầu và không bắt buộc âm thanh
+// - Ưu tiên phát Video Logo 10 giây (/brand/sky-first-intro.mp4, H.264, muted, playsInline)
+// - Phân biệt thời lượng tệp video với thời gian hiển thị intro mục tiêu (mặc định 10 giây)
+// - Có phương án dự phòng tức thì (Visual Logo 10s hoặc vào thẳng trang chủ) khi video chậm/lỗi
+// - Tôn trọng prefers-reduced-motion, tối ưu khung hình Desktop & Mobile, không lặp lại khi chuyển trang
 // -----------------------------------------------------------------------------
 
-const OFFICIAL_INTRO_NETWORK_NAME = 'MẠNG LƯỚI GIÁO DỤC VÀ PHÁT TRIỂN CỘNG ĐỒNG SKY FIRST';
+const OFFICIAL_INTRO_NETWORK_NAME = "MẠNG LƯỚI GIÁO DỤC VÀ PHÁT TRIỂN CỘNG ĐỒNG SKY FIRST";
 const OFFICIAL_INTRO_SLOGAN_CLAUSES = [
-  'TIÊN PHONG SÁNG TẠO',
-  'KẾT NỐI TRI THỨC',
-  'KIẾN TẠO TƯƠNG LAI',
-  'VÌ MỘT CỘNG ĐỒNG BỀN VỮNG',
+  "TIÊN PHONG SÁNG TẠO",
+  "KẾT NỐI TRI THỨC",
+  "KIẾN TẠO TƯƠNG LAI",
+  "VÌ MỘT CỘNG ĐỒNG BỀN VỮNG",
 ] as const;
-
-type IntroStage = 'video' | 'appear' | 'rotate' | 'name' | 'slogan' | 'hold' | 'exiting';
 
 export const HomepageIntroOverlay: React.FC<{
   config?: IntroConfig;
   siteName?: string;
   defaultLogoUrl?: string;
   onFinish: () => void;
+  previewMode?: boolean;
 }> = ({
   config,
-  siteName = 'Trang Thông Tin Điện Tử Sky First',
-  defaultLogoUrl = '/brand/sky-first-network-web.png',
+  siteName = "Trang Thông Tin Điện Tử Sky First",
+  defaultLogoUrl = "/brand/sky-first-network-web.png",
   onFinish,
+  previewMode = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const videoUrl = String(config?.videoUrl || '').trim();
-  const [videoFailed, setVideoFailed] = useState(false);
-  const [stage, setStage] = useState<IntroStage>(() => (videoUrl ? 'video' : 'appear'));
-  const [sloganBeat, setSloganBeat] = useState<number>(0);
-  const [voiceActive, setVoiceActive] = useState<boolean>(true);
-  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'speaking' | 'blocked' | 'unsupported'>('idle');
-  const spokenStagesRef = useRef<{ name: boolean; slogan: boolean }>({ name: false, slogan: false });
+  const finishedRef = useRef(false);
 
-  const logoSrc = config?.logoUrl || defaultLogoUrl || '/brand/sky-first-network-web.png';
-  const skipLabel = config?.skipLabel || 'Bỏ qua Intro';
+  const activeMode = config?.activeMode || "video";
+  const videoUrl = String(config?.videoUrl || "/brand/sky-first-intro.mp4").trim();
+  const posterUrl = String(config?.posterUrl || config?.logoUrl || defaultLogoUrl || "/brand/sky-first-network-web.png").trim();
+  const logoSrc = String(config?.logoUrl || defaultLogoUrl || "/brand/sky-first-network-web.png").trim();
+  const skipLabel = config?.skipLabel || "Bỏ qua Intro";
   const allowSkip = config?.allowSkip !== false;
   const respectReducedMotion = config?.respectReducedMotion !== false;
-  const displayWebsiteTitle =
-    siteName && siteName !== 'Sky First Network' ? siteName : 'Trang Thông Tin Điện Tử Sky First';
+  const fallbackMode = config?.fallbackMode || "logo_fade";
+  const transitionStyle = config?.transitionStyle || "fade";
+  const desktopDisplayMode = config?.desktopDisplayMode || "contain";
+  const mobileDisplayMode = config?.mobileDisplayMode || "contain";
 
-  const stopSpeech = () => {
+  // Thời gian hiển thị intro mục tiêu (mặc định chính xác 10 giây, giới hạn an toàn 3s - 20s)
+  const targetDurationSec = Math.max(3, Math.min(20, Number(config?.durationSeconds ?? 10) || 10));
+  const maxWaitMs = Math.max(1500, Math.min(8000, Number(config?.maxWaitDurationMs ?? 3500) || 3500));
+
+  const design = config?.designConfig || {};
+  const bgPrimary = design.bgPrimary || "#061A3A";
+  const bgSecondary = design.bgSecondary || "#0B3B78";
+  const accentGlow = design.accentGlow || "#22D3EE";
+  const pedestalStyle = design.pedestalStyle || "pearl_white";
+  const logoScalePercent = Math.max(60, Math.min(135, Number(design.logoScalePercent ?? 100) || 100));
+  const logoOffsetYPercent = Math.max(-20, Math.min(20, Number(design.logoOffsetYPercent ?? 0) || 0));
+  const headlineText = design.headlineText || OFFICIAL_INTRO_NETWORK_NAME;
+  const subtitleText = design.subtitleText || "SKY FIRST NETWORK (SFN) • CỔNG THÔNG TIN CHÍNH THỨC";
+  const showSloganPillars = design.showSloganPillars !== false;
+  const customClauses =
+    Array.isArray(design.sloganClauses) && design.sloganClauses.length === 4
+      ? design.sloganClauses
+      : [...OFFICIAL_INTRO_SLOGAN_CLAUSES];
+
+  const displayWebsiteTitle =
+    siteName && siteName !== "Sky First Network" ? siteName : "Trang Thông Tin Điện Tử Sky First";
+
+  const shouldUseVideo = activeMode !== "designed" && Boolean(videoUrl);
+  const [renderMode, setRenderMode] = useState<"video" | "visual">(() => (shouldUseVideo ? "video" : "visual"));
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [exiting, setExiting] = useState(false);
+
+  const triggerFinish = () => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    setExiting(true);
     try {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+      if (videoRef.current) {
+        videoRef.current.pause();
       }
     } catch {}
-  };
-
-  const handleImmediateSkip = () => {
-    stopSpeech();
-    onFinish();
-  };
-
-  // Hỗ trợ phát âm báo nhẹ nhàng bằng Web Audio API khi mở đầu (không lấn át giọng đọc)
-  const playSubtleBrandChord = () => {
-    try {
-      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      if (ctx.state === 'suspended') {
-        void ctx.resume().catch(() => {});
-      }
-      const now = ctx.currentTime;
-      const freqs = [261.63, 329.63, 392.0, 523.25]; // C4 - E4 - G4 - C5
-      freqs.forEach((f, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(f, now + idx * 0.08);
-        gain.gain.setValueAtTime(0.0001, now + idx * 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.018, now + idx * 0.08 + 0.15);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 1.4);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now + idx * 0.08);
-        osc.stop(now + idx * 0.08 + 1.45);
-      });
-    } catch {
-      // Không bao giờ treo trang nếu trình duyệt chặn AudioContext
-    }
-  };
-
-  // Đọc lời thuyết minh tiếng Việt chuẩn mực qua Web Speech API (Mục 33)
-  const speakVietnamesePhrase = (text: string) => {
-    if (!voiceActive) return;
-    if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-      setVoiceStatus('unsupported');
-      return;
-    }
-    try {
-      const synth = window.speechSynthesis;
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'vi-VN';
-      utterance.rate = 0.96;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-
-      const voices = synth.getVoices?.() || [];
-      const viVoice =
-        voices.find((v) => v.lang?.toLowerCase().startsWith('vi') && /google|microsoft|hoai|my|linh|nam|viet/i.test(v.name)) ||
-        voices.find((v) => v.lang?.toLowerCase().startsWith('vi'));
-      if (viVoice) utterance.voice = viVoice;
-
-      utterance.onstart = () => setVoiceStatus('speaking');
-      utterance.onend = () => setVoiceStatus((prev) => (prev === 'speaking' ? 'idle' : prev));
-      utterance.onerror = () => setVoiceStatus('blocked');
-
-      synth.speak(utterance);
-    } catch {
-      setVoiceStatus('blocked');
-    }
-  };
-
-  // Điều phối 6 giai đoạn chuyển động (Mục 32)
-  useEffect(() => {
-    if (
-      respectReducedMotion &&
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    ) {
+    window.setTimeout(() => {
       onFinish();
-      return;
-    }
+    }, transitionStyle === "minimal" ? 80 : 380);
+  };
 
-    if (videoUrl && !videoFailed && stage === 'video') {
-      const v = videoRef.current;
-      if (v) {
-        try {
-          v.currentTime = 0;
-          const playPromise = v.play();
-          if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(() => setVideoFailed(true));
-          }
-        } catch {
-          setVideoFailed(true);
+  useEffect(() => {
+    finishedRef.current = false;
+    setExiting(false);
+    setElapsedSec(0);
+    setVideoPlaying(false);
+    setRenderMode(activeMode !== "designed" && Boolean(videoUrl) ? "video" : "visual");
+  }, [activeMode, videoUrl, targetDurationSec]);
+
+  useEffect(() => {
+    if (!previewMode) {
+      if (
+        respectReducedMotion &&
+        typeof window !== "undefined" &&
+        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+      ) {
+        onFinish();
+        return;
+      }
+      if (
+        mobileDisplayMode === "skip_on_slow" &&
+        typeof window !== "undefined" &&
+        window.innerWidth < 768
+      ) {
+        const conn = (navigator as any)?.connection;
+        if (conn?.saveData || conn?.effectiveType === "slow-2g" || conn?.effectiveType === "2g") {
+          onFinish();
+          return;
         }
       }
-      const maxWait = Math.max(2000, Math.min(12000, Number(config?.maxWaitDurationMs ?? 6000)));
-      const videoTimeout = window.setTimeout(() => setStage('appear'), maxWait);
-      return () => window.clearTimeout(videoTimeout);
     }
 
-    if (stage === 'video' && (!videoUrl || videoFailed)) {
-      setStage('appear');
-      return;
-    }
-
-    if (stage !== 'appear') return;
-
-    playSubtleBrandChord();
-
-    // Lịch trình 6 giai đoạn chuẩn:
-    // 0.0s - 0.6s: Giai đoạn 1 (appear) - Logo xuất hiện cùng ánh sáng nền
-    // 0.6s - 3.0s: Giai đoạn 2 (rotate) - Logo xoay tròn mượt 360 độ và dừng chính giữa
-    // 3.0s - 6.0s: Giai đoạn 3 (name) - Hiển thị & đọc tên đầy đủ Mạng lưới
-    // 6.0s - 12.0s: Giai đoạn 4 (slogan) - Hiển thị & đọc tuần tự 4 vế khẩu hiệu
-    // 12.0s - 14.2s: Giai đoạn 5 (hold) - Giữ khung hình hoàn chỉnh
-    // 14.2s - 14.8s: Giai đoạn 6 (exiting) - Chuyển mượt vào trang chủ
-    const timers: number[] = [];
-    timers.push(window.setTimeout(() => setStage('rotate'), 550));
-    timers.push(window.setTimeout(() => setStage('name'), 2950));
-    timers.push(
-      window.setTimeout(() => {
-        setStage('slogan');
-        setSloganBeat(1);
-      }, 5900)
-    );
-    timers.push(window.setTimeout(() => setSloganBeat(2), 7350));
-    timers.push(window.setTimeout(() => setSloganBeat(3), 8800));
-    timers.push(window.setTimeout(() => setSloganBeat(4), 10250));
-    timers.push(window.setTimeout(() => setStage('hold'), 11900));
-    timers.push(window.setTimeout(() => setStage('exiting'), 14100));
-    timers.push(
-      window.setTimeout(() => {
-        stopSpeech();
-        onFinish();
-      }, 14650)
-    );
+    const startedAt = performance.now();
+    const intervalId = window.setInterval(() => {
+      const sec = (performance.now() - startedAt) / 1000;
+      setElapsedSec(Math.min(targetDurationSec, sec));
+      if (sec >= targetDurationSec) {
+        window.clearInterval(intervalId);
+        triggerFinish();
+      }
+    }, 100);
 
     return () => {
-      timers.forEach((id) => window.clearTimeout(id));
+      window.clearInterval(intervalId);
     };
-  }, [stage === 'video', videoUrl, videoFailed, respectReducedMotion]);
+  }, [targetDurationSec, respectReducedMotion, mobileDisplayMode, previewMode]);
 
-  // Kích hoạt giọng đọc ở Giai đoạn 3 và Giai đoạn 4
+  // Kiểm soát tải & tự chạy video (muted autoplay chuẩn trình duyệt, fallback không chặn trang)
   useEffect(() => {
-    if (stage === 'name' && !spokenStagesRef.current.name) {
-      spokenStagesRef.current.name = true;
-      speakVietnamesePhrase('Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First.');
-    } else if (stage === 'slogan' && !spokenStagesRef.current.slogan) {
-      spokenStagesRef.current.slogan = true;
-      speakVietnamesePhrase(
-        'Tiên phong sáng tạo. Kết nối tri thức. Kiến tạo tương lai. Vì một cộng đồng bền vững.'
-      );
+    if (renderMode !== "video" || !videoUrl) return;
+    const v = videoRef.current;
+    let fallbackTimer: number | undefined;
+
+    const handleFallback = () => {
+      if (finishedRef.current) return;
+      if (fallbackMode === "skip_immediately" && !previewMode) {
+        triggerFinish();
+      } else {
+        setRenderMode("visual");
+      }
+    };
+
+    fallbackTimer = window.setTimeout(() => {
+      if (!videoPlaying) {
+        handleFallback();
+      }
+    }, maxWaitMs);
+
+    if (v) {
+      try {
+        v.muted = true;
+        v.defaultMuted = true;
+        v.playsInline = true;
+        v.currentTime = 0;
+        const playPromise = v.play();
+        if (playPromise && typeof playPromise.then === "function") {
+          playPromise
+            .then(() => {
+              setVideoPlaying(true);
+              if (fallbackTimer) window.clearTimeout(fallbackTimer);
+            })
+            .catch(() => {
+              handleFallback();
+            });
+        }
+      } catch {
+        handleFallback();
+      }
     }
-  }, [stage, voiceActive]);
+
+    return () => {
+      if (fallbackTimer) window.clearTimeout(fallbackTimer);
+    };
+  }, [renderMode, videoUrl, maxWaitMs, fallbackMode, previewMode]);
 
   useEffect(() => {
+    if (previewMode) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleImmediateSkip();
+      if (e.key === "Escape" && allowSkip) {
+        triggerFinish();
+      }
     };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      stopSpeech();
-    };
-  }, []);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [allowSkip, previewMode]);
 
-  const stageOrder: IntroStage[] = ['appear', 'rotate', 'name', 'slogan', 'hold', 'exiting'];
-  const currentStageIndex = Math.max(0, stageOrder.indexOf(stage));
-  const showName = currentStageIndex >= 2;
-  const showSlogan = currentStageIndex >= 3;
-  const isHoldComplete = currentStageIndex >= 4;
+  const progressRatio = Math.min(1, Math.max(0, elapsedSec / targetDurationSec));
+  const showTitleInVisual = elapsedSec >= 1.5 || activeMode === "designed";
+  const showPillarsInVisual = elapsedSec >= 3.0 || activeMode === "designed";
 
-  const handleReplayOrToggleVoice = () => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-      setVoiceActive(true);
-      playSubtleBrandChord();
-      speakVietnamesePhrase(
-        'Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First. Tiên phong sáng tạo. Kết nối tri thức. Kiến tạo tương lai. Vì một cộng đồng bền vững.'
-      );
-    } catch {}
-  };
+  const exitClass = exiting
+    ? transitionStyle === "zoom"
+      ? "opacity-0 scale-105 pointer-events-none"
+      : transitionStyle === "slide_up"
+      ? "opacity-0 -translate-y-6 pointer-events-none"
+      : "opacity-0 pointer-events-none"
+    : "opacity-100 scale-100 translate-y-0";
 
   return (
     <div
       role="region"
-      aria-label="Giới thiệu mở đầu Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First"
-      className={`fixed inset-0 z-[180] flex flex-col items-center justify-between bg-[#061A3A] text-white transition-opacity duration-500 p-4 sm:p-8 overflow-y-auto ${
-        stage === 'exiting' ? 'opacity-0 pointer-events-none' : 'opacity-100'
-      }`}
+      aria-label="Màn hình nhận diện thương hiệu Sky First"
+      style={{
+        background: `radial-gradient(circle at 50% 34%, ${bgSecondary} 0%, ${bgPrimary} 72%)`,
+      }}
+      className={`${
+        previewMode ? "relative w-full h-full min-h-[420px] rounded-2xl" : "fixed inset-0 z-[180]"
+      } flex flex-col items-center justify-between text-white transition-all duration-400 p-3 sm:p-6 overflow-hidden select-none ${exitClass}`}
     >
-      {/* Nền thương hiệu xanh navy sâu với hiệu ứng quầng sáng mềm (Giai đoạn 1) */}
+      {/* Ánh sáng nền tinh tế hỗ trợ tôn bật Logo Sky First */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="sfn-intro-aura absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 h-[360px] w-[360px] sm:h-[520px] sm:w-[520px] rounded-full bg-gradient-to-tr from-[#0B66C3]/40 via-sky-400/25 to-cyan-300/20 blur-3xl" />
-        <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-[#0B66C3]/25 blur-3xl" />
-        <div className="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-cyan-400/15 blur-3xl" />
+        <div
+          style={{ backgroundColor: accentGlow }}
+          className="sfn-intro-aura absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 h-[280px] w-[280px] sm:h-[460px] sm:w-[460px] rounded-full opacity-20 blur-3xl"
+        />
       </div>
 
-      {/* Thanh điều khiển phía trên: Nhãn trang thông tin + Nút thuyết minh + Nút Bỏ qua Intro */}
-      <div className="relative z-30 w-full max-w-5xl flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/25 bg-white/10 px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-sky-200 backdrop-blur-md">
+      {/* Thanh điều khiển phía trên: Nhãn cổng thông tin + Thời lượng + Nút Bỏ qua Intro */}
+      <div className="relative z-30 w-full max-w-6xl flex items-center justify-between gap-2 px-1">
+        <div className="inline-flex items-center gap-2 rounded-full border border-sky-300/30 bg-slate-950/45 px-3.5 py-1.5 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.14em] text-sky-200 backdrop-blur-md">
           <Sparkles size={13} className="text-cyan-300 shrink-0" />
-          <span>{displayWebsiteTitle}</span>
+          <span className="truncate max-w-[210px] sm:max-w-none">{displayWebsiteTitle}</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleReplayOrToggleVoice}
-            className="inline-flex items-center gap-1.5 rounded-2xl border border-cyan-300/30 bg-slate-900/60 hover:bg-sky-500/20 px-3.5 py-2 text-xs font-bold text-cyan-100 backdrop-blur-md transition cursor-pointer"
-            title="Phát thuyết minh giọng đọc tiếng Việt"
-          >
-            {voiceStatus === 'speaking' ? <Volume2 size={14} className="text-cyan-300 animate-pulse" /> : <Volume2 size={14} />}
-            <span>{voiceStatus === 'speaking' ? 'Đang thuyết minh' : 'Nghe thuyết minh'}</span>
-          </button>
-
+          <span className="hidden sm:inline-flex items-center rounded-full border border-white/15 bg-slate-950/40 px-3 py-1 text-[11px] font-mono font-semibold text-sky-200/90">
+            {Math.min(targetDurationSec, Math.ceil(elapsedSec))}s / {targetDurationSec}s
+          </span>
           {allowSkip && (
             <button
               type="button"
-              onClick={handleImmediateSkip}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-slate-950/65 hover:bg-white hover:text-[#061A3A] px-4 py-2 text-xs sm:text-sm font-black tracking-wide backdrop-blur-md shadow-xl transition cursor-pointer"
+              onClick={triggerFinish}
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-white/25 bg-slate-950/65 hover:bg-white hover:text-[#061A3A] px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs font-black tracking-wide backdrop-blur-md shadow-xl transition cursor-pointer"
             >
               <span>{skipLabel}</span>
-              <SkipForward size={15} />
+              <SkipForward size={14} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Pha Video tùy chọn (nếu quản trị viên cấu hình videoUrl hợp lệ) */}
-      {stage === 'video' && videoUrl && !videoFailed && (
-        <div className="relative z-20 my-auto w-full flex items-center justify-center p-4">
+      {/* Khu vực trung tâm: Phát Video Logo 10 giây (MP4/H.264) hoặc Bản thiết kế Visual dự phòng */}
+      {renderMode === "video" && videoUrl ? (
+        <div className="relative z-20 my-auto w-full max-w-5xl flex items-center justify-center px-1 sm:px-4">
           <video
             ref={videoRef}
             src={videoUrl}
+            poster={posterUrl}
             muted
+            autoPlay
             playsInline
             preload="auto"
-            onEnded={() => setStage('appear')}
-            onError={() => setVideoFailed(true)}
-            className="max-h-[76vh] max-w-[92vw] w-auto h-auto rounded-3xl shadow-2xl object-contain"
+            onPlay={() => setVideoPlaying(true)}
+            onEnded={triggerFinish}
+            onError={() => {
+              if (fallbackMode === "skip_immediately" && !previewMode) {
+                triggerFinish();
+              } else {
+                setRenderMode("visual");
+              }
+            }}
+            className={`w-full rounded-2xl sm:rounded-3xl shadow-[0_24px_70px_rgba(0,0,0,0.55)] border border-sky-300/25 bg-[#061A3A] ${
+              desktopDisplayMode === "cover"
+                ? "sm:max-h-[78vh] sm:object-cover"
+                : desktopDisplayMode === "theater"
+                ? "sm:max-h-[82vh] sm:object-contain"
+                : "sm:max-h-[74vh] sm:object-contain"
+            } ${
+              mobileDisplayMode === "compact"
+                ? "max-h-[54vh] object-contain"
+                : "max-h-[68vh] object-contain"
+            }`}
           />
         </div>
-      )}
-
-      {/* Khung chính của 6 giai đoạn Intro Thương hiệu */}
-      {stage !== 'video' && (
-        <div className="relative z-20 my-auto flex flex-col items-center text-center max-w-4xl w-full px-3 sm:px-6 py-4">
-          {/* Giai đoạn 1 & 2: Logo xuất hiện trên nền sáng sang trọng và xoay tròn mượt mà rồi dừng ổn định ở chính giữa */}
-          <div className="relative flex items-center justify-center">
-            <div
-              className={`rounded-full bg-white p-5 sm:p-7 shadow-[0_28px_80px_rgba(0,0,0,0.45)] border-2 border-cyan-300/40 transition-transform duration-700 ${
-                stage === 'rotate' ? 'sfn-intro-spin' : 'scale-100 rotate-0'
-              }`}
-            >
-              <img
-                src={logoSrc}
-                alt="Logo Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First"
-                className="h-20 w-20 sm:h-28 sm:w-28 object-contain mx-auto select-none"
-              />
-            </div>
-          </div>
-
-          {/* Giai đoạn 3: Tên đầy đủ chính thức của Mạng lưới */}
+      ) : (
+        <div
+          style={{ transform: `translateY(${logoOffsetYPercent}%)` }}
+          className="relative z-20 my-auto flex flex-col items-center text-center max-w-4xl w-full px-3 sm:px-6 py-2 transition-all duration-500"
+        >
+          {/* Bệ sáng tôn bật nguyên bản tỷ lệ Logo Sky First */}
           <div
-            className={`mt-6 sm:mt-8 transition-all duration-700 ${
-              showName ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
+            style={{ transform: `scale(${logoScalePercent / 100})` }}
+            className={`rounded-3xl px-6 py-5 sm:px-10 sm:py-7 shadow-[0_24px_70px_rgba(0,0,0,0.45)] transition-all duration-700 ${
+              pedestalStyle === "frosted_glass"
+                ? "bg-white/90 backdrop-blur-xl border-2 border-cyan-300/60"
+                : pedestalStyle === "minimal_clear"
+                ? "bg-white/95 border border-white/40"
+                : "bg-white border-2 border-sky-300/80"
             }`}
           >
-            <p className="text-[11px] sm:text-xs font-extrabold uppercase tracking-[0.22em] text-cyan-300 mb-2">
-              SKY FIRST NETWORK
-            </p>
-            <h1 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tight text-white leading-snug max-w-3xl mx-auto">
-              {OFFICIAL_INTRO_NETWORK_NAME}
+            <img
+              src={logoSrc}
+              alt="Logo Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First"
+              className="h-24 sm:h-36 md:h-40 w-auto max-w-[78vw] sm:max-w-[420px] object-contain mx-auto select-none"
+            />
+          </div>
+
+          {/* Tên đầy đủ chính thức của Mạng lưới */}
+          <div
+            className={`mt-5 sm:mt-6 transition-all duration-700 ${
+              showTitleInVisual ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            }`}
+          >
+            <h1 className="text-base sm:text-xl md:text-2xl lg:text-[26px] font-black uppercase tracking-tight text-white leading-snug max-w-3xl mx-auto">
+              {headlineText}
             </h1>
+            <p className="text-[11px] sm:text-xs font-extrabold uppercase tracking-[0.18em] text-sky-300 mt-1.5">
+              {subtitleText}
+            </p>
+            <div className="mx-auto mt-3 h-[3px] w-44 rounded-full bg-cyan-400/80" />
           </div>
 
-          {/* Giai đoạn 4 & 5: Khẩu hiệu 4 vế xuất hiện tuần tự theo nhịp giọng đọc */}
-          <div
-            className={`mt-6 sm:mt-8 w-full max-w-4xl transition-all duration-700 ${
-              showSlogan ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
-            }`}
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-              {OFFICIAL_INTRO_SLOGAN_CLAUSES.map((clause, idx) => {
-                const clauseIndex = idx + 1;
-                const isRevealed = sloganBeat >= clauseIndex || isHoldComplete;
-                const isCurrentBeat = stage === 'slogan' && sloganBeat === clauseIndex;
-                return (
-                  <div
-                    key={clause}
-                    className={`rounded-2xl border px-3.5 py-3 sm:py-3.5 transition-all duration-500 flex flex-col items-center justify-center min-h-[64px] ${
-                      isRevealed
-                        ? isCurrentBeat
-                          ? 'border-cyan-300 bg-sky-500/25 text-white shadow-lg shadow-cyan-500/20 scale-[1.02]'
-                          : 'border-white/20 bg-white/10 text-sky-50'
-                        : 'border-white/5 bg-white/[0.02] text-white/20 scale-95 opacity-25'
-                    }`}
-                  >
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-300/90 mb-0.5">
-                      0{clauseIndex}
-                    </span>
-                    <span className="text-xs sm:text-[13px] font-black uppercase tracking-wide text-center leading-snug">
-                      {clause}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Dòng khẩu hiệu đầy đủ kết nối 4 vế ở Giai đoạn 5 */}
-            <p
-              className={`mt-4 text-xs sm:text-sm font-bold tracking-wide text-cyan-200 transition-opacity duration-500 ${
-                sloganBeat >= 4 || isHoldComplete ? 'opacity-100' : 'opacity-0'
+          {/* 4 trụ cột khẩu hiệu chính thức */}
+          {showSloganPillars && (
+            <div
+              className={`mt-5 w-full max-w-4xl transition-all duration-700 ${
+                showPillarsInVisual ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              TIÊN PHONG SÁNG TẠO – KẾT NỐI TRI THỨC – KIẾN TẠO TƯƠNG LAI – VÌ MỘT CỘNG ĐỒNG BỀN VỮNG
-            </p>
-          </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                {customClauses.map((clause, idx) => {
+                  const clauseStart = 3.0 + idx * 0.65;
+                  const revealed = elapsedSec >= clauseStart || activeMode === "designed";
+                  return (
+                    <div
+                      key={`${idx}-${clause}`}
+                      className={`rounded-2xl border px-3 py-2.5 sm:py-3 transition-all duration-500 flex flex-col items-center justify-center min-h-[58px] ${
+                        revealed
+                          ? "border-sky-300/45 bg-[#0A2246]/80 text-white shadow-md"
+                          : "border-white/10 bg-white/[0.03] text-white/30 opacity-40"
+                      }`}
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-sky-300 mb-0.5">
+                        0{idx + 1}
+                      </span>
+                      <span className="text-[11px] sm:text-xs font-black uppercase tracking-wide text-center leading-snug">
+                        {clause}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Thanh tiến trình 6 giai đoạn ở chân màn hình */}
-      <div className="relative z-30 w-full max-w-md mx-auto flex flex-col items-center gap-2 pb-1">
-        <div className="flex items-center gap-1.5 w-full">
-          {(['appear', 'rotate', 'name', 'slogan', 'hold'] as const).map((st, i) => {
-            const active = currentStageIndex >= i;
-            return (
-              <div
-                key={st}
-                className={`h-1 flex-1 rounded-full transition-all duration-500 ${
-                  active ? 'bg-cyan-300' : 'bg-white/15'
-                }`}
-              />
-            );
-          })}
+      {/* Thanh tiến trình thời lượng 10 giây ở chân màn hình */}
+      <div className="relative z-30 w-full max-w-sm mx-auto flex flex-col items-center gap-1.5 pb-1">
+        <div className="w-full h-1.5 rounded-full bg-white/15 overflow-hidden">
+          <div
+            style={{ width: `${Math.round(progressRatio * 100)}%` }}
+            className="h-full rounded-full bg-sky-400 transition-all duration-150"
+          />
         </div>
-        <span className="text-[11px] text-slate-300/80 font-medium">
-          {stage === 'appear' && 'Giai đoạn 1/5: Khởi tạo nhận diện Sky First'}
-          {stage === 'rotate' && 'Giai đoạn 2/5: Chuyển động hội tụ biểu trưng'}
-          {stage === 'name' && 'Giai đoạn 3/5: Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First'}
-          {stage === 'slogan' && 'Giai đoạn 4/5: Khẩu hiệu định hướng 4 trụ cột'}
-          {(stage === 'hold' || stage === 'exiting') && 'Giai đoạn 5/5: Sẵn sàng vào Trang Thông Tin Điện Tử Sky First'}
-        </span>
       </div>
     </div>
   );

@@ -198,10 +198,15 @@ async function enqueueFormEmail(c, { idempotencyKey, to, subject, body, eventTyp
        VALUES(?,?,?,?,?,?,?,?,0,datetime('now'),datetime('now'))`
     ).bind(id, idempotencyKey || id, to, subject, body, eventType, referenceId, status).run();
     if (!key) return;
+    const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e2e8f0;border-radius:12px;"><div style="background:#061a3a;color:#fff;padding:16px 20px;border-radius:8px;font-weight:800;">Trang Thông Tin Điện Tử Sky First</div><div style="padding:18px 4px;line-height:1.65;color:#1e293b;white-space:pre-line;">${String(body || '').replace(/</g, '&lt;')}</div><div style="font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:12px;">Cổng thông tin chính thức: <a href="https://skyfirst.io.vn">https://skyfirst.io.vn</a></div></div>`;
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [to], subject, text: body }),
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': String(idempotencyKey || id).slice(0, 250),
+      },
+      body: JSON.stringify({ from, to: [to], subject, text: body, html }),
     });
     const d = await r.json().catch(() => ({}));
     if (r.ok) {

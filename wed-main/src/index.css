@@ -154,3 +154,51 @@ html[data-motion="reduced"] .sfn-intro-aura { animation:none!important }
 .sf-media-original{width:auto!important;height:auto!important;object-fit:contain!important}.sf-media-fit{object-fit:contain!important}.sf-media-cover{object-fit:cover!important}
 @media(max-width:767px){button,a,input,select,textarea{min-height:44px}.sf-hero-visual:hover{transform:none}}
 @media(prefers-reduced-motion:reduce){.sf-hero-visual{animation:none!important}.sf-hero-visual:hover{transform:none!important}}
+
+/* Dynamic Admin Layout & Sizing Customizer Tokens (Section VI & VII) */
+:root {
+  --sfn-logo-h-desktop: 48px;
+  --sfn-logo-h-mobile: 38px;
+  --sfn-header-h: 80px;
+  --sfn-nav-gap: 6px;
+  --sfn-grid-gap: 24px;
+  --sfn-heading-scale: 1;
+  --sfn-lead-font-size: 18px;
+  --sfn-body-font-size: 16px;
+  --sfn-caption-font-size: 13px;
+  --sfn-line-height: 1.65;
+  --sfn-paragraph-gap: 16px;
+  --sfn-section-gap: 64px;
+  --sfn-image-radius: 20px;
+  --sfn-form-max-w: 768px;
+  --sfn-form-field-gap: 16px;
+  --sfn-form-input-h: 46px;
+  --sfn-form-label-size: 13px;
+}
+.sfn-brand-logo {
+  height: var(--sfn-logo-h-mobile, 38px);
+  width: auto;
+  object-fit: contain;
+}
+@media (min-width: 640px) {
+  .sfn-brand-logo {
+    height: var(--sfn-logo-h-desktop, 48px);
+  }
+  .sfn-header-bar {
+    min-height: var(--sfn-header-h, 80px);
+  }
+}
+.sfn-dynamic-form {
+  max-width: var(--sfn-form-max-w, 768px);
+  width: 100%;
+  margin-inline: auto;
+}
+.sfn-dynamic-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.sfn-dynamic-form select {
+  min-height: var(--sfn-form-input-h, 46px);
+}
+@media (max-width: 767px) {
+  .sfn-dynamic-form {
+    max-width: 100% !important;
+  }
+}

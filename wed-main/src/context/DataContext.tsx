@@ -188,19 +188,113 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   homeSections:{hero:true,direction:true,pillars:true,programs:true,units:true,certificate:false,values:true,news:true,transparency:true,cta:true},
   homeSectionOrder:['hero','pillars','news','programs','values','certificate','transparency','units','cta'],
   footerSlogan:'', footerAboutText:'', footerCopyright:'© 2026. Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First.', footerCertBadgeText:'Xác thực GCN',footerUnitsBadgeText:'Đơn vị trực thuộc',footerSocialFacebook:'',footerSocialInstagram:'',footerSocialTiktok:'',footerSocialLinkedin:'',footerSocialYoutube:'',footerSocialZalo:'',
+  designSystem: {
+    primary: '#0B66C3',
+    navy: '#071B3A',
+    accent: '#22D3EE',
+    radius: '24px',
+    container: '1280px',
+    fontFamily: 'Be Vietnam Pro',
+    spacing: 'normal',
+    motion: 'balanced',
+    defaultImageDisplay: 'original',
+    logoHeightDesktopPx: 48,
+    logoHeightMobilePx: 38,
+    headerHeightPx: 80,
+    navItemGapPx: 6,
+    containerMaxWidthPx: 1280,
+    gridGapPx: 24,
+    headingScale: 1.0,
+    leadFontSizePx: 18,
+    bodyFontSizePx: 16,
+    captionFontSizePx: 13,
+    lineHeight: 1.65,
+    paragraphGapPx: 16,
+    sectionGapPx: 64,
+    cardImageAspectRatio: 'auto',
+    imageBorderRadiusPx: 20,
+    homeNewsColumns: 3,
+    homeProgramsColumns: 3,
+    homePillarsColumns: 5,
+    homeValuesColumns: 3,
+    showOfficialPortalBar: true,
+    formMaxWidthPx: 768,
+    formFieldGapPx: 16,
+    formInputHeightPx: 46,
+    formLabelSizePx: 13,
+    formLayoutMode: 'single'
+  },
   intro: {
     enabled: true,
-    videoUrl: '',
-    posterUrl: '/brand/sky-first-network-logo.png',
+    activeMode: 'video',
+    videoUrl: '/brand/sky-first-intro.mp4',
+    posterUrl: '/brand/sky-first-network-web.png',
     logoUrl: '/brand/sky-first-network-web.png',
+    durationSeconds: 10,
+    videoFileDurationSeconds: 10,
     logoRevealDurationMs: 1400,
-    maxWaitDurationMs: 8000,
+    maxWaitDurationMs: 3500,
     allowSkip: true,
     skipLabel: 'Bỏ qua Intro',
+    transitionStyle: 'fade',
+    desktopDisplayMode: 'contain',
+    mobileDisplayMode: 'contain',
+    mutedByDefault: true,
     playMode: 'every_home_load',
     respectReducedMotion: true,
     fallbackMode: 'logo_fade',
-    tagline: 'TIÊN PHONG SÁNG TẠO – KẾT NỐI TRI THỨC – KIẾN TẠO TƯƠNG LAI – VÌ MỘT CỘNG ĐỒNG BỀN VỮNG'
+    tagline: 'TIÊN PHONG SÁNG TẠO – KẾT NỐI TRI THỨC – KIẾN TẠO TƯƠNG LAI – VÌ MỘT CỘNG ĐỒNG BỀN VỮNG',
+    designConfig: {
+      bgPrimary: '#061A3A',
+      bgSecondary: '#0B3B78',
+      accentGlow: '#22D3EE',
+      pedestalStyle: 'pearl_white',
+      logoScalePercent: 100,
+      logoOffsetYPercent: 0,
+      logoAppearDelaySec: 0.15,
+      motionPreset: 'refined_scale',
+      headlineText: 'MẠNG LƯỚI GIÁO DỤC VÀ PHÁT TRIỂN CỘNG ĐỒNG SKY FIRST',
+      subtitleText: 'SKY FIRST NETWORK (SFN) • CỔNG THÔNG TIN CHÍNH THỨC',
+      showSloganPillars: true,
+      sloganClauses: [
+        'TIÊN PHONG SÁNG TẠO',
+        'KẾT NỐI TRI THỨC',
+        'KIẾN TẠO TƯƠNG LAI',
+        'VÌ MỘT CỘNG ĐỒNG BỀN VỮNG'
+      ],
+      holdStartSec: 7.5,
+      exitStartSec: 9.4
+    },
+    library: [
+      {
+        id: 'builtin-intro-10s',
+        name: 'Video Intro Thương Hiệu Sky First Chuẩn 10 Giây (MP4/H.264)',
+        kind: 'video',
+        url: '/brand/sky-first-intro.mp4',
+        posterUrl: '/brand/sky-first-network-web.png',
+        format: 'video/mp4 (H.264)',
+        sizeBytes: 387766,
+        durationSeconds: 10,
+        width: 1280,
+        height: 720,
+        uploadedAt: '2026-10-28T00:00:00.000Z',
+        status: 'active',
+        note: 'Bản mặc định chính thức 10.0s (1280x720, không âm thanh, tối ưu autoplay Desktop & Mobile)'
+      },
+      {
+        id: 'builtin-poster-default',
+        name: 'Poster Dự Phòng Logo Sky First Nguyên Bản',
+        kind: 'poster',
+        url: '/brand/sky-first-network-web.png',
+        format: 'image/png',
+        sizeBytes: 651353,
+        width: 1945,
+        height: 1171,
+        uploadedAt: '2026-10-28T00:00:00.000Z',
+        status: 'active',
+        note: 'Ảnh poster dự phòng giữ nguyên 100% tỷ lệ gốc 1945x1171'
+      }
+    ]
   },
   emailSettings: {
     enabled: false,
@@ -228,7 +322,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     titleTemplate: '%s | Trang Thông Tin Điện Tử Sky First',
     defaultTitle: 'Trang Thông Tin Điện Tử Sky First — Mạng lưới Giáo dục & Phát triển Cộng đồng Sky First',
     defaultDescription: 'Sky First Network được xây dựng như một không gian kết nối các hoạt động giáo dục, phát triển người trẻ, tình nguyện, hợp tác và truyền thông cộng đồng.',
-    defaultOgImage: '/brand/sky-first-network-logo.png',
+    defaultOgImage: '/brand/sky-first-network-web.png',
     canonicalDomain: 'https://skyfirst.io.vn',
     allowIndexing: true
   }
@@ -244,15 +338,69 @@ const normalizeHomeSectionOrder=(value?:string[])=>{
   return [...new Set([...cleaned,...PRODUCTION_HOME_ORDER.filter(x=>!cleaned.includes(x))])];
 };
 
+const clampNum = (val: unknown, fallback: number, min: number, max: number): number => {
+  const n = Number(val);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+};
+
 const normalizeRemoteSiteConfig = (prev: SiteConfig, remoteConfig: Partial<SiteConfig>): SiteConfig => {
   const normalizedSiteName =
     !remoteConfig.siteName || remoteConfig.siteName === 'Sky First Network'
       ? 'Trang Thông Tin Điện Tử Sky First'
       : remoteConfig.siteName;
+  const rawIntro = (remoteConfig.intro || {}) as Partial<SiteConfig['intro'] & Record<string, any>>;
+  const mergedIntro = {
+    ...prev.intro,
+    ...rawIntro,
+    videoUrl: rawIntro.videoUrl && String(rawIntro.videoUrl).trim() ? String(rawIntro.videoUrl).trim() : (prev.intro?.videoUrl || '/brand/sky-first-intro.mp4'),
+    posterUrl:
+      !rawIntro.posterUrl || rawIntro.posterUrl === '/brand/sky-first-network-logo.png'
+        ? (prev.intro?.posterUrl || '/brand/sky-first-network-web.png')
+        : rawIntro.posterUrl,
+    logoUrl: rawIntro.logoUrl || prev.intro?.logoUrl || '/brand/sky-first-network-web.png',
+    durationSeconds: clampNum(rawIntro.durationSeconds ?? prev.intro?.durationSeconds, 10, 3, 20),
+    maxWaitDurationMs: clampNum(rawIntro.maxWaitDurationMs ?? prev.intro?.maxWaitDurationMs, 3500, 1500, 8000),
+    mutedByDefault: true,
+    designConfig: {
+      ...(prev.intro?.designConfig || {}),
+      ...(rawIntro.designConfig || {}),
+    },
+    library:
+      Array.isArray(rawIntro.library) && rawIntro.library.length > 0
+        ? rawIntro.library
+        : prev.intro?.library || [],
+  };
+  const rawDs = (remoteConfig.designSystem || {}) as Record<string, any>;
+  const prevDs = prev.designSystem || {};
+  const mergedDs = {
+    ...prevDs,
+    ...rawDs,
+    logoHeightDesktopPx: clampNum(rawDs.logoHeightDesktopPx ?? prevDs.logoHeightDesktopPx, 48, 32, 84),
+    logoHeightMobilePx: clampNum(rawDs.logoHeightMobilePx ?? prevDs.logoHeightMobilePx, 38, 28, 56),
+    headerHeightPx: clampNum(rawDs.headerHeightPx ?? prevDs.headerHeightPx, 80, 64, 112),
+    navItemGapPx: clampNum(rawDs.navItemGapPx ?? prevDs.navItemGapPx, 6, 2, 20),
+    containerMaxWidthPx: clampNum(rawDs.containerMaxWidthPx ?? prevDs.containerMaxWidthPx, 1280, 1024, 1440),
+    gridGapPx: clampNum(rawDs.gridGapPx ?? prevDs.gridGapPx, 24, 12, 40),
+    headingScale: clampNum(rawDs.headingScale ?? prevDs.headingScale, 1.0, 0.85, 1.25),
+    leadFontSizePx: clampNum(rawDs.leadFontSizePx ?? prevDs.leadFontSizePx, 18, 15, 22),
+    bodyFontSizePx: clampNum(rawDs.bodyFontSizePx ?? prevDs.bodyFontSizePx, 16, 14, 19),
+    captionFontSizePx: clampNum(rawDs.captionFontSizePx ?? prevDs.captionFontSizePx, 13, 11, 15),
+    lineHeight: clampNum(rawDs.lineHeight ?? prevDs.lineHeight, 1.65, 1.4, 1.95),
+    paragraphGapPx: clampNum(rawDs.paragraphGapPx ?? prevDs.paragraphGapPx, 16, 8, 32),
+    sectionGapPx: clampNum(rawDs.sectionGapPx ?? prevDs.sectionGapPx, 64, 32, 112),
+    imageBorderRadiusPx: clampNum(rawDs.imageBorderRadiusPx ?? prevDs.imageBorderRadiusPx, 20, 8, 32),
+    formMaxWidthPx: clampNum(rawDs.formMaxWidthPx ?? prevDs.formMaxWidthPx, 768, 520, 980),
+    formFieldGapPx: clampNum(rawDs.formFieldGapPx ?? prevDs.formFieldGapPx, 16, 10, 28),
+    formInputHeightPx: clampNum(rawDs.formInputHeightPx ?? prevDs.formInputHeightPx, 46, 40, 56),
+    formLabelSizePx: clampNum(rawDs.formLabelSizePx ?? prevDs.formLabelSizePx, 13, 11, 16),
+  };
   return {
     ...prev,
     ...remoteConfig,
     siteName: normalizedSiteName,
+    intro: mergedIntro,
+    designSystem: mergedDs,
     homeSections: { ...prev.homeSections, ...(remoteConfig.homeSections || {}) },
     homeSectionOrder: normalizeHomeSectionOrder(remoteConfig.homeSectionOrder),
   };

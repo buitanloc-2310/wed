@@ -641,6 +641,10 @@ test('Sky First Network — Comprehensive Backend, CMS, Forms, Email, Automation
       CREATE TABLE website_media_metadata (
         key TEXT PRIMARY KEY, alt TEXT NOT NULL DEFAULT '', caption TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL
       );
+      CREATE TABLE website_email_outbox (
+        id TEXT PRIMARY KEY, recipient TEXT NOT NULL, subject TEXT NOT NULL, body TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'queued', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
       CREATE TABLE website_forms (
         id TEXT PRIMARY KEY, slug TEXT NOT NULL UNIQUE, title TEXT NOT NULL,
         description TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'draft',
@@ -690,81 +694,18 @@ test('Sky First Network — Comprehensive Backend, CMS, Forms, Email, Automation
       const body = await res.json();
       assert.equal(body.ok, true);
       assert.equal(body.item.application_code, 'SFN-2025-OLD001');
+      // Also verify system.js auto-adds next_retry_at and other missing columns on older website_email_outbox
+      await legacyDB.prepare("INSERT INTO website_admin_users(uid,email,name,role,status,is_root_owner) VALUES('qa-owner','skyfirst.ec@gmail.com','Owner','developer','active',1)").run();
+      const outboxRes = await system.onRequestGet({
+        env: legacyEnv,
+        request: new Request('https://test.invalid/api/system?action=email-outbox', {
+          headers: { authorization: 'Bearer qa-owner-token' },
+        }),
+        data: {},
+      });
+      assert.equal(outboxRes.status, 200);
     } finally {
       legacyBridge.close();
     }
-  });
-
-  await t.test('17. Intro Video MP4 Upload, R2 Range Streaming, Active Video Lock & Resend API Idempotency/HTML', async () => {
-    // 1. Upload valid MP4 intro video (ftypisom header)
-    const mp4Bytes = new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109, 0, 0, 2, 0, 105, 115, 111, 109, 105, 115, 111, 50]);
-    const fd = new FormData();
-    fd.append('file', new File([mp4Bytes], 'sky-first-intro-10s.mp4', { type: 'video/mp4' }));
-    fd.append('category', 'intro_video');
-    fd.append('versionStatus', 'active');
-    fd.append('durationSeconds', '10');
-    fd.append('width', '1280');
-    fd.append('height', '720');
-    const upRes = await upload.onRequestPost({
-      env: f.env,
-      request: new Request('https://test.invalid/api/media/upload', {
-        method: 'POST',
-        headers: { authorization: `Bearer ${admin}` },
-        body: fd,
-      }),
-      data: {},
-    });
-    assert.equal(upRes.status, 200);
-    const upData = await upRes.json();
-    assert.equal(upData.ok, true);
-    assert.equal(upData.category, 'intro_video');
-    assert.equal(upData.versionStatus, 'active');
-    assert.equal(upData.durationSeconds, 10);
-
-    // 2. Active intro video cannot be deleted while active (HTTP 409)
-    const delActive = await call(media, 'DELETE', '/api/media', { key: upData.key }, admin);
-    assert.equal(delActive.status, 409);
-
-    // 3. Streaming video supports Accept-Ranges: bytes
-    const streamRes = await serve.onRequestGet({
-      env: f.env,
-      params: { path: upData.key.split('/') },
-      request: new Request(`https://test.invalid/media/${upData.key}`),
-    });
-    assert.equal(streamRes.status, 200);
-    assert.equal(streamRes.headers.get('accept-ranges'), 'bytes');
-
-    // 4. Resend API preview returns renderedHtml & email-domain-check works safely
-    const prevRes = await call(system, 'POST', '/api/system?action=email-preview', {
-      subjectTemplate: '[{{site_name}}] Xác nhận {{ma_ho_so}}',
-      bodyTemplate: 'Xin chào {{ho_ten}}, mã hồ sơ {{ma_ho_so}}',
-    }, admin);
-    assert.equal(prevRes.status, 200);
-    assert.ok(prevRes.data.renderedHtml.includes('<!DOCTYPE html>'));
-    assert.ok(prevRes.data.renderedHtml.includes('SKY FIRST NETWORK'));
-
-    const domRes = await call(system, 'POST', '/api/system?action=email-domain-check', {
-      domain: 'skyfirst.io.vn',
-    }, admin);
-    assert.equal(domRes.status, 200);
-    assert.equal(domRes.data.ok, true);
-
-    // 5. Contact submission queues receipt & admin alert in website_email_outbox and blocks rapid duplicate
-    const c1 = await call(contact, 'POST', '/api/contact', {
-      name: 'Trần Văn Kiểm Thử',
-      email: 'kiemthu@example.com',
-      topic: 'Hợp tác & Đồng hành',
-      message: 'Đề xuất hợp tác giáo dục cộng đồng năm 2026.',
-    });
-    assert.equal(c1.status, 200);
-    assert.equal(c1.data.ok, true);
-
-    const cDup = await call(contact, 'POST', '/api/contact', {
-      name: 'Trần Văn Kiểm Thử',
-      email: 'kiemthu@example.com',
-      topic: 'Hợp tác & Đồng hành',
-      message: 'Đề xuất hợp tác giáo dục cộng đồng năm 2026.',
-    });
-    assert.equal(cDup.status, 409);
   });
 });

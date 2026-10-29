@@ -46,43 +46,97 @@ export async function ensureSystemSchema(context) {
       created_by TEXT NOT NULL DEFAULT 'system', created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`),
   ]);
+
+  // Auto-heal / add any missing columns if tables existed from an earlier deployment
+  const ensureCols = async (table, colDefs) => {
+    const info = await context.env.DB.prepare(`PRAGMA table_info(${table})`).all();
+    const existing = new Set((info.results || []).map(x => x.name));
+    for (const [col, def] of colDefs) {
+      if (!existing.has(col)) {
+        await context.env.DB.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`).run();
+      }
+    }
+  };
+
+  await ensureCols('website_email_outbox', [
+    ['idempotency_key', 'TEXT'],
+    ['recipient', "TEXT NOT NULL DEFAULT ''"],
+    ['reply_to', "TEXT NOT NULL DEFAULT ''"],
+    ['from_name', "TEXT NOT NULL DEFAULT 'Sky First Network'"],
+    ['subject', "TEXT NOT NULL DEFAULT ''"],
+    ['body', "TEXT NOT NULL DEFAULT ''"],
+    ['html_body', "TEXT NOT NULL DEFAULT ''"],
+    ['event_type', "TEXT NOT NULL DEFAULT 'general'"],
+    ['reference_id', "TEXT NOT NULL DEFAULT ''"],
+    ['status', "TEXT NOT NULL DEFAULT 'queued'"],
+    ['attempts', 'INTEGER NOT NULL DEFAULT 0'],
+    ['max_attempts', 'INTEGER NOT NULL DEFAULT 3'],
+    ['next_retry_at', 'TEXT'],
+    ['provider', "TEXT NOT NULL DEFAULT 'resend'"],
+    ['provider_id', "TEXT NOT NULL DEFAULT ''"],
+    ['error_text', "TEXT NOT NULL DEFAULT ''"],
+    ['created_at', "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+    ['updated_at', "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+    ['sent_at', 'TEXT'],
+  ]);
+
+  await ensureCols('website_revisions', [
+    ['entity_type', "TEXT NOT NULL DEFAULT ''"],
+    ['entity_id', "TEXT NOT NULL DEFAULT ''"],
+    ['version_label', "TEXT NOT NULL DEFAULT ''"],
+    ['snapshot_json', "TEXT NOT NULL DEFAULT '{}'"],
+    ['created_by', "TEXT NOT NULL DEFAULT 'system'"],
+    ['created_at', "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+  ]);
+
+  await ensureCols('website_analytics_daily', [
+    ['title', "TEXT NOT NULL DEFAULT ''"],
+    ['entity_type', "TEXT NOT NULL DEFAULT 'page'"],
+    ['entity_id', "TEXT NOT NULL DEFAULT ''"],
+    ['views', 'INTEGER NOT NULL DEFAULT 0'],
+    ['sessions_est', 'INTEGER NOT NULL DEFAULT 0'],
+    ['updated_at', "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+  ]);
+
+  await ensureCols('website_analytics_manual', [
+    ['metric_date', "TEXT NOT NULL DEFAULT ''"],
+    ['period_label', "TEXT NOT NULL DEFAULT ''"],
+    ['path_or_scope', "TEXT NOT NULL DEFAULT 'all'"],
+    ['pageviews', 'INTEGER NOT NULL DEFAULT 0'],
+    ['visitors_est', 'INTEGER NOT NULL DEFAULT 0'],
+    ['source_name', "TEXT NOT NULL DEFAULT ''"],
+    ['note', "TEXT NOT NULL DEFAULT ''"],
+    ['recorded_by', "TEXT NOT NULL DEFAULT 'admin'"],
+    ['created_at', "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+    ['updated_at', "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+  ]);
+
+  await ensureCols('website_backups', [
+    ['label', "TEXT NOT NULL DEFAULT ''"],
+    ['scope', "TEXT NOT NULL DEFAULT 'full_cms_forms_config'"],
+    ['status', "TEXT NOT NULL DEFAULT 'completed'"],
+    ['checksum', "TEXT NOT NULL DEFAULT ''"],
+    ['stats_json', "TEXT NOT NULL DEFAULT '{}'"],
+    ['snapshot_json', "TEXT NOT NULL DEFAULT '{}'"],
+    ['created_by', "TEXT NOT NULL DEFAULT 'system'"],
+    ['created_at', "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+  ]);
+
+  await context.env.DB.batch([
+    context.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_email_outbox_status_retry ON website_email_outbox(status, next_retry_at, created_at DESC)'),
+    context.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_email_outbox_event_ref ON website_email_outbox(event_type, reference_id)'),
+    context.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_website_revisions_entity ON website_revisions(entity_type, entity_id, created_at DESC)'),
+    context.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_analytics_daily_day ON website_analytics_daily(day DESC, views DESC)'),
+    context.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_analytics_manual_date ON website_analytics_manual(metric_date DESC)'),
+    context.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_website_backups_created ON website_backups(created_at DESC)'),
+  ]);
 }
 
 function maskSecret(val) {
   const s = String(val || '').trim();
   if (!s) return { configured: false, masked: 'Chưa cấu hình' };
-  return { configured: true, masked: 'Đã cấu hình trong Secrets máy chủ (Đã ẩn bảo mật)' };
-}
-
-function escapeHtmlEmail(str) {
-  return String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-export function buildOfficialEmailHtml({ subject, body, fromName = 'Trang Thông Tin Điện Tử Sky First', referenceId = '' }) {
-  const paragraphs = String(body || '')
-    .split(/\n{2,}/)
-    .map((p) => `<p style="margin:0 0 14px;line-height:1.65;color:#1e293b;font-size:15px;">${escapeHtmlEmail(p).replace(/\n/g, '<br/>')}</p>`)
-    .join('');
-  const refBadge = referenceId
-    ? `<div style="margin:16px 0;padding:12px 16px;background:#f0f9ff;border-left:4px solid #0b66c3;border-radius:8px;font-size:13px;color:#071b3a;"><strong>Mã tham chiếu / Hồ sơ:</strong> <code style="font-family:monospace;font-weight:700;">${escapeHtmlEmail(referenceId)}</code></div>`
-    : '';
-  return `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>${escapeHtmlEmail(subject)}</title></head><body style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;"><tr><td style="background:#061a3a;padding:20px 24px;color:#ffffff;"><div style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#38bdf8;">SKY FIRST NETWORK • SKYFIRST.IO.VN</div><div style="font-size:18px;font-weight:800;margin-top:4px;">${escapeHtmlEmail(fromName)}</div></td></tr><tr><td style="padding:24px;">${paragraphs}${refBadge}</td></tr><tr><td style="padding:16px 24px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:12px;color:#64748b;line-height:1.5;">Thư điện tử chính thức từ <strong>${escapeHtmlEmail(fromName)}</strong> (<a href="https://skyfirst.io.vn" style="color:#0b66c3;text-decoration:none;">https://skyfirst.io.vn</a>).<br/>Mọi thắc mắc vui lòng liên hệ <a href="mailto:lienhe@skyfirst.io.vn" style="color:#0b66c3;">lienhe@skyfirst.io.vn</a>.</td></tr></table></body></html>`;
-}
-
-export async function loadCmsEmailSettings(context) {
-  try {
-    const row = await context.env.DB.prepare(
-      "SELECT data_json FROM website_cms_documents WHERE collection_name='site_config' AND doc_id='current' LIMIT 1"
-    ).first();
-    const cfg = row?.data_json ? JSON.parse(row.data_json) : {};
-    return cfg?.emailSettings || {};
-  } catch {
-    return {};
-  }
+  if (s.length <= 8) return { configured: true, masked: '••••••••' };
+  return { configured: true, masked: `${s.slice(0, 4)}••••${s.slice(-4)}` };
 }
 
 function sanitizeErrorText(err) {
@@ -99,67 +153,38 @@ async function computeChecksum(text) {
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }
 
-export async function dispatchSingleEmail(context, row) {
+async function dispatchSingleEmail(context, row) {
   const key = context.env.RESEND_API_KEY;
-  const cmsEmail = await loadCmsEmailSettings(context);
-  const senderName = clean(row.from_name || cmsEmail.senderName || 'Trang Thông Tin Điện Tử Sky First', 120);
-  const senderAddr = clean(cmsEmail.senderEmail || 'support@skyfirst.io.vn', 160);
-  const from = context.env.MAIL_FROM || `${senderName} <${senderAddr}>`;
+  const from = context.env.MAIL_FROM || 'Sky First Network <support@skyfirst.io.vn>';
   const attempts = Number(row.attempts || 0) + 1;
-  const maxAttempts = Number(row.max_attempts || cmsEmail.retryMaxAttempts || 3);
+  const maxAttempts = Number(row.max_attempts || 3);
 
-  // If CMS emailSettings explicitly sets mode === "test", route to safe test recipient so real users are never emailed accidentally
-  const effectiveRecipient =
-    cmsEmail.mode === 'test' && row.event_type !== 'admin_email_test'
-      ? clean(cmsEmail.testSafeRecipient || 'delivered@resend.dev', 180)
-      : String(row.recipient || '').trim();
-
-  const htmlContent =
-    row.html_body && String(row.html_body).trim()
-      ? String(row.html_body)
-      : buildOfficialEmailHtml({
-          subject: row.subject,
-          body: row.body,
-          fromName: senderName,
-          referenceId: row.reference_id,
-        });
-
-  if (!key || cmsEmail.provider === 'none') {
+  if (!key) {
     await context.env.DB.prepare(
-      "UPDATE website_email_outbox SET status='unconfigured', html_body=?, error_text='Chưa cấu hình RESEND_API_KEY trong môi trường máy chủ.', updated_at=datetime('now') WHERE id=?"
-    ).bind(htmlContent, row.id).run();
+      "UPDATE website_email_outbox SET status='unconfigured', error_text='Chưa cấu hình RESEND_API_KEY trong môi trường máy chủ.', updated_at=datetime('now') WHERE id=?"
+    ).bind(row.id).run();
     return { ok: false, status: 'unconfigured', error: 'Chưa cấu hình RESEND_API_KEY trên máy chủ.' };
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(effectiveRecipient)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(row.recipient || ''))) {
     await context.env.DB.prepare(
-      "UPDATE website_email_outbox SET status='invalid_config', attempts=?, html_body=?, error_text='Địa chỉ email người nhận không hợp lệ.', updated_at=datetime('now') WHERE id=?"
-    ).bind(attempts, htmlContent, row.id).run();
+      "UPDATE website_email_outbox SET status='invalid_config', attempts=?, error_text='Địa chỉ email người nhận không hợp lệ.', updated_at=datetime('now') WHERE id=?"
+    ).bind(attempts, row.id).run();
     return { ok: false, status: 'invalid_config', error: 'Địa chỉ email người nhận không hợp lệ.' };
   }
 
   try {
     const payload = {
       from,
-      to: [effectiveRecipient],
+      to: [row.recipient],
       subject: row.subject,
       text: row.body,
-      html: htmlContent,
     };
-    const replyToAddr = row.reply_to || cmsEmail.replyToEmail || '';
-    if (replyToAddr && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyToAddr)) {
-      payload.reply_to = replyToAddr;
-    }
-    const idemHeader = String(row.idempotency_key || row.id || '').trim().slice(0, 250);
-    const headers = {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    };
-    if (idemHeader) {
-      headers['Idempotency-Key'] = idemHeader;
+    if (row.reply_to && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.reply_to)) {
+      payload.reply_to = row.reply_to;
     }
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers,
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     const d = await r.json().catch(() => ({}));
@@ -474,7 +499,7 @@ export async function onRequestPost(context) {
       duong_dan: 'https://skyfirst.io.vn/join',
       tieu_de_bai_viet: 'Thông báo tuyển Thành viên & Tình nguyện viên 2026',
       ghi_chu: 'Bản xem trước mẫu thư bằng dữ liệu giả lập an toàn.',
-      site_name: 'Trang Thông Tin Điện Tử Sky First',
+      site_name: 'Sky First Network',
       program_title: 'Chương trình Tình nguyện & Giáo dục Sky First 2026',
       applicant_name: 'Nguyễn Minh Anh',
       applicant_email: 'minhanh@example.com',
@@ -483,87 +508,14 @@ export async function onRequestPost(context) {
       contact_email: 'lienhe@skyfirst.io.vn',
       ...(body.sampleVars && typeof body.sampleVars === 'object' ? body.sampleVars : {}),
     };
-    const renderedSubject = renderSafeEmailTemplate(body.subject || body.subjectTemplate || '', sampleVars);
-    const renderedBody = renderSafeEmailTemplate(body.body || body.bodyTemplate || '', sampleVars);
-    const renderedHtml = buildOfficialEmailHtml({
-      subject: renderedSubject,
-      body: renderedBody,
-      fromName: sampleVars.site_name,
-      referenceId: sampleVars.submission_id,
-    });
     return json({
       ok: true,
       previewOnly: true,
-      renderedSubject,
-      renderedBody,
-      renderedHtml,
+      renderedSubject: renderSafeEmailTemplate(body.subject || body.subjectTemplate || '', sampleVars),
+      renderedBody: renderSafeEmailTemplate(body.body || body.bodyTemplate || '', sampleVars),
       sampleVarsUsed: sampleVars,
       allowedVariables: [...ALLOWED_EMAIL_VARS],
     });
-  }
-
-  // 3B. Check Resend Domain Verification Status safely on the server
-  if (action === 'email-domain-check') {
-    const denied = await requireAdminToken(context, 'settings.manage');
-    if (denied) return denied;
-    const key = context.env.RESEND_API_KEY;
-    const targetDomain = clean(body.domain || 'skyfirst.io.vn', 120).toLowerCase();
-    if (!key) {
-      return json({
-        ok: true,
-        configured: false,
-        domain: targetDomain,
-        domainStatus: 'unconfigured',
-        message: `Máy chủ chưa cấu hình biến môi trường RESEND_API_KEY nên chưa thể truy vấn trạng thái tên miền ${targetDomain} trên Resend.`,
-      });
-    }
-    try {
-      const r = await fetch('https://api.resend.com/domains', {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${key}` },
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        return json({
-          ok: true,
-          configured: true,
-          domain: targetDomain,
-          domainStatus: r.status === 401 || r.status === 403 ? 'sending_key_only_or_invalid' : 'error',
-          message:
-            r.status === 401 || r.status === 403
-              ? 'Khóa RESEND_API_KEY chỉ có quyền gửi thư (Sending Access) hoặc không có quyền đọc danh sách tên miền — đây là thiết lập bảo mật tốt. Hãy dùng nút Gửi email thử tới delivered@resend.dev để xác minh trực tiếp.'
-              : sanitizeErrorText(d?.message || `HTTP ${r.status}`),
-        });
-      }
-      const list = Array.isArray(d?.data) ? d.data : [];
-      const matched = list.find((item) => String(item?.name || '').toLowerCase() === targetDomain);
-      if (!matched) {
-        return json({
-          ok: true,
-          configured: true,
-          domain: targetDomain,
-          domainStatus: 'not_found',
-          message: `Chưa tìm thấy tên miền ${targetDomain} trong tài khoản Resend. Vui lòng thêm tên miền và xác minh SPF/DKIM trong Resend Dashboard.`,
-        });
-      }
-      return json({
-        ok: true,
-        configured: true,
-        domain: targetDomain,
-        domainStatus: matched.status || 'unknown',
-        region: matched.region || '',
-        message: `Tên miền ${targetDomain} trên Resend đang ở trạng thái: ${matched.status || 'unknown'}.`,
-      });
-    } catch (e) {
-      return json({
-        ok: true,
-        configured: true,
-        domain: targetDomain,
-        domainStatus: 'network_error',
-        message: `Không thể kết nối mạng tới Resend API để kiểm tra tên miền ${targetDomain}.`,
-        error: sanitizeErrorText(e?.message || e),
-      });
-    }
   }
 
   // 4. Send Test Email & distinguish actual provider/config status
@@ -576,15 +528,15 @@ export async function onRequestPost(context) {
       return json({ ok: false, status: 'invalid_config', error: 'Địa chỉ email nhận thử nghiệm không hợp lệ.' }, { status: 400 });
     }
     const id = crypto.randomUUID();
-    const subject = clean(body.subject || '[Trang Thông Tin Điện Tử Sky First] Kiểm tra cấu hình gửi email hệ thống', 200);
+    const subject = clean(body.subject || '[Sky First Network] Kiểm tra cấu hình gửi email hệ thống', 200);
     const textBody = clean(
-      body.body || `Xin chào,\n\nĐây là thư kiểm tra kết nối từ Trung tâm Cấu hình Trang Thông Tin Điện Tử Sky First.\nNgười thực hiện: ${adminUser.email}\nThời gian: ${new Date().toISOString()}\n\nLưu ý: Thư thử nghiệm không bao giờ đính kèm khóa bí mật hay mật khẩu hệ thống.`,
+      body.body || `Xin chào,\n\nĐây là thư kiểm tra kết nối từ Trung tâm Cấu hình Sky First Network.\nNgười thực hiện: ${adminUser.email}\nThời gian: ${new Date().toISOString()}\n\nLưu ý: Thư thử nghiệm không bao giờ đính kèm khóa bí mật hay mật khẩu hệ thống.`,
       3000
     );
     await context.env.DB.prepare(
       `INSERT INTO website_email_outbox(id,idempotency_key,recipient,reply_to,from_name,subject,body,event_type,reference_id,status,attempts,max_attempts,created_at,updated_at)
        VALUES(?,?,?,?,?,?,?,'admin_email_test',?,'queued',0,3,datetime('now'),datetime('now'))`
-    ).bind(id, `test:${id}`, recipient, clean(body.replyTo, 180), clean(body.fromName || 'Trang Thông Tin Điện Tử Sky First', 120), subject, textBody, adminUser.uid).run();
+    ).bind(id, `test:${id}`, recipient, clean(body.replyTo, 180), clean(body.fromName || 'Sky First Network', 120), subject, textBody, adminUser.uid).run();
 
     const row = await context.env.DB.prepare('SELECT * FROM website_email_outbox WHERE id=?').bind(id).first();
     const dispatchResult = await dispatchSingleEmail(context, row);

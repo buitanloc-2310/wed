@@ -311,7 +311,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </div>
 
-          <div className={`grid gap-4 md:grid-cols-2 ${siteConfig.designSystem?.homePillarsColumns === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-5'}`}>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             {pillars.map(([title, desc, Icon], i) => (
               <article
                 key={String(title)}
@@ -497,7 +497,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <h2 className="mt-3 text-4xl font-black tracking-[-.04em] text-slate-950 sm:text-5xl">{siteConfig.valuesHeading}</h2>
           </div>
 
-          <div className={`mt-10 grid gap-4 sm:grid-cols-2 ${siteConfig.designSystem?.homeValuesColumns === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {values.map((v, i) => (
               <div
                 key={v.name}
@@ -541,7 +541,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           ) : (
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
-              <div className={`grid gap-4 sm:grid-cols-2 ${siteConfig.designSystem?.homeNewsColumns === 3 ? 'xl:grid-cols-3' : ''}`}>
+              <div className="grid gap-4 sm:grid-cols-2">
                 {standardNews.map((n: any) => (
                   <article
                     key={n.id}

@@ -51,15 +51,10 @@ export async function queueAndSend(context, { to, subject, body, event, ref, ide
   ).bind(id, idem, to, subject, body, event, ref, initialStatus).run();
   if (!key) return { queued: true, sent: false, status: 'unconfigured', id };
   try {
-    const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e2e8f0;border-radius:12px;"><div style="background:#061a3a;color:#fff;padding:16px 20px;border-radius:8px;font-weight:800;">Trang Thông Tin Điện Tử Sky First</div><div style="padding:18px 4px;line-height:1.65;color:#1e293b;white-space:pre-line;">${String(body || '').replace(/</g, '&lt;')}</div><div style="font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:12px;">Cổng thông tin chính thức: <a href="https://skyfirst.io.vn">https://skyfirst.io.vn</a></div></div>`;
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': String(idem || id).slice(0, 250),
-      },
-      body: JSON.stringify({ from, to: [to], subject, text: body, html }),
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: [to], subject, text: body }),
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) {

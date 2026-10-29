@@ -46,108 +46,15 @@ export interface CounterAnimationConfig {
   numberFormat?: 'vi' | 'plain' | 'en';
 }
 
-export interface IntroVisualDesignConfig {
-  bgPrimary?: string;
-  bgSecondary?: string;
-  accentGlow?: string;
-  pedestalStyle?: 'pearl_white' | 'frosted_glass' | 'minimal_clear';
-  logoScalePercent?: number;
-  logoOffsetYPercent?: number;
-  logoAppearDelaySec?: number;
-  motionPreset?: 'refined_scale' | 'gentle_rise' | 'luminous_reveal' | 'minimal_still';
-  headlineText?: string;
-  subtitleText?: string;
-  showSloganPillars?: boolean;
-  sloganClauses?: string[];
-  holdStartSec?: number;
-  exitStartSec?: number;
-}
-
-export interface IntroLibraryItem {
-  id: string;
-  key?: string;
-  name: string;
-  kind: 'video' | 'poster' | 'design';
-  url: string;
-  posterUrl?: string;
-  format?: string;
-  sizeBytes?: number;
-  durationSeconds?: number;
-  width?: number;
-  height?: number;
-  uploadedAt: string;
-  status: 'draft' | 'active' | 'archived';
-  note?: string;
-  designConfig?: IntroVisualDesignConfig;
-}
-
 export interface IntroConfig {
   enabled?: boolean;
-  activeMode?: 'video' | 'designed' | 'hybrid';
   videoUrl?: string;
-  posterUrl?: string;
   logoUrl?: string;
   durationSeconds?: number;
-  videoFileDurationSeconds?: number;
   logoRevealSeconds?: number;
-  logoRevealDurationMs?: number;
-  maxWaitDurationMs?: number;
-  allowSkip?: boolean;
   skipLabel?: string;
   tagline?: string;
-  transitionStyle?: 'fade' | 'zoom' | 'slide_up' | 'minimal';
-  desktopDisplayMode?: 'contain' | 'cover' | 'theater';
-  mobileDisplayMode?: 'contain' | 'compact' | 'skip_on_slow';
-  mutedByDefault?: boolean;
-  playMode?: 'every_home_load' | 'once_per_session' | 'disabled';
-  respectReducedMotion?: boolean;
-  fallbackMode?: 'logo_fade' | 'skip_immediately';
-  designConfig?: IntroVisualDesignConfig;
-  library?: IntroLibraryItem[];
-}
-
-export interface LayoutDesignSystemConfig {
-  primary?: string;
-  navy?: string;
-  accent?: string;
-  radius?: string;
-  container?: string;
-  fontFamily?: string;
-  spacing?: 'compact' | 'normal' | 'relaxed';
-  motion?: 'reduced' | 'balanced' | 'rich';
-  defaultImageDisplay?: 'original' | 'contain' | 'cover';
-  // Group 1: Logo & Header sizing
-  logoHeightDesktopPx?: number;
-  logoHeightMobilePx?: number;
-  headerHeightPx?: number;
-  navItemGapPx?: number;
-  // Group 2: Content width & column gap
-  containerMaxWidthPx?: number;
-  gridGapPx?: number;
-  // Group 3: Typography sizes
-  headingScale?: number;
-  leadFontSizePx?: number;
-  bodyFontSizePx?: number;
-  captionFontSizePx?: number;
-  // Group 4: Line height, paragraph spacing & section padding
-  lineHeight?: number;
-  paragraphGapPx?: number;
-  sectionGapPx?: number;
-  // Group 5: Image sizing & aspect ratio
-  cardImageAspectRatio?: 'auto' | '16:9' | '4:3' | '3:2';
-  imageBorderRadiusPx?: number;
-  // Group 6 & 7: Homepage column counts & official portal bar
-  homeNewsColumns?: 2 | 3;
-  homeProgramsColumns?: 2 | 3;
-  homePillarsColumns?: 3 | 5;
-  homeValuesColumns?: 2 | 3;
-  showOfficialPortalBar?: boolean;
-  // Group 9: Form sizing & layout
-  formMaxWidthPx?: number;
-  formFieldGapPx?: number;
-  formInputHeightPx?: number;
-  formLabelSizePx?: number;
-  formLayoutMode?: 'single' | 'two_column';
+  transitionStyle?: 'fade' | 'zoom' | 'minimal';
 }
 
 export interface EmailConfig {
@@ -155,19 +62,8 @@ export interface EmailConfig {
   fromAddress?: string;
   replyToAddress?: string;
   adminNotifyAddress?: string;
-  provider?: 'none' | 'resend' | 'custom_webhook' | 'cloudflare_email' | 'webhook';
+  provider?: 'resend' | 'custom_webhook';
   mode?: 'live' | 'test';
-  testSafeRecipient?: string;
-  verifiedDomain?: string;
-  enabled?: boolean;
-  senderEmail?: string;
-  replyToEmail?: string;
-  adminRecipientEmails?: string;
-  apiKeyMasked?: string;
-  sendOnProgramRegistration?: boolean;
-  sendAdminAlertOnRegistration?: boolean;
-  sendOnContactSubmission?: boolean;
-  sendOnStatusChange?: boolean;
   retryMaxAttempts?: number;
   rateLimitPerHour?: number;
   brandColor?: string;
@@ -216,10 +112,10 @@ export interface SiteConfig {
   closedMessage?: string;
   closedEstimatedReopen?: string;
   closedNoticeType?: 'banner' | 'lockscreen';
-  intro?: IntroSettings;
-  emailSettings?: EmailSystemSettings;
-  automationSettings?: AutomationSystemSettings;
-  seoSettings?: SeoSystemSettings;
+  intro?: IntroConfig;
+  emailSettings?: EmailConfig;
+  automationSettings?: AutomationConfig;
+  seoSettings?: SeoGlobalConfig;
   stats: {
     membersCount: string;
     membersSubtext: string;
@@ -324,7 +220,7 @@ export interface SiteConfig {
   footerPortals?: { label: string; domain: string; url: string; icon?: string; description?: string }[];
   footerLegalLinks?: { label: string; url: string }[];
   organizationInfo?: { label: string; value: string; url?: string; icon?: string; visible?: boolean }[];
-  designSystem?: LayoutDesignSystemConfig;
+  designSystem?: { primary?: string; navy?: string; accent?: string; radius?: string; container?: string; fontFamily?: string; spacing?: 'compact' | 'normal' | 'relaxed'; motion?: 'reduced' | 'balanced' | 'rich'; defaultImageDisplay?: 'original' | 'contain' | 'cover' };
   announcement?: { enabled?: boolean; text?: string; buttonLabel?: string; buttonUrl?: string; startAt?: string; endAt?: string; tone?: 'info' | 'success' | 'warning' };
   reusableBlockTemplates?: PageBlock[];
 }
@@ -393,7 +289,6 @@ export interface Program {
   date: string;
   location: string;
   targetAudience: string;
-  leadUnit?: string;
   spotsLeft?: number;
   timeline: string[];
   benefits: string[];
@@ -856,6 +751,7 @@ export interface CustomPage {
 export interface AdminManagerActionRef {
   handleCreateNew: () => void;
 }
+
 
 export type AdminCapability =
   | 'content.edit'

@@ -75,6 +75,26 @@ async function ensure(c) {
   if (!subCols.has('applicant_phone')) await c.env.DB.prepare('ALTER TABLE website_form_submissions ADD COLUMN applicant_phone TEXT').run();
   if (!subCols.has('field_snapshot_json')) await c.env.DB.prepare("ALTER TABLE website_form_submissions ADD COLUMN field_snapshot_json TEXT NOT NULL DEFAULT '[]'").run();
   if (!subCols.has('form_version')) await c.env.DB.prepare('ALTER TABLE website_form_submissions ADD COLUMN form_version INTEGER NOT NULL DEFAULT 1').run();
+  const outboxCols = new Set(((await c.env.DB.prepare('PRAGMA table_info(website_email_outbox)').all()).results || []).map(x => x.name));
+  for (const [col, def] of [
+    ['idempotency_key', 'TEXT'],
+    ['recipient', "TEXT NOT NULL DEFAULT ''"],
+    ['reply_to', "TEXT NOT NULL DEFAULT ''"],
+    ['from_name', "TEXT NOT NULL DEFAULT 'Sky First Network'"],
+    ['html_body', "TEXT NOT NULL DEFAULT ''"],
+    ['event_type', "TEXT NOT NULL DEFAULT 'general'"],
+    ['reference_id', "TEXT NOT NULL DEFAULT ''"],
+    ['attempts', 'INTEGER NOT NULL DEFAULT 0'],
+    ['max_attempts', 'INTEGER NOT NULL DEFAULT 3'],
+    ['next_retry_at', 'TEXT'],
+    ['provider', "TEXT NOT NULL DEFAULT 'resend'"],
+    ['provider_id', "TEXT NOT NULL DEFAULT ''"],
+    ['error_text', "TEXT NOT NULL DEFAULT ''"],
+    ['updated_at', "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+    ['sent_at', 'TEXT'],
+  ]) {
+    if (!outboxCols.has(col)) await c.env.DB.prepare(`ALTER TABLE website_email_outbox ADD COLUMN ${col} ${def}`).run();
+  }
   await c.env.DB.batch([
     c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_website_forms_program ON website_forms(program_id, status)'),
     c.env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_website_form_submissions_program ON website_form_submissions(program_id, created_at DESC)'),
@@ -198,15 +218,10 @@ async function enqueueFormEmail(c, { idempotencyKey, to, subject, body, eventTyp
        VALUES(?,?,?,?,?,?,?,?,0,datetime('now'),datetime('now'))`
     ).bind(id, idempotencyKey || id, to, subject, body, eventType, referenceId, status).run();
     if (!key) return;
-    const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e2e8f0;border-radius:12px;"><div style="background:#061a3a;color:#fff;padding:16px 20px;border-radius:8px;font-weight:800;">Trang Thông Tin Điện Tử Sky First</div><div style="padding:18px 4px;line-height:1.65;color:#1e293b;white-space:pre-line;">${String(body || '').replace(/</g, '&lt;')}</div><div style="font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:12px;">Cổng thông tin chính thức: <a href="https://skyfirst.io.vn">https://skyfirst.io.vn</a></div></div>`;
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': String(idempotencyKey || id).slice(0, 250),
-      },
-      body: JSON.stringify({ from, to: [to], subject, text: body, html }),
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: [to], subject, text: body }),
     });
     const d = await r.json().catch(() => ({}));
     if (r.ok) {

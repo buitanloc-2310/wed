@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Calendar,
   Clock,
@@ -11,32 +11,19 @@ import {
   ZoomIn,
   Quote,
   Play,
-  Pause,
-  Square,
-  Volume2,
-  Bookmark,
-  List,
-  Maximize2,
-  Minimize2,
-  MessageCircle,
-  Send,
-  Loader2,
-  ShieldCheck,
-  User,
 } from 'lucide-react';
 import { useDataContext } from '../context/DataContext';
 import { PageRoute, NewsArticle, PageBlock } from '../types';
 import { getArticleSlug, sanitizeHtml } from '../utils/contentUtils';
-import { ImageLightboxModal, EntityBadge, RichTextRenderer } from '../components/UIPrimitives';
-
+import { ImageLightboxModal } from '../components/UIPrimitives';
+import { EntityBadge } from '../components/UIPrimitives';
+import { RichTextRenderer } from '../components/UIPrimitives';
 interface NewsDetailPageProps {
   newsSlugOrId: string;
   onNavigate: (route: PageRoute) => void;
   onShowToast: (message: string) => void;
   onSelectArticle?: (article: NewsArticle) => void;
 }
-
-const SAVED_ARTICLES_KEY = 'sfn_saved_articles';
 
 const youtubeEmbed = (value?: string) => {
   const raw = String(value || '').trim();
@@ -53,57 +40,14 @@ const youtubeEmbed = (value?: string) => {
   }
 };
 
-const makeHeadingAnchorId = (rawText: string, index: number): string => {
-  const slug = String(rawText || '')
-    .replace(/<[^>]+>/g, '')
-    .toLocaleLowerCase('vi')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .slice(0, 64);
-  return slug ? `muc-${slug}-${index}` : `muc-${index}`;
-};
-
-const stripHtmlToText = (html: string): string =>
-  String(html || '')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<figcaption[\s\S]*?<\/figcaption>/gi, ' ')
-    .replace(/<\/(p|h1|h2|h3|h4|li|blockquote|div)>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/[ \t]+/g, ' ')
-    .trim();
-
 export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
   newsSlugOrId,
   onNavigate,
   onShowToast,
   onSelectArticle,
 }) => {
-  const { newsArticles, siteConfig, isPublicDataReady } = useDataContext();
+  const { newsArticles, isPublicDataReady } = useDataContext();
   const [lightboxImg, setLightboxImg] = useState<{ src: string; alt?: string; caption?: string; credit?: string } | null>(null);
-  const [readingProgress, setReadingProgress] = useState<number>(0);
-  const [focusMode, setFocusMode] = useState<boolean>(false);
-  const [isSaved, setIsSaved] = useState<boolean>(false);
-
-  // Trạng thái Đọc bài viết bằng giọng nói tiếng Việt (Text-to-Speech)
-  const [ttsState, setTtsState] = useState<'idle' | 'playing' | 'paused' | 'unsupported'>('idle');
-  const [ttsRate, setTtsRate] = useState<number>(1.0);
-  const [ttsSegmentIndex, setTtsSegmentIndex] = useState<number>(0);
-  const ttsActiveRef = useRef<boolean>(false);
-
-  const displayWebsiteTitle =
-    siteConfig.siteName && siteConfig.siteName !== 'Sky First Network'
-      ? siteConfig.siteName
-      : 'Trang Thông Tin Điện Tử Sky First';
 
   const article = newsArticles.find(
     (a) =>
@@ -111,181 +55,6 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
       a.id === newsSlugOrId ||
       (a.slug && a.slug === newsSlugOrId)
   );
-
-  // Kiểm tra trạng thái đã lưu bài viết
-  useEffect(() => {
-    if (!article || typeof window === 'undefined') return;
-    try {
-      const savedIds: string[] = JSON.parse(window.localStorage.getItem(SAVED_ARTICLES_KEY) || '[]');
-      setIsSaved(Array.isArray(savedIds) && savedIds.includes(article.id));
-    } catch {
-      setIsSaved(false);
-    }
-  }, [article?.id]);
-
-  // Thanh tiến độ đọc bài viết (Reading Progress Bar)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onScroll = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const docHeight = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-      const pct = Math.max(0, Math.min(100, Math.round((scrollTop / docHeight) * 100)));
-      setReadingProgress(pct);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [article?.id]);
-
-  // Dừng đọc giọng nói khi chuyển bài hoặc rời trang
-  useEffect(() => {
-    ttsActiveRef.current = false;
-    setTtsState('idle');
-    setTtsSegmentIndex(0);
-    try {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    } catch {}
-    return () => {
-      ttsActiveRef.current = false;
-      try {
-        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-        }
-      } catch {}
-    };
-  }, [article?.id]);
-
-  const rawContent = useMemo(() => {
-    if (!article) return '';
-    return article.contentFormatted || (Array.isArray(article.content) ? article.content.join('\n\n') : article.content);
-  }, [article]);
-
-  // Trích xuất Mục lục tự động (Table of Contents) từ tiêu đề phụ h2/h3 và khối heading
-  const tocItems = useMemo(() => {
-    if (!article) return [] as { id: string; text: string; level: 'h2' | 'h3' }[];
-    const list: { id: string; text: string; level: 'h2' | 'h3' }[] = [];
-    let counter = 0;
-
-    if (/<[a-z][\s\S]*>/i.test(rawContent)) {
-      const regex = /<(h[23])[^>]*>([\s\S]*?)<\/\1>/gi;
-      let match: RegExpExecArray | null;
-      while ((match = regex.exec(rawContent)) !== null) {
-        counter += 1;
-        const level = match[1].toLowerCase() as 'h2' | 'h3';
-        const cleanText = stripHtmlToText(match[2]);
-        if (cleanText) {
-          list.push({ id: makeHeadingAnchorId(match[2], counter), text: cleanText, level });
-        }
-      }
-    } else if (rawContent) {
-      rawContent.split('\n').forEach((line) => {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('## ')) {
-          counter += 1;
-          const text = trimmed.slice(3).trim();
-          if (text) list.push({ id: makeHeadingAnchorId(text, counter), text, level: 'h2' });
-        } else if (trimmed.startsWith('### ')) {
-          counter += 1;
-          const text = trimmed.slice(4).trim();
-          if (text) list.push({ id: makeHeadingAnchorId(text, counter), text, level: 'h3' });
-        }
-      });
-    }
-
-    (article.pageBlocks || []).forEach((b, idx) => {
-      if (!b.hidden && b.type === 'heading' && (b.title || b.body)) {
-        const text = String(b.title || b.body || '').trim();
-        if (text) {
-          list.push({
-            id: `block-heading-${b.id || idx}`,
-            text,
-            level: b.headingLevel === 'h3' ? 'h3' : 'h2',
-          });
-        }
-      }
-    });
-
-    return list;
-  }, [article, rawContent]);
-
-  // Chuẩn bị danh sách đoạn văn sạch để đọc bằng giọng nói tiếng Việt (chỉ đọc Tiêu đề + Sapo + Nội dung chính)
-  const speechSegments = useMemo(() => {
-    if (!article) return [] as { label: string; text: string }[];
-    const segments: { label: string; text: string }[] = [];
-    if (article.title) {
-      segments.push({ label: 'Tiêu đề bài viết', text: article.title });
-    }
-    if (article.summary) {
-      segments.push({ label: 'Tóm tắt mở đầu (Sapo)', text: article.summary });
-    }
-    const bodyText = stripHtmlToText(rawContent);
-    bodyText
-      .split(/\n+/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 2)
-      .forEach((line, idx) => {
-        segments.push({ label: `Đoạn ${idx + 1}`, text: line });
-      });
-
-    (article.pageBlocks || []).forEach((b) => {
-      if (b.hidden) return;
-      if (['heading', 'paragraph', 'quote', 'callout', 'list'].includes(b.type)) {
-        const blockText = [b.title, stripHtmlToText(b.body || '')].filter(Boolean).join('. ');
-        if (blockText.trim()) {
-          segments.push({ label: 'Nội dung chi tiết', text: blockText.trim() });
-        }
-      }
-    });
-
-    return segments;
-  }, [article, rawContent]);
-
-  // Bơm JSON-LD NewsArticle chuẩn Google Search Central
-  useEffect(() => {
-    if (!article || typeof document === 'undefined') return;
-    let scriptEl = document.head.querySelector('#sfn-jsonld-article') as HTMLScriptElement | null;
-    if (!scriptEl) {
-      scriptEl = document.createElement('script');
-      scriptEl.id = 'sfn-jsonld-article';
-      scriptEl.type = 'application/ld+json';
-      document.head.appendChild(scriptEl);
-    }
-    const origin = window.location.origin || 'https://skyfirst.io.vn';
-    const slug = getArticleSlug(article);
-    const articleUrl = `${origin}/tin-tuc/${slug}`;
-    const schema = {
-      '@context': 'https://schema.org',
-      '@type': 'NewsArticle',
-      mainEntityOfPage: {
-        '@type': 'WebPage',
-        '@id': articleUrl,
-      },
-      headline: article.seoTitle || article.title,
-      description: article.seoDescription || article.summary || article.title,
-      image: article.imageUrl ? [article.imageUrl.startsWith('http') ? article.imageUrl : `${origin}${article.imageUrl}`] : [`${origin}/brand/sky-first-network-web.png`],
-      datePublished: article.publishedAt || article.date,
-      dateModified: article.updatedAt || article.publishedAt || article.date,
-      author: {
-        '@type': 'Organization',
-        name: article.author || 'Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First',
-      },
-      publisher: {
-        '@type': 'Organization',
-        name: displayWebsiteTitle,
-        alternateName: 'Mạng lưới Giáo dục và Phát triển Cộng đồng Sky First',
-        logo: {
-          '@type': 'ImageObject',
-          url: `${origin}/brand/sky-first-network-web.png`,
-        },
-      },
-    };
-    scriptEl.textContent = JSON.stringify(schema);
-    return () => {
-      scriptEl?.remove();
-    };
-  }, [article, displayWebsiteTitle]);
 
   if (!isPublicDataReady) {
     return (
@@ -335,132 +104,15 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
     }
   };
 
-  const handleToggleSaveArticle = () => {
-    if (typeof window === 'undefined') return;
-    try {
-      const current: string[] = JSON.parse(window.localStorage.getItem(SAVED_ARTICLES_KEY) || '[]');
-      const list = Array.isArray(current) ? current : [];
-      const exists = list.includes(article.id);
-      const next = exists ? list.filter((id) => id !== article.id) : [article.id, ...list];
-      window.localStorage.setItem(SAVED_ARTICLES_KEY, JSON.stringify(next));
-      setIsSaved(!exists);
-      onShowToast(
-        !exists
-          ? 'Đã lưu bài viết vào danh sách đọc sau trên trình duyệt của bạn.'
-          : 'Đã bỏ lưu bài viết khỏi danh sách đọc sau.'
-      );
-    } catch {
-      onShowToast('Trình duyệt hiện không cho phép lưu cục bộ.');
-    }
-  };
+  const rawContent = article.contentFormatted || (Array.isArray(article.content) ? article.content.join('\n\n') : article.content);
 
-  // Điều khiển trình đọc bài viết bằng giọng nói tiếng Việt (Play / Pause / Resume / Stop / Rate)
-  const speakSegmentAt = (index: number, rateOverride?: number) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-      setTtsState('unsupported');
-      onShowToast('Trình duyệt hiện tại không hỗ trợ tính năng đọc giọng nói (Web Speech API).');
-      return;
-    }
-    if (index >= speechSegments.length) {
-      ttsActiveRef.current = false;
-      setTtsState('idle');
-      setTtsSegmentIndex(0);
-      return;
-    }
-
-    try {
-      const synth = window.speechSynthesis;
-      synth.cancel();
-      const seg = speechSegments[index];
-      const utterance = new SpeechSynthesisUtterance(seg.text);
-      utterance.lang = 'vi-VN';
-      utterance.rate = rateOverride ?? ttsRate;
-      utterance.pitch = 1.0;
-
-      const voices = synth.getVoices?.() || [];
-      const viVoice =
-        voices.find((v) => v.lang?.toLowerCase().startsWith('vi') && /google|microsoft|hoai|my|linh|nam|viet/i.test(v.name)) ||
-        voices.find((v) => v.lang?.toLowerCase().startsWith('vi'));
-      if (viVoice) utterance.voice = viVoice;
-
-      setTtsSegmentIndex(index);
-      setTtsState('playing');
-      ttsActiveRef.current = true;
-
-      utterance.onend = () => {
-        if (!ttsActiveRef.current) return;
-        if (index + 1 < speechSegments.length) {
-          speakSegmentAt(index + 1, rateOverride ?? ttsRate);
-        } else {
-          ttsActiveRef.current = false;
-          setTtsState('idle');
-          setTtsSegmentIndex(0);
-        }
-      };
-
-      utterance.onerror = () => {
-        ttsActiveRef.current = false;
-        setTtsState('idle');
-      };
-
-      synth.speak(utterance);
-    } catch {
-      setTtsState('unsupported');
-    }
-  };
-
-  const handleTtsPlayOrResume = () => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      setTtsState('unsupported');
-      onShowToast('Trình duyệt hiện tại không hỗ trợ đọc bài viết bằng giọng nói.');
-      return;
-    }
-    if (ttsState === 'paused') {
-      try {
-        window.speechSynthesis.resume();
-        setTtsState('playing');
-        ttsActiveRef.current = true;
-        return;
-      } catch {}
-    }
-    speakSegmentAt(ttsState === 'idle' ? 0 : ttsSegmentIndex);
-  };
-
-  const handleTtsPause = () => {
-    try {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.pause();
-        setTtsState('paused');
-      }
-    } catch {}
-  };
-
-  const handleTtsStop = () => {
-    ttsActiveRef.current = false;
-    setTtsState('idle');
-    setTtsSegmentIndex(0);
-    try {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    } catch {}
-  };
-
-  const handleTtsRateChange = (newRate: number) => {
-    setTtsRate(newRate);
-    if (ttsState === 'playing') {
-      speakSegmentAt(ttsSegmentIndex, newRate);
-    }
-  };
-
-  const renderArticleBlock = (block: PageBlock, idx: number) => {
+  const renderArticleBlock = (block: PageBlock) => {
     if (block.hidden) return null;
     if (block.type === 'divider') return <hr key={block.id} className="my-6 border-slate-200" />;
     if (block.type === 'heading') {
       const TagName = block.headingLevel || 'h2';
-      const anchorId = `block-heading-${block.id || idx}`;
       return (
-        <TagName id={anchorId} key={block.id} className="font-extrabold text-slate-900 mt-6 mb-3 tracking-tight text-xl sm:text-2xl scroll-mt-24">
+        <TagName key={block.id} className="font-extrabold text-slate-900 mt-6 mb-3 tracking-tight text-xl sm:text-2xl">
           {block.title || block.body}
         </TagName>
       );
@@ -524,12 +176,12 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
         <div key={block.id} className="my-6 space-y-3">
           {block.title && <h3 className="font-bold text-slate-900">{block.title}</h3>}
           <div className="grid gap-3 sm:grid-cols-2">
-            {(block.items || []).map((it, idxGallery) =>
+            {(block.items || []).map((it, idx) =>
               it.imageUrl ? (
-                <figure key={idxGallery} className="rounded-2xl border border-slate-100 bg-slate-50 p-2">
+                <figure key={idx} className="rounded-2xl border border-slate-100 bg-slate-50 p-2">
                   <img
                     src={it.imageUrl}
-                    alt={it.title || `${article.title} - ảnh ${idxGallery + 1}`}
+                    alt={it.title || `${article.title} - ảnh ${idx + 1}`}
                     onClick={() => setLightboxImg({ src: it.imageUrl!, alt: it.title, caption: it.body })}
                     className="block h-auto w-auto max-w-full mx-auto rounded-xl object-contain cursor-zoom-in"
                   />
@@ -565,8 +217,8 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
       const ListTag = block.listType === 'ol' ? 'ol' : 'ul';
       return (
         <ListTag key={block.id} className={`my-4 pl-6 space-y-1.5 text-slate-700 ${block.listType === 'ol' ? 'list-decimal' : 'list-disc'}`}>
-          {lines.map((l, idxLine) => (
-            <li key={idxLine}>{l}</li>
+          {lines.map((l, idx) => (
+            <li key={idx}>{l}</li>
           ))}
         </ListTag>
       );
@@ -584,24 +236,16 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
 
   return (
     <div className="bg-slate-50/50 min-h-screen pb-20">
-      {/* Thanh tiến độ đọc bài viết (Reading Progress Bar) */}
-      <div className="fixed top-0 left-0 right-0 z-[70] h-1 bg-slate-200/40 pointer-events-none">
-        <div
-          className="h-full bg-gradient-to-r from-[#0B66C3] via-[#0284C7] to-cyan-400 transition-all duration-150"
-          style={{ width: `${readingProgress}%` }}
-        />
-      </div>
-
       {/* Top Header / Breadcrumb Bar */}
-      <div className="bg-white border-b border-slate-200/80 sticky top-[76px] z-20 backdrop-blur-md bg-white/95">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-slate-500 min-w-0 flex-1">
+      <div className="bg-white border-b border-slate-200/80 sticky top-16 sm:top-20 z-20 backdrop-blur-md bg-white/95">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-xs text-slate-500 truncate">
             <button
               onClick={() => {
                 onNavigate('home');
                 window.history.pushState({}, '', '/home');
               }}
-              className="hover:text-[#0284C7] font-medium shrink-0"
+              className="hover:text-[#0284C7] font-medium"
             >
               Trang chủ
             </button>
@@ -611,43 +255,15 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
                 onNavigate('news');
                 window.history.pushState({}, '', '/news');
               }}
-              className="hover:text-[#0284C7] font-medium shrink-0"
+              className="hover:text-[#0284C7] font-medium"
             >
-              Tin tức &amp; Hoạt động
+              Tin tức & Hoạt động
             </button>
             <ChevronRight size={12} className="text-slate-400 shrink-0" />
-            <span className="text-slate-900 font-bold truncate">{article.title}</span>
-          </nav>
+            <span className="text-slate-900 font-bold truncate max-w-[200px] sm:max-w-xs">{article.title}</span>
+          </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setFocusMode((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border transition ${
-                focusMode
-                  ? 'bg-[#071B3A] text-white border-[#071B3A]'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-              }`}
-              title="Chế độ đọc tập trung"
-            >
-              {focusMode ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-              <span className="hidden sm:inline">{focusMode ? 'Thoát đọc tập trung' : 'Đọc tập trung'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleToggleSaveArticle}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border transition ${
-                isSaved
-                  ? 'bg-sky-50 text-[#0284C7] border-sky-300'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-              }`}
-              title="Lưu bài viết để đọc lại sau"
-            >
-              <Bookmark size={13} className={isSaved ? 'fill-[#0284C7]' : ''} />
-              <span className="hidden sm:inline">{isSaved ? 'Đã lưu bài' : 'Lưu bài'}</span>
-            </button>
-
             <button
               type="button"
               onClick={handleCopyUrl}
@@ -662,22 +278,16 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
       </div>
 
       {/* Article Content Container */}
-      <article className={`${focusMode ? 'max-w-3xl' : 'max-w-4xl'} mx-auto px-4 sm:px-6 pt-8 transition-all`}>
+      <article className="max-w-4xl mx-auto px-4 sm:px-6 pt-8">
         <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-xs space-y-6">
           {/* Category & Meta */}
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs border-b border-slate-100 pb-4">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
               <EntityBadge label={article.categoryLabel} color={article.categoryColor} className="uppercase tracking-wider" />
               <span className="text-slate-400 font-mono bg-slate-50 px-2 py-0.5 rounded-md text-[11px]">/tin-tuc/{currentSlug}</span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 text-slate-500">
-              {article.author && (
-                <span className="flex items-center gap-1 font-semibold text-slate-700">
-                  <User size={13} className="text-[#0284C7]" />
-                  {article.author}
-                </span>
-              )}
+            <div className="flex items-center gap-4 text-slate-500">
               <span className="flex items-center gap-1">
                 <Calendar size={13} className="text-[#0284C7]" />
                 {article.date}
@@ -690,131 +300,16 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
           </div>
 
           {/* Heading */}
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
-            {article.title}
-          </h1>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">{article.title}</h1>
 
-          {/* Trình đọc bài viết bằng giọng nói tiếng Việt (Text-to-Speech Player — Phụ lục Nghiên cứu IV.1) */}
-          <div
-            role="region"
-            aria-label="Trình đọc bài viết bằng giọng nói tiếng Việt"
-            className="rounded-2xl border border-sky-200/80 bg-gradient-to-r from-sky-50/90 via-white to-cyan-50/60 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[#0B66C3] text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Volume2 size={18} className={ttsState === 'playing' ? 'animate-pulse' : ''} />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-black uppercase tracking-wider text-[#071B3A]">
-                    Nghe đọc bài viết (Tiếng Việt)
-                  </span>
-                  <span className="text-[11px] font-semibold text-sky-700 bg-sky-100/80 px-2 py-0.5 rounded-full">
-                    {ttsState === 'playing'
-                      ? `Đang đọc (${ttsSegmentIndex + 1}/${Math.max(1, speechSegments.length)})`
-                      : ttsState === 'paused'
-                      ? 'Đang tạm dừng'
-                      : ttsState === 'unsupported'
-                      ? 'Trình duyệt không hỗ trợ'
-                      : `${speechSegments.length} đoạn nội dung`}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 truncate mt-0.5">
-                  {ttsState === 'playing' || ttsState === 'paused'
-                    ? speechSegments[ttsSegmentIndex]?.text || article.title
-                    : 'Chỉ đọc tiêu đề, sapo và nội dung chính của bài viết.'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {ttsState !== 'playing' ? (
-                <button
-                  type="button"
-                  onClick={handleTtsPlayOrResume}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0B66C3] hover:bg-[#084F99] text-white px-3.5 py-2 text-xs font-extrabold transition shadow-xs cursor-pointer"
-                >
-                  <Play size={14} />
-                  <span>{ttsState === 'paused' ? 'Tiếp tục nghe' : 'Nghe bài viết'}</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleTtsPause}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 text-xs font-extrabold transition shadow-xs cursor-pointer"
-                >
-                  <Pause size={14} />
-                  <span>Tạm dừng</span>
-                </button>
-              )}
-
-              {(ttsState === 'playing' || ttsState === 'paused') && (
-                <button
-                  type="button"
-                  onClick={handleTtsStop}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-700 text-slate-700 px-3 py-2 text-xs font-bold transition cursor-pointer"
-                >
-                  <Square size={13} />
-                  <span>Dừng</span>
-                </button>
-              )}
-
-              <label className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700">
-                <span className="text-[11px] text-slate-400">Tốc độ:</span>
-                <select
-                  aria-label="Tốc độ đọc giọng nói"
-                  value={ttsRate}
-                  onChange={(e) => handleTtsRateChange(Number(e.target.value))}
-                  className="bg-transparent font-extrabold text-[#0B66C3] outline-none cursor-pointer"
-                >
-                  <option value={0.85}>0.85x (Chậm)</option>
-                  <option value={1}>1.0x (Chuẩn)</option>
-                  <option value={1.15}>1.15x (Nhanh vừa)</option>
-                  <option value={1.25}>1.25x (Nhanh)</option>
-                </select>
-              </label>
-            </div>
-          </div>
-
-          {/* Summary Quote / Lede (Sapo) */}
+          {/* Summary Quote / Lede */}
           {article.summary && (
-            <div className="p-4 sm:p-5 bg-sky-50/60 rounded-2xl border-l-4 border-[#0284C7] text-slate-800 font-semibold text-sm sm:text-base leading-relaxed">
+            <div className="p-4 sm:p-5 bg-sky-50/60 rounded-2xl border-l-4 border-[#0284C7] text-slate-700 font-medium text-sm sm:text-base leading-relaxed">
               {article.summary}
             </div>
           )}
 
-          {/* Mục lục tự động (Auto Table of Contents) khi bài có >= 2 mục tiêu đề */}
-          {tocItems.length >= 2 && (
-            <nav
-              aria-label="Mục lục bài viết"
-              className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5 space-y-2.5"
-            >
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700">
-                <List size={15} className="text-[#0284C7]" />
-                <span>Mục lục nội dung ({tocItems.length} phần)</span>
-              </div>
-              <ol className="grid gap-1.5 sm:grid-cols-2 text-xs sm:text-sm">
-                {tocItems.map((item, idx) => (
-                  <li key={item.id} className={item.level === 'h3' ? 'pl-3' : ''}>
-                    <a
-                      href={`#${item.id}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        const el = document.getElementById(item.id);
-                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }}
-                      className="inline-flex items-start gap-2 text-slate-700 hover:text-[#0284C7] font-semibold transition"
-                    >
-                      <span className="text-[#0284C7] font-mono text-xs shrink-0">{idx + 1}.</span>
-                      <span>{item.text}</span>
-                    </a>
-                  </li>
-                ))}
-              </ol>
-            </nav>
-          )}
-
-          {/* Feature Cover Image: mặc định hiển thị toàn bộ ảnh gốc không cắt */}
+          {/* Feature Cover Image: mặc định hiển thị toàn bộ ảnh gốc không cắt, có nút Xem ảnh gốc / Phóng to */}
           {article.heroImageMode !== 'hidden' && article.imageUrl && (
             <figure className="pt-2">
               <div
@@ -880,7 +375,7 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
 
           {/* Main Body: RichTextRenderer + Gutenberg PageBlocks + Uncropped Gallery */}
           <div
-            className={`pt-4 text-slate-800 leading-relaxed space-y-4 ${focusMode ? 'text-base sm:text-lg leading-8' : ''}`}
+            className="pt-4 text-slate-800 leading-relaxed space-y-4"
             onClick={(e) => {
               const target = e.target as HTMLElement;
               if (target.tagName === 'IMG') {
@@ -890,7 +385,7 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
             }}
           >
             {rawContent && <RichTextRenderer content={rawContent} />}
-            {(article.pageBlocks || []).map((block, idx) => renderArticleBlock(block, idx))}
+            {(article.pageBlocks || []).map(renderArticleBlock)}
             {(article.galleryImages || []).filter(Boolean).length > 0 && (
               <section className="mt-10">
                 <h2 className="mb-4 text-xl font-black text-slate-900">Hình ảnh liên quan</h2>
@@ -937,10 +432,8 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
           )}
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-600">
-            <span>
-              Thông tin được đăng tải trên <strong>{displayWebsiteTitle}</strong> — Mạng lưới Giáo dục &amp; Phát triển Cộng đồng Sky First.
-            </span>
-            <div className="flex flex-wrap items-center gap-2">
+            <span>Thông tin được đăng tải trên website Sky First Network.</span>
+            <div className="flex items-center gap-2">
               <a href="#binh-luan" className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-100 transition">
                 Bình luận
               </a>
@@ -955,47 +448,45 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
           </div>
         </div>
 
-        {!focusMode && <NewsComments articleId={article.id} enabled={article.allowComments !== false} />}
+        <NewsComments articleId={article.id} enabled={article.allowComments !== false} />
 
-        {/* Related articles */}
-        {!focusMode && (
-          <div className="mt-10 space-y-4">
-            <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <BookOpen size={20} className="text-[#0284C7]" />
-              Tin Tức Liên Quan Từ Mạng Lưới
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {newsArticles
-                .filter((n) => n.id !== article.id && n.isPublished !== false)
-                .sort((a, b) => {
-                  const scoreA = (a.category === article.category ? 2 : 0) + (a.tags || []).filter((t) => (article.tags || []).includes(t)).length;
-                  const scoreB = (b.category === article.category ? 2 : 0) + (b.tags || []).filter((t) => (article.tags || []).includes(t)).length;
-                  return scoreB - scoreA;
-                })
-                .slice(0, 3)
-                .map((other) => {
-                  const otherSlug = getArticleSlug(other);
-                  return (
-                    <div
-                      key={other.id}
-                      onClick={() => {
-                        window.history.pushState({}, '', `/tin-tuc/${otherSlug}`);
-                        if (onSelectArticle) onSelectArticle(other);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      className="p-4 bg-white rounded-2xl border border-slate-200 hover:border-sky-300 hover:shadow-xs transition cursor-pointer group space-y-2"
-                    >
-                      <EntityBadge label={other.categoryLabel} color={other.categoryColor} className="px-2 py-0.5 text-[10px]" />
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-[#0284C7] transition line-clamp-2 leading-snug">
-                        {other.title}
-                      </h4>
-                      <span className="text-[11px] text-slate-400 block">{other.date}</span>
-                    </div>
-                  );
-                })}
-            </div>
+        {/* Related articles (prioritizing same category or shared tags) */}
+        <div className="mt-10 space-y-4">
+          <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <BookOpen size={20} className="text-[#0284C7]" />
+            Tin Tức Liên Quan Từ Mạng Lưới
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {newsArticles
+              .filter((n) => n.id !== article.id && n.isPublished !== false)
+              .sort((a, b) => {
+                const scoreA = (a.category === article.category ? 2 : 0) + (a.tags || []).filter((t) => (article.tags || []).includes(t)).length;
+                const scoreB = (b.category === article.category ? 2 : 0) + (b.tags || []).filter((t) => (article.tags || []).includes(t)).length;
+                return scoreB - scoreA;
+              })
+              .slice(0, 3)
+              .map((other) => {
+                const otherSlug = getArticleSlug(other);
+                return (
+                  <div
+                    key={other.id}
+                    onClick={() => {
+                      window.history.pushState({}, '', `/tin-tuc/${otherSlug}`);
+                      if (onSelectArticle) onSelectArticle(other);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="p-4 bg-white rounded-2xl border border-slate-200 hover:border-sky-300 hover:shadow-xs transition cursor-pointer group space-y-2"
+                  >
+                    <EntityBadge label={other.categoryLabel} color={other.categoryColor} className="px-2 py-0.5 text-[10px]" />
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-[#0284C7] transition line-clamp-2 leading-snug">
+                      {other.title}
+                    </h4>
+                    <span className="text-[11px] text-slate-400 block">{other.date}</span>
+                  </div>
+                );
+              })}
           </div>
-        )}
+        </div>
       </article>
 
       <ImageLightboxModal
@@ -1010,6 +501,7 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
 };
 
 // --- Consolidated from NewsComments.tsx ---
+import { MessageCircle, Send, Loader2, ShieldCheck } from 'lucide-react';
 
 interface Props { articleId: string; enabled?: boolean; }
 interface CommentRow { id:string; name:string; content:string; created_at:string; }

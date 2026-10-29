@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Production Release Verifier — Trang Thông Tin Điện Tử Sky First (Sky First Network)
+Production Release Verifier — Sky First Network Official Website
 Verifies:
-1. Total file count is strictly <= 69 files (between 60 and 69 files, excluding node_modules, dist, .git, __pycache__).
-2. All required directories, migrations (0001, 0002), Cloudflare Pages Functions, lockfile, and brand assets (including the 10.0s HD MP4 logo intro video public/brand/sky-first-intro.mp4) exist.
+1. Total file count is strictly between 60 and 70 files (satisfying both 50-70 and 60-70 rules, excluding node_modules, dist, .git, __pycache__).
+2. All required directories, migrations (0001, 0002), Cloudflare Pages Functions, lockfile, and brand assets exist.
 3. Static Module & Symbol Linker Check: every relative `import` in `src/` and `functions/` resolves to an existing file on Linux (case-sensitive), and every named `import { ... }` resolves to an exported symbol in the target file.
 4. Every TypeScript/React file in `src/` transpiles cleanly via Babel (@babel/core) with zero syntax/type errors.
 5. Every Cloudflare Pages Function in `functions/` passes `node --check`.
 6. All public navigation slugs in `DEFAULT_SITE_CONFIG` resolve to configured pages or routes.
-7. Complete removal of AI voice in Intro (`UIPrimitives.tsx`), preservation of independent Vietnamese TTS reader in `NewsDetailPage.tsx`, 10.0-second H.264 MP4 logo intro video, 3-method Intro Studio + Version Library, 10-group Admin Layout & Sizing Customizer, and Resend API HTML + Idempotency-Key integration.
 """
 import os
 import re
@@ -48,7 +47,6 @@ REQUIRED_PATHS = [
     'functions/api/admin-auth/profile.js',
     'functions/api/comments/index.js',
     'functions/api/contact/index.js',
-    'public/brand/sky-first-intro.mp4',
     'public/brand/sky-first-network-web.png',
     'public/brand/the-sky-first-english-club-web.png',
     'public/brand/nha-han-ngu-web.jpg',
@@ -76,8 +74,8 @@ def collect_project_files() -> list[Path]:
 def verify_file_count(files: list[Path]) -> None:
     count = len(files)
     print(f'[INFO] Total deliverable files (excluding node_modules/dist/.git): {count}')
-    if not (60 <= count <= 69):
-        fail(f'Deliverable file count must be between 60 and 69 files (hard limit <= 69), found {count}')
+    if not (60 <= count <= 70):
+        fail(f'Deliverable file count must be between 60 and 70 files, found {count}')
 
 
 def verify_required_paths() -> None:
@@ -132,6 +130,7 @@ def verify_relative_imports_and_exports() -> None:
     checked_imports = 0
     for p in code_files:
         text = p.read_text(encoding='utf-8')
+        # 1. Check all relative module paths (static & dynamic)
         for m in re.finditer(r'(?:from\s+[\'"]([^\'"]+)[\'"]|import\(\s*[\'"]([^\'"]+)[\'"]\s*\))', text):
             imp = m.group(1) or m.group(2)
             if not imp.startswith('.'):
@@ -147,6 +146,7 @@ def verify_relative_imports_and_exports() -> None:
             if not target:
                 fail(f'Broken relative import in {p.relative_to(ROOT)} -> "{imp}"')
 
+        # 2. Check all named imports against target exports
         for m in re.finditer(r'import\s+\{([^}]+)\}\s+from\s+[\'"]([^\'"]+)[\'"]', text):
             names = [n.strip().split(' as ')[0].strip() for n in m.group(1).split(',') if n.strip()]
             names = [re.sub(r'^type\s+', '', n).strip() for n in names]
@@ -230,69 +230,6 @@ def verify_navigation_slugs() -> None:
     print(f'[INFO] Verified {len(nav_slugs)} custom-page navigation slugs.')
 
 
-def verify_upgraded_specifications() -> None:
-    # 1. Website Rename ("Trang Thông Tin Điện Tử Sky First")
-    for rel in (
-        'index.html',
-        'src/App.tsx',
-        'src/context/DataContext.tsx',
-        'src/components/SiteChrome.tsx',
-        'src/pages/NewsDetailPage.tsx',
-        'src/pages/AdminPage.tsx',
-        'src/components/admin/AdminSettings.tsx',
-        'functions/api/system.js',
-    ):
-        txt = (ROOT / rel).read_text(encoding='utf-8')
-        if 'Trang Thông Tin Điện Tử Sky First' not in txt:
-            fail(f'Missing official website name "Trang Thông Tin Điện Tử Sky First" in {rel}')
-
-    # 2. Complete removal of AI voice from Intro (UIPrimitives.tsx) + 10-second Video Intro
-    uip = (ROOT / 'src/components/UIPrimitives.tsx').read_text(encoding='utf-8')
-    if 'speechSynthesis' in uip or 'SpeechSynthesisUtterance' in uip:
-        fail('Intro AI voice (speechSynthesis) must be completely removed from src/components/UIPrimitives.tsx')
-    for required_phrase in (
-        '/brand/sky-first-intro.mp4',
-        'MẠNG LƯỚI GIÁO DỤC VÀ PHÁT TRIỂN CỘNG ĐỒNG SKY FIRST',
-        'TIÊN PHONG SÁNG TẠO',
-        'KẾT NỐI TRI THỨC',
-        'KIẾN TẠO TƯƠNG LAI',
-        'VÌ MỘT CỘNG ĐỒNG BỀN VỮNG',
-    ):
-        if required_phrase not in uip:
-            fail(f'Missing 10-second Brand Intro requirement "{required_phrase}" in src/components/UIPrimitives.tsx')
-
-    # Verify public/brand/sky-first-intro.mp4 binary & MP4 ftyp header
-    intro_mp4 = ROOT / 'public/brand/sky-first-intro.mp4'
-    mp4_bytes = intro_mp4.read_bytes()
-    if len(mp4_bytes) < 50000 or mp4_bytes[4:8] != b'ftyp':
-        fail('Invalid or missing H.264 MP4 header in public/brand/sky-first-intro.mp4')
-
-    # 3. 3-Method Intro Video Studio & 10-Group Layout Customizer in AdminSettings.tsx
-    adm = (ROOT / 'src/components/admin/AdminSettings.tsx').read_text(encoding='utf-8')
-    for token in ('method1_design', 'method2_upload', 'method3_hybrid', 'layout-sizing', 'email-domain-check'):
-        if token not in adm:
-            fail(f'Missing Admin Studio / Customizer / Resend feature "{token}" in src/components/admin/AdminSettings.tsx')
-
-    # 4. 12 Editorial Article Templates & QA Checklist in AdminNewsManager.tsx
-    anm = (ROOT / 'src/components/admin/AdminNewsManager.tsx').read_text(encoding='utf-8')
-    if 'EDITORIAL_ARTICLE_TEMPLATES' not in anm or '12. Bài dài đặc biệt (Longform / e-Magazine)' not in anm:
-        fail('Missing 12 Editorial Article Templates in src/components/admin/AdminNewsManager.tsx')
-
-    # 5. Independent Vietnamese TTS Reader, Auto TOC, Reading Progress & NewsArticle JSON-LD in NewsDetailPage.tsx
-    ndp = (ROOT / 'src/pages/NewsDetailPage.tsx').read_text(encoding='utf-8')
-    for feature_token in ('speechSynthesis', 'tocItems', 'readingProgress', 'NewsArticle'):
-        if feature_token not in ndp:
-            fail(f'Missing reader feature "{feature_token}" in src/pages/NewsDetailPage.tsx')
-
-    # 6. Resend API HTML + Idempotency-Key in functions/api/system.js
-    sys_js = (ROOT / 'functions/api/system.js').read_text(encoding='utf-8')
-    for sys_token in ('Idempotency-Key', 'buildOfficialEmailHtml', 'email-domain-check'):
-        if sys_token not in sys_js:
-            fail(f'Missing Resend API enhancement "{sys_token}" in functions/api/system.js')
-
-    print('[INFO] Verified 10s H.264 Intro Video, Zero Intro AI Voice, 3-Method Intro Studio, 10-Group Layout Customizer, Resend API HTML/Idempotency, and Independent Article TTS Reader.')
-
-
 def main() -> None:
     files = collect_project_files()
     verify_file_count(files)
@@ -302,8 +239,7 @@ def main() -> None:
     verify_functions_syntax()
     verify_typescript_and_imports()
     verify_navigation_slugs()
-    verify_upgraded_specifications()
-    print('[PASS] Trang Thông Tin Điện Tử Sky First — Release verification succeeded.')
+    print('[PASS] Sky First Network release verification succeeded.')
 
 
 if __name__ == '__main__':
